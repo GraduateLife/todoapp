@@ -3,11 +3,11 @@ import MainLayout from '../layouts/MainLayout'
 import { TodoInputContainer } from '../features/todo/containers/TodoInputContainer'
 import { TodoListContainer } from '../features/todo/containers/TodoListContainer'
 
-export const Route = createFileRoute('/')({
-  component: HomePage,
+export const Route = createFileRoute('/todo')({
+  component: TodoPage,
 })
 
-function HomePage() {
+function TodoPage() {
   return (
     <MainLayout>
       <section className="island-shell rise-in relative overflow-hidden rounded-[2rem] px-6 py-10 sm:px-10 sm:py-14">
