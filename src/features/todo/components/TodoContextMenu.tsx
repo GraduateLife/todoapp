@@ -44,18 +44,25 @@ export function TodoContextMenu({
   const menu = (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[120px] rounded-lg border border-[var(--line)] bg-[var(--surface-strong)] py-1 shadow-lg"
+      className="rf-context-menu fixed"
       style={{ left: position.x, top: position.y }}
       role="menu"
-      aria-label="Todo actions"
+      aria-label="Note actions"
     >
+      {/* Menu header */}
+      <div
+        className="px-3 py-1.5 font-mono text-[8px] tracking-[0.2em] uppercase opacity-40 border-b border-[var(--rf-border)]"
+        style={{ color: 'var(--rf-cyan)' }}
+      >
+        actions
+      </div>
       <button
         type="button"
-        className="w-full px-3 py-2 text-left text-sm text-danger hover:bg-[var(--line)]"
+        className="rf-context-item rf-context-item--delete"
         role="menuitem"
         onClick={handleDelete}
       >
-        Delete
+        [ delete ]
       </button>
     </div>
   )

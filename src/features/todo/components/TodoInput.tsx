@@ -1,4 +1,3 @@
-import { Input } from '@heroui/react'
 import type { ReactNode } from 'react'
 
 interface TodoInputProps {
@@ -13,7 +12,7 @@ export function TodoInput({
   value,
   onChange,
   onSubmit,
-  placeholder = 'Add a todo…',
+  placeholder = 'type a task and press enter_',
   attachments,
 }: TodoInputProps) {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -24,21 +23,43 @@ export function TodoInput({
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 shadow-sm">
-      <Input
-        type="text"
-        value={value}
-        onValueChange={onChange}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        variant="flat"
-        classNames={{
-          input: 'bg-transparent',
-          inputWrapper: 'bg-transparent shadow-none',
+    <div className="rf-input-bar">
+      {/* Top edge glow line */}
+      <div
+        className="w-full h-[1px] opacity-30"
+        style={{
+          background: 'linear-gradient(90deg, transparent, rgba(0,245,255,0.6), transparent)',
         }}
-        aria-label="New todo title"
       />
-      {attachments}
+      <div className="rf-input-inner">
+        <span className="rf-input-prompt" aria-hidden="true">
+          &gt;_
+        </span>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="rf-input-field"
+          aria-label="New todo"
+          autoComplete="off"
+          spellCheck={false}
+        />
+        {attachments && (
+          <div className="flex items-center gap-1 flex-shrink-0">{attachments}</div>
+        )}
+        {value.trim() && (
+          <button
+            type="button"
+            onClick={onSubmit}
+            className="rf-btn flex-shrink-0"
+            aria-label="Add todo"
+          >
+            [ add ]
+          </button>
+        )}
+      </div>
     </div>
   )
 }

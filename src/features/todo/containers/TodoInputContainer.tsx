@@ -22,12 +22,7 @@ export function TodoInputContainer() {
     const url = await fileToDataUrl(file)
     setPendingAttachments((prev) => [
       ...prev,
-      {
-        id: crypto.randomUUID(),
-        type: 'image',
-        url,
-        name: file.name,
-      },
+      { id: crypto.randomUUID(), type: 'image', url, name: file.name },
     ])
   }, [])
 
@@ -35,12 +30,7 @@ export function TodoInputContainer() {
     const url = await blobToDataUrl(blob)
     setPendingAttachments((prev) => [
       ...prev,
-      {
-        id: crypto.randomUUID(),
-        type: 'voice',
-        url,
-        name,
-      },
+      { id: crypto.randomUUID(), type: 'voice', url, name },
     ])
   }, [])
 
@@ -49,7 +39,7 @@ export function TodoInputContainer() {
       <ImageAttachment onSelect={handleImageSelect} />
       <VoiceAttachment onRecorded={handleVoiceRecorded} />
       {pendingAttachments.length > 0 && (
-        <span className="ml-1 text-xs text-[var(--sea-ink-soft)]">
+        <span className="ml-1 font-mono text-[10px]" style={{ color: 'var(--rf-cyan)' }}>
           +{pendingAttachments.length}
         </span>
       )}
