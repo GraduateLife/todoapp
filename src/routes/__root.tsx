@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import { HeroUIProvider } from '@heroui/react'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
 
@@ -14,7 +15,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 
 import { getLocale } from '#/paraglide/runtime'
 
-import appCss from '../styles.css?url'
+import appCss from '../styles/globals.css?url'
 
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -65,9 +66,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
         <TanStackQueryProvider>
-          <Header />
-          {children}
-          <Footer />
+          <HeroUIProvider>
+            <Header />
+            {children}
+            <Footer />
           <TanStackDevtools
             config={{
               position: 'bottom-right',
@@ -80,6 +82,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               TanStackQueryDevtools,
             ]}
           />
+          </HeroUIProvider>
         </TanStackQueryProvider>
         <Scripts />
       </body>
