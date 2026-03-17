@@ -54,9 +54,13 @@ export const useTodoStore = create<TodoState>()(
     (set) => ({
       todos: [],
       addTodo: (title, attachments = []) =>
-        set((state) => ({
-          todos: [...state.todos, createTodo(title, attachments)],
-        })),
+        set((state) => {
+          const maxZ = state.todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
+          const next = createTodo(title, attachments)
+          return {
+            todos: [...state.todos, { ...next, zIndex: maxZ + 1 }],
+          }
+        }),
       deleteTodo: (id) =>
         set((state) => ({
           todos: state.todos.filter((t) => t.id !== id),

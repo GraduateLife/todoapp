@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useTodoStore } from '../store'
 import { TodoInput } from '../components/TodoInput'
 import { ImageAttachment, fileToDataUrl } from '#/components/Attachment/ImageAttachment'
@@ -7,16 +7,23 @@ import type { Attachment } from '../types'
 
 export function TodoInputContainer() {
   const [value, setValue] = useState('')
+  const valueRef = useRef('')
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([])
   const addTodo = useTodoStore((s) => s.addTodo)
 
+  const onChange = useCallback((nextValue: string) => {
+    valueRef.current = nextValue
+    setValue(nextValue)
+  }, [])
+
   const handleSubmit = useCallback(() => {
-    const trimmed = value.trim()
+    const trimmed = valueRef.current.trim()
     if (!trimmed) return
     addTodo(trimmed, pendingAttachments.length > 0 ? pendingAttachments : undefined)
+    valueRef.current = ''
     setValue('')
     setPendingAttachments([])
-  }, [value, pendingAttachments, addTodo])
+  }, [pendingAttachments, addTodo])
 
   const handleImageSelect = useCallback(async (file: File) => {
     const url = await fileToDataUrl(file)
@@ -49,7 +56,7 @@ export function TodoInputContainer() {
   return (
     <TodoInput
       value={value}
-      onChange={setValue}
+      onChange={onChange}
       onSubmit={handleSubmit}
       attachments={attachments}
     />

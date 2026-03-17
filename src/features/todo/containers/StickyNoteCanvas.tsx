@@ -12,8 +12,8 @@ export function StickyNoteCanvas() {
 
   return (
     <div
-      className="fixed inset-0 overflow-hidden pointer-events-none"
-      style={{ zIndex: 10 }}
+      className="fixed inset-0 overflow-hidden"
+      // style={{ zIndex: 10 }}
       aria-label="Sticky notes canvas"
     >
       <AnimatePresence>
