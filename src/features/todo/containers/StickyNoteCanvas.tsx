@@ -8,7 +8,7 @@ import { ReminderMarkers } from '../components/reminder/ReminderMarkers'
 import { ReminderToast } from '../components/reminder/ReminderToast'
 import { FolderPickerModal } from '../components/folder/FolderPickerModal'
 import { FolderMarkers } from '../components/folder/FolderMarkers'
-import { FolderOverlay } from '../components/folder/FolderOverlay'
+import { FolderDrawer } from '../components/folder/FolderDrawer'
 import { useReminderScheduler } from '../hooks/useReminderScheduler'
 
 export function StickyNoteCanvas() {
@@ -26,7 +26,8 @@ export function StickyNoteCanvas() {
   const setReminder = useTodoStore((s) => s.setReminder)
   const setFolder = useTodoStore((s) => s.setFolder)
   const hasOpenFolder = useFolderStore((s) => s.folders.some((f) => f.isOpen))
-  const openFolderId = useFolderStore((s) => s.folders.find((f) => f.isOpen)?.id ?? null)
+  const appendToFolder = useFolderStore((s) => s.appendToFolder)
+  const removeFromFolder = useFolderStore((s) => s.removeFromFolder)
 
   // Boot reminder scheduler (idempotent)
   const { activeToast, clearToast } = useReminderScheduler()
@@ -49,66 +50,54 @@ export function StickyNoteCanvas() {
   const handleFolderConfirm = (folderId: string) => {
     if (!folderTarget) return
     setFolder(folderTarget, folderId)
+    appendToFolder(folderId, folderTarget)
     setFolderTarget(null)
   }
 
-  // Visible: non-archived. When a folder is open, only show todos IN that folder.
-  const visibleTodos = todos.filter((t) => !t.archived)
+  // Move a todo out of a folder back to the main canvas
+  const handleMoveToMain = (todoId: string) => {
+    const todo = todos.find((t) => t.id === todoId)
+    if (todo?.folderId) {
+      removeFromFolder(todo.folderId, todoId)
+    }
+    setFolder(todoId, null)
+  }
+
+  // Main canvas: non-archived, not in any folder
+  const visibleTodos = todos.filter((t) => !t.archived && !t.folderId)
 
   return (
     <div className="fixed inset-0 overflow-hidden" aria-label="Sticky notes canvas">
-      {/* Folder overlay (backdrop + frame) — renders below folder cards */}
-      <FolderOverlay />
+      {/* Folder drawer (slides in from left, includes backdrop) */}
+      <FolderDrawer
+        onMoveToMain={handleMoveToMain}
+        onDeleteTodo={deleteTodo}
+        onToggleTodo={toggleTodo}
+      />
 
-      {/* Folder todos — rendered after overlay so they appear above the backdrop (z-index 200+) */}
+      {/* Main sticky note cards */}
       <AnimatePresence>
-        {openFolderId && visibleTodos
-          .filter((t) => t.folderId === openFolderId)
-          .map((todo) => (
-            <StickyNote
-              key={todo.id}
-              todo={todo}
-              onMove={moveTodo}
-              onBringToFront={bringToFront}
-              onDelete={deleteTodo}
-              onToggle={toggleTodo}
-              onUpdateTitle={updateTitle}
-              onSetPriority={setPriority}
-              onArchive={archiveTodo}
-              onAddSubTask={addSubTask}
-              onToggleSubTask={toggleSubTask}
-              onDeleteSubTask={deleteSubTask}
-              onRequestReminder={setReminderTarget}
-              onRequestFolder={setFolderTarget}
-              zIndexOverride={200 + todo.zIndex}
-            />
-          ))}
+        {visibleTodos.map((todo) => (
+          <StickyNote
+            key={todo.id}
+            todo={todo}
+            onMove={moveTodo}
+            onBringToFront={bringToFront}
+            onDelete={deleteTodo}
+            onToggle={toggleTodo}
+            onUpdateTitle={updateTitle}
+            onSetPriority={setPriority}
+            onArchive={archiveTodo}
+            onAddSubTask={addSubTask}
+            onToggleSubTask={toggleSubTask}
+            onDeleteSubTask={deleteSubTask}
+            onRequestReminder={setReminderTarget}
+            onRequestFolder={setFolderTarget}
+          />
+        ))}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {visibleTodos
-          .filter((t) => !openFolderId || t.folderId !== openFolderId)
-          .map((todo) => (
-            <StickyNote
-              key={todo.id}
-              todo={todo}
-              onMove={moveTodo}
-              onBringToFront={bringToFront}
-              onDelete={deleteTodo}
-              onToggle={toggleTodo}
-              onUpdateTitle={updateTitle}
-              onSetPriority={setPriority}
-              onArchive={archiveTodo}
-              onAddSubTask={addSubTask}
-              onToggleSubTask={toggleSubTask}
-              onDeleteSubTask={deleteSubTask}
-              onRequestReminder={setReminderTarget}
-              onRequestFolder={setFolderTarget}
-            />
-          ))}
-      </AnimatePresence>
-
-      {/* Left-edge folder markers */}
+      {/* Left-edge folder markers (hidden when drawer is open) */}
       {!hasOpenFolder && <FolderMarkers />}
 
       {/* Right-edge reminder countdown markers */}

@@ -14,6 +14,10 @@ interface FolderState {
   closeFolder: (id: string) => void
   closeAllFolders: () => void
   updateMarkerY: (id: string, markerY: number) => void
+  appendToFolder: (folderId: string, todoId: string) => void
+  removeFromFolder: (folderId: string, todoId: string) => void
+  reorderTodo: (folderId: string, fromIndex: number, toIndex: number) => void
+  setOrderedTodoIds: (folderId: string, ids: string[]) => void
 }
 
 function randomFolderColor(): NoteColor {
@@ -32,7 +36,8 @@ export const useFolderStore = create<FolderState>()(
           color: randomFolderColor(),
           createdAt: Date.now(),
           isOpen: false,
-          markerY: 120 + get().folders.length * 64, // stack markers vertically
+          markerY: 120 + get().folders.length * 64,
+          orderedTodoIds: [],
         }
         set((state) => ({ folders: [...state.folders, folder] }))
         return folder
@@ -48,7 +53,6 @@ export const useFolderStore = create<FolderState>()(
 
       openFolder: (id) =>
         set((state) => ({
-          // Only one folder open at a time
           folders: state.folders.map((f) =>
             f.id === id ? { ...f, isOpen: true } : { ...f, isOpen: false }
           ),
@@ -68,10 +72,58 @@ export const useFolderStore = create<FolderState>()(
         set((state) => ({
           folders: state.folders.map((f) => (f.id === id ? { ...f, markerY } : f)),
         })),
+
+      appendToFolder: (folderId, todoId) =>
+        set((state) => ({
+          folders: state.folders.map((f) =>
+            f.id === folderId && !f.orderedTodoIds.includes(todoId)
+              ? { ...f, orderedTodoIds: [...f.orderedTodoIds, todoId] }
+              : f
+          ),
+        })),
+
+      removeFromFolder: (folderId, todoId) =>
+        set((state) => ({
+          folders: state.folders.map((f) =>
+            f.id === folderId
+              ? { ...f, orderedTodoIds: f.orderedTodoIds.filter((id) => id !== todoId) }
+              : f
+          ),
+        })),
+
+      reorderTodo: (folderId, fromIndex, toIndex) =>
+        set((state) => ({
+          folders: state.folders.map((f) => {
+            if (f.id !== folderId) return f
+            const ids = [...f.orderedTodoIds]
+            const [moved] = ids.splice(fromIndex, 1)
+            ids.splice(toIndex, 0, moved)
+            return { ...f, orderedTodoIds: ids }
+          }),
+        })),
+
+      setOrderedTodoIds: (folderId, ids) =>
+        set((state) => ({
+          folders: state.folders.map((f) =>
+            f.id === folderId ? { ...f, orderedTodoIds: ids } : f
+          ),
+        })),
     }),
     {
       name: STORAGE_KEY,
-      version: 1,
+      version: 2,
+      migrate: (persistedState: any, version: number) => {
+        let state = persistedState
+        if (version < 2) {
+          state = {
+            folders: (state?.folders ?? []).map((f: any) => ({
+              ...f,
+              orderedTodoIds: f.orderedTodoIds ?? [],
+            })),
+          }
+        }
+        return state
+      },
     }
   )
 )

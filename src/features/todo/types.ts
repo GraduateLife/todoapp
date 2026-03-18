@@ -44,5 +44,6 @@ export interface Folder {
   color: NoteColor
   createdAt: number
   isOpen: boolean
-  markerY: number // Y position of left-side marker on screen
+  markerY: number          // Y position of left-side marker on screen
+  orderedTodoIds: string[] // ordered list of todo IDs in this folder
 }
