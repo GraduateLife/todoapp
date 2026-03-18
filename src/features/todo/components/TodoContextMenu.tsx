@@ -1,11 +1,25 @@
 import { createPortal } from 'react-dom'
 import { useEffect, useRef } from 'react'
+import type { Priority } from '../types'
+
+const PRIORITY_LABELS: Record<Priority, string> = {
+  low: '[ low ]',
+  normal: '[ normal ]',
+  high: '[ high ]',
+}
 
 interface TodoContextMenuProps {
   open: boolean
   position: { x: number; y: number }
   onClose: () => void
   onDelete: () => void
+  onArchive: () => void
+  onSetPriority: (priority: Priority) => void
+  onAddSubTask: () => void
+  onSetReminder: () => void
+  onMoveToFolder: () => void
+  currentPriority: Priority
+  noteColor: string
 }
 
 export function TodoContextMenu({
@@ -13,6 +27,13 @@ export function TodoContextMenu({
   position,
   onClose,
   onDelete,
+  onArchive,
+  onSetPriority,
+  onAddSubTask,
+  onSetReminder,
+  onMoveToFolder,
+  currentPriority,
+  noteColor,
 }: TodoContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -34,33 +55,98 @@ export function TodoContextMenu({
     }
   }, [open, onClose])
 
-  const handleDelete = () => {
-    onDelete()
+  const handleAction = (fn: () => void) => {
+    fn()
     onClose()
   }
 
   if (!open || typeof document === 'undefined') return null
 
+  // Clamp menu position so it doesn't overflow viewport
+  const menuWidth = 160
+  const menuHeight = 200
+  const left = Math.min(position.x, window.innerWidth - menuWidth - 8)
+  const top = Math.min(position.y, window.innerHeight - menuHeight - 8)
+
   const menu = (
     <div
       ref={menuRef}
       className="rf-context-menu fixed"
-      style={{ left: position.x, top: position.y }}
+      style={{ left, top }}
       role="menu"
       aria-label="Note actions"
     >
-      {/* Menu header */}
-      <div
-        className="px-3 py-1.5 font-mono text-[8px] tracking-[0.2em] uppercase opacity-40 border-b border-[var(--rf-border)]"
-        style={{ color: 'var(--rf-cyan)' }}
+      {/* Header */}
+      <div className="rf-context-section">actions</div>
+
+      {/* ── Priority ── */}
+      <div className="rf-context-separator" />
+      <div className="rf-context-section">priority</div>
+
+      {(['low', 'normal', 'high'] as Priority[]).map((p) => (
+        <button
+          key={p}
+          type="button"
+          className={`rf-context-item ${currentPriority === p ? 'rf-context-item--active' : ''}`}
+          style={
+            currentPriority === p
+              ? { color: noteColor, textShadow: `0 0 6px ${noteColor}` }
+              : undefined
+          }
+          role="menuitem"
+          onClick={() => handleAction(() => onSetPriority(p))}
+        >
+          {currentPriority === p ? '▸ ' : '  '}
+          {PRIORITY_LABELS[p]}
+        </button>
+      ))}
+
+      {/* ── Actions ── */}
+      <div className="rf-context-separator" />
+
+      <button
+        type="button"
+        className="rf-context-item"
+        role="menuitem"
+        onClick={() => handleAction(onAddSubTask)}
       >
-        actions
-      </div>
+        [ add subtask ]
+      </button>
+
+      <button
+        type="button"
+        className="rf-context-item"
+        role="menuitem"
+        onClick={() => handleAction(onSetReminder)}
+      >
+        [ set reminder ]
+      </button>
+
+      <button
+        type="button"
+        className="rf-context-item"
+        role="menuitem"
+        onClick={() => handleAction(onMoveToFolder)}
+      >
+        [ move to folder ]
+      </button>
+
+      <button
+        type="button"
+        className="rf-context-item"
+        role="menuitem"
+        onClick={() => handleAction(onArchive)}
+      >
+        [ archive ]
+      </button>
+
+      <div className="rf-context-separator" />
+
       <button
         type="button"
         className="rf-context-item rf-context-item--delete"
         role="menuitem"
-        onClick={handleDelete}
+        onClick={() => handleAction(onDelete)}
       >
         [ delete ]
       </button>

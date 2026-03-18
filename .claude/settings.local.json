@@ -5,7 +5,9 @@
       "Bash(mv components/TodoList.tsx components/TodoList.tsx.bak)",
       "Bash(mv components/EditableTitle.tsx components/EditableTitle.tsx.bak)",
       "Bash(mv containers/TodoListContainer.tsx containers/TodoListContainer.tsx.bak)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npm run:*)"
     ]
   }
 }

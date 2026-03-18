@@ -1,7 +1,8 @@
 import { motion, useMotionValue } from 'framer-motion'
 import { useState, useEffect, useCallback } from 'react'
 import { TodoContextMenu } from './TodoContextMenu'
-import type { Todo, NoteColor } from '../types'
+import { SubTaskList } from './note/SubTaskList'
+import type { Todo, NoteColor, Priority } from '../types'
 
 // ─── Color palettes per note color ──────────────────────────────────────────
 const NOTE_STYLES: Record<
@@ -50,7 +51,23 @@ const NOTE_STYLES: Record<
   },
 }
 
-const DELETE_ZONE_OFFSET = 120 // px from bottom of viewport
+// ─── Priority modifiers ──────────────────────────────────────────────────────
+const PRIORITY_GLOW: Record<Priority, number> = {
+  low: 6,
+  normal: 18,
+  high: 32,
+}
+
+const PRIORITY_BORDER_OPACITY: Record<Priority, number> = {
+  low: 0.45,
+  normal: 1,
+  high: 1,
+}
+
+const DELETE_ZONE_OFFSET = 120  // px from bottom of viewport
+const ARCHIVE_ZONE_OFFSET = 80  // px from top of viewport
+const REMINDER_ZONE_OFFSET = 80 // px from right of viewport
+const FOLDER_ZONE_OFFSET = 80   // px from left of viewport
 
 interface StickyNoteProps {
   todo: Todo
@@ -59,6 +76,13 @@ interface StickyNoteProps {
   onDelete: (id: string) => void
   onToggle: (id: string) => void
   onUpdateTitle: (id: string, title: string) => void
+  onSetPriority: (id: string, priority: Priority) => void
+  onArchive: (id: string) => void
+  onAddSubTask: (id: string, title: string) => void
+  onToggleSubTask: (id: string, subtaskId: string) => void
+  onDeleteSubTask: (id: string, subtaskId: string) => void
+  onRequestReminder: (id: string) => void   // opens the reminder modal
+  onRequestFolder: (id: string) => void     // opens the folder picker modal
 }
 
 export function StickyNote({
@@ -68,18 +92,30 @@ export function StickyNote({
   onDelete,
   onToggle,
   onUpdateTitle,
+  onSetPriority,
+  onArchive,
+  onAddSubTask,
+  onToggleSubTask,
+  onDeleteSubTask,
+  onRequestReminder,
+  onRequestFolder,
 }: StickyNoteProps) {
   const initX = todo.position?.x ?? 120
   const initY = todo.position?.y ?? 120
   const color: NoteColor = todo.color ?? 'cyan'
   const rotation = todo.rotation ?? 0
+  const priority: Priority = todo.priority ?? 'normal'
 
   const x = useMotionValue(initX)
   const y = useMotionValue(initY)
 
   const [isInDeleteZone, setIsInDeleteZone] = useState(false)
+  const [isInArchiveZone, setIsInArchiveZone] = useState(false)
+  const [isInReminderZone, setIsInReminderZone] = useState(false)
+  const [isInFolderZone, setIsInFolderZone] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(todo.title)
+  const [isAddingSubTask, setIsAddingSubTask] = useState(false)
   const [contextMenu, setContextMenu] = useState<{
     open: boolean
     pos: { x: number; y: number }
@@ -91,32 +127,75 @@ export function StickyNote({
 
   const ns = NOTE_STYLES[color]
 
+  // ─── Priority-adjusted styles ──────────────────────────────────────────────
+  const glowSize = PRIORITY_GLOW[priority]
+  const borderOpacity = PRIORITY_BORDER_OPACITY[priority]
+
+  // Parse the base glow color and adjust alpha
+  const glowAlphaMap: Record<Priority, number> = { low: 0.15, normal: 0.35, high: 0.65 }
+  const glowAlpha = glowAlphaMap[priority]
+  // Re-build rgba with adjusted alpha from the note's glow value
+  // ns.glow is like 'rgba(0,245,255,0.35)' — extract rgb components
+  const rgbMatch = ns.glow.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+  const [r, g, b] = rgbMatch ? [rgbMatch[1], rgbMatch[2], rgbMatch[3]] : ['0', '245', '255']
+  const adjustedGlow = `rgba(${r},${g},${b},${glowAlpha})`
+
+  // Border color with opacity for low priority
+  const adjustedBorder =
+    borderOpacity < 1
+      ? `rgba(${r},${g},${b},${borderOpacity})`
+      : ns.border
+
+  // ─── Drag zone states ──────────────────────────────────────────────────────
   const handleDragStart = useCallback(() => {
     onBringToFront(todo.id)
   }, [todo.id, onBringToFront])
 
   const handleDrag = useCallback(() => {
-    const inZone = typeof window !== 'undefined'
-      ? y.get() > window.innerHeight - DELETE_ZONE_OFFSET
-      : false
-    setIsInDeleteZone(inZone)
-  }, [y])
+    if (typeof window === 'undefined') return
+    const cx = x.get() + 128 // center of the 256px card
+    const inDelete = y.get() > window.innerHeight - DELETE_ZONE_OFFSET
+    const inArchive = y.get() < ARCHIVE_ZONE_OFFSET
+    const inReminder = cx > window.innerWidth - REMINDER_ZONE_OFFSET && !inDelete && !inArchive
+    const inFolder = x.get() < FOLDER_ZONE_OFFSET && !inDelete && !inArchive
+    setIsInDeleteZone(inDelete)
+    setIsInArchiveZone(inArchive && !inDelete)
+    setIsInReminderZone(inReminder)
+    setIsInFolderZone(inFolder)
+  }, [x, y])
 
   const handleDragEnd = useCallback(() => {
-    if (typeof window !== 'undefined' && y.get() > window.innerHeight - DELETE_ZONE_OFFSET) {
+    if (typeof window === 'undefined') return
+    const cx = x.get() + 128
+    if (y.get() > window.innerHeight - DELETE_ZONE_OFFSET) {
       onDelete(todo.id)
+    } else if (y.get() < ARCHIVE_ZONE_OFFSET) {
+      onArchive(todo.id)
+    } else if (cx > window.innerWidth - REMINDER_ZONE_OFFSET) {
+      onMove(todo.id, x.get(), y.get())
+      onRequestReminder(todo.id)
+      setIsInReminderZone(false)
+    } else if (x.get() < FOLDER_ZONE_OFFSET) {
+      onMove(todo.id, x.get(), y.get())
+      onRequestFolder(todo.id)
+      setIsInFolderZone(false)
     } else {
       onMove(todo.id, x.get(), y.get())
       setIsInDeleteZone(false)
+      setIsInArchiveZone(false)
+      setIsInReminderZone(false)
+      setIsInFolderZone(false)
     }
-  }, [todo.id, x, y, onMove, onDelete])
+  }, [todo.id, x, y, onMove, onDelete, onArchive, onRequestReminder, onRequestFolder])
 
+  // ─── Context menu ──────────────────────────────────────────────────────────
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     onBringToFront(todo.id)
     setContextMenu({ open: true, pos: { x: e.clientX, y: e.clientY } })
   }, [todo.id, onBringToFront])
 
+  // ─── Inline edit ──────────────────────────────────────────────────────────
   const saveEdit = useCallback(() => {
     const trimmed = editValue.trim()
     if (trimmed && trimmed !== todo.title) {
@@ -138,9 +217,39 @@ export function StickyNote({
     [saveEdit, todo.title]
   )
 
-  const borderColor = isInDeleteZone ? '#ff3030' : ns.border
-  const bgColor = isInDeleteZone ? 'rgba(255,30,30,0.12)' : ns.bg
-  const glowColor = isInDeleteZone ? 'rgba(255,48,48,0.5)' : ns.glow
+  // ─── Computed styles ───────────────────────────────────────────────────────
+  const isInZone = isInDeleteZone || isInArchiveZone || isInReminderZone || isInFolderZone
+  const zoneColor = isInDeleteZone
+    ? '#ff3030'
+    : isInArchiveZone
+      ? '#39ff14'
+      : isInFolderZone
+        ? '#bf5fff'
+        : '#ffb800'
+  const zoneGlow = isInDeleteZone
+    ? 'rgba(255,48,48,0.5)'
+    : isInArchiveZone
+      ? 'rgba(57,255,20,0.5)'
+      : isInFolderZone
+        ? 'rgba(191,95,255,0.5)'
+        : 'rgba(255,184,0,0.5)'
+  const zoneLabel = isInDeleteZone
+    ? '[ delete ]'
+    : isInArchiveZone
+      ? '[ archive ]'
+      : isInFolderZone
+        ? '[ folder ]'
+        : '[ remind ]'
+
+  const borderColor = isInZone ? zoneColor : adjustedBorder
+  const bgColor = isInDeleteZone
+    ? 'rgba(255,30,30,0.12)'
+    : isInArchiveZone
+      ? 'rgba(57,255,20,0.08)'
+      : ns.bg
+  const glowColor = isInZone ? zoneGlow : adjustedGlow
+
+  const boxShadow = `0 0 ${isInZone ? 20 : glowSize}px ${glowColor}, 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`
 
   return (
     <>
@@ -157,11 +266,12 @@ export function StickyNote({
           zIndex: todo.zIndex,
           width: 256,
           touchAction: 'none',
+          opacity: priority === 'low' ? 0.8 : 1,
         }}
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{
-          scale: isInDeleteZone ? 0.82 : 1,
-          opacity: isInDeleteZone ? 0.65 : 1,
+          scale: isInZone ? 0.82 : 1,
+          opacity: isInZone ? 0.65 : priority === 'low' ? 0.8 : 1,
         }}
         exit={{ scale: 0.3, opacity: 0, transition: { duration: 0.15, ease: 'easeIn' } }}
         transition={{ type: 'spring', stiffness: 400, damping: 28 }}
@@ -177,10 +287,18 @@ export function StickyNote({
           style={{
             background: bgColor,
             border: `1px solid ${borderColor}`,
-            boxShadow: `0 0 18px ${glowColor}, 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`,
+            boxShadow,
           }}
           className="relative rounded-[3px] p-4 overflow-hidden"
         >
+          {/* High-priority pulsing ring */}
+          {priority === 'high' && !isInZone && (
+            <div
+              className="absolute inset-[-2px] rounded-[4px] pointer-events-none rf-priority-ring"
+              style={{ border: `1px solid ${ns.border}`, color: ns.border }}
+            />
+          )}
+
           {/* Corner bracket decorations */}
           <span
             style={{ color: ns.dim }}
@@ -212,18 +330,37 @@ export function StickyNote({
             style={{ borderBottom: `1px solid ${ns.dim}` }}
             className="flex items-center justify-between pb-2 mb-3"
           >
-            <span
-              style={{ color: ns.dim }}
-              className="font-mono text-[9px] tracking-[0.18em] uppercase"
-            >
-              {todo.completed ? '// done' : '// todo'}
-            </span>
+            <div className="flex items-center gap-2">
+              <span
+                style={{ color: ns.dim }}
+                className="font-mono text-[9px] tracking-[0.18em] uppercase"
+              >
+                {todo.completed ? '// done' : '// todo'}
+              </span>
+              {/* Priority badge — only show low/high, normal is silent */}
+              {priority === 'high' && (
+                <span
+                  className="font-mono text-[8px] tracking-[0.15em] uppercase"
+                  style={{ color: ns.border, textShadow: `0 0 6px ${ns.border}` }}
+                >
+                  [!!]
+                </span>
+              )}
+              {priority === 'low' && (
+                <span
+                  className="font-mono text-[8px] tracking-[0.15em] uppercase opacity-50"
+                  style={{ color: ns.dim }}
+                >
+                  [low]
+                </span>
+              )}
+            </div>
             <span
               style={{
                 background: borderColor,
                 boxShadow: `0 0 6px ${glowColor}`,
               }}
-              className="w-[6px] h-[6px] rounded-full block"
+              className={`w-[6px] h-[6px] rounded-full block ${priority === 'high' ? 'rf-priority-ring' : ''}`}
             />
           </div>
 
@@ -301,6 +438,21 @@ export function StickyNote({
             </div>
           </div>
 
+          {/* Sub-tasks */}
+          <SubTaskList
+            subtasks={todo.subtasks}
+            borderColor={borderColor}
+            textColor={ns.text}
+            dimColor={ns.dim}
+            checkColor={ns.check}
+            glowColor={adjustedGlow}
+            isAddingExternal={isAddingSubTask}
+            onAddingClose={() => setIsAddingSubTask(false)}
+            onToggle={(subtaskId) => onToggleSubTask(todo.id, subtaskId)}
+            onDelete={(subtaskId) => onDeleteSubTask(todo.id, subtaskId)}
+            onAdd={(title) => onAddSubTask(todo.id, title)}
+          />
+
           {/* Footer row */}
           <div
             style={{
@@ -316,11 +468,24 @@ export function StickyNote({
                 year: '2-digit',
               })}
             </span>
-            {todo.attachments.length > 0 && (
-              <span className="font-mono text-[8px] opacity-60">
-                [{todo.attachments.length}]
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {todo.attachments.length > 0 && (
+                <span className="font-mono text-[8px] opacity-60">
+                  [{todo.attachments.length}]
+                </span>
+              )}
+              {/* Add subtask button */}
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => setIsAddingSubTask(true)}
+                className="font-mono text-[9px] opacity-40 hover:opacity-90 transition-opacity"
+                style={{ color: ns.border, cursor: 'pointer', lineHeight: 1 }}
+                title="Add subtask"
+              >
+                [+]
+              </button>
+            </div>
           </div>
 
           {/* Scanline overlay */}
@@ -332,14 +497,25 @@ export function StickyNote({
             }}
           />
 
-          {/* Delete zone overlay */}
-          {isInDeleteZone && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-[3px] bg-[rgba(255,30,30,0.08)]">
+          {/* Drag zone overlay */}
+          {isInZone && (
+            <div
+              className="absolute inset-0 flex items-center justify-center rounded-[3px]"
+              style={{
+                background: isInDeleteZone
+                  ? 'rgba(255,30,30,0.08)'
+                  : isInArchiveZone
+                    ? 'rgba(57,255,20,0.06)'
+                    : isInFolderZone
+                      ? 'rgba(191,95,255,0.08)'
+                      : 'rgba(255,184,0,0.06)',
+              }}
+            >
               <span
                 className="font-mono text-[11px] tracking-[0.2em] uppercase animate-pulse"
-                style={{ color: '#ff4444', textShadow: '0 0 8px #ff3030' }}
+                style={{ color: zoneColor, textShadow: `0 0 8px ${zoneColor}` }}
               >
-                [ delete ]
+                {zoneLabel}
               </span>
             </div>
           )}
@@ -351,6 +527,13 @@ export function StickyNote({
         position={contextMenu.pos}
         onClose={() => setContextMenu((p) => ({ ...p, open: false }))}
         onDelete={() => onDelete(todo.id)}
+        onArchive={() => onArchive(todo.id)}
+        onSetPriority={(p) => onSetPriority(todo.id, p)}
+        onAddSubTask={() => setIsAddingSubTask(true)}
+        onSetReminder={() => onRequestReminder(todo.id)}
+        onMoveToFolder={() => onRequestFolder(todo.id)}
+        currentPriority={priority}
+        noteColor={ns.border}
       />
     </>
   )

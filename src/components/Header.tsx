@@ -1,7 +1,11 @@
 import { Link } from '@tanstack/react-router'
+import { useState } from 'react'
 import ThemeToggle from './ThemeToggle'
+import { ArchivePanel } from '#/features/todo/components/archive/ArchivePanel'
 
 export default function Header() {
+  const [archiveOpen, setArchiveOpen] = useState(false)
+
   return (
     <header className="rf-header relative" style={{ zIndex: 50 }}>
       <nav className="page-wrap flex items-center gap-6 py-3" style={{ minHeight: 52 }}>
@@ -32,11 +36,19 @@ export default function Header() {
         {/* Right side */}
         <div className="ml-auto flex items-center gap-4">
           <span
-            className="hidden sm:block font-mono text-[9px] tracking-[0.14em] uppercase"
+            className="hidden md:block font-mono text-[9px] tracking-[0.14em] uppercase"
             style={{ color: 'var(--rf-text-dim)' }}
           >
-            drag to bottom → delete
+            ↓ delete · ↑ archive · → remind
           </span>
+          <button
+            type="button"
+            className="nav-link"
+            onClick={() => setArchiveOpen(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            archive
+          </button>
           <ThemeToggle />
         </div>
       </nav>
@@ -49,6 +61,8 @@ export default function Header() {
             'linear-gradient(90deg, transparent, rgba(0,245,255,0.45) 30%, rgba(191,95,255,0.3) 70%, transparent)',
         }}
       />
+
+      <ArchivePanel open={archiveOpen} onClose={() => setArchiveOpen(false)} />
     </header>
   )
 }
