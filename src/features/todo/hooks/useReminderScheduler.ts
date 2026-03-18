@@ -1,21 +1,34 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useTodoStore } from '../store'
 import { reminderScheduler, getNotificationService } from '../services/reminderService'
+
+export interface ReminderToast {
+  todoId: string
+  title: string
+}
 
 /**
  * Mount this hook once (in StickyNoteCanvas or the route root).
  * It boots up all persisted reminders on page load and
  * reacts to reminder changes in the store.
+ * Returns an in-app toast for when browser notifications aren't available.
  */
 export function useReminderScheduler() {
   const todos = useTodoStore((s) => s.todos)
   const setReminder = useTodoStore((s) => s.setReminder)
+
+  const [activeToast, setActiveToast] = useState<ReminderToast | null>(null)
+  const clearToast = useCallback(() => setActiveToast(null), [])
 
   // When a reminder fires, clear it from the store if it was one-shot
   useEffect(() => {
     reminderScheduler.setOnFire((todoId) => {
       const todo = useTodoStore.getState().todos.find((t) => t.id === todoId)
       if (!todo?.reminder) return
+
+      // Always show in-app toast as fallback (visible even if browser notifications denied)
+      setActiveToast({ todoId, title: todo.title })
+
       if (!todo.reminder.interval) {
         // one-shot — clear the reminder
         setReminder(todoId, null)
@@ -64,4 +77,6 @@ export function useReminderScheduler() {
   useEffect(() => {
     getNotificationService().requestPermission()
   }, [])
+
+  return { activeToast, clearToast }
 }

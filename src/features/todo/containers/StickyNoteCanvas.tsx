@@ -5,6 +5,7 @@ import { useFolderStore } from '../store'
 import { StickyNote } from '../components/StickyNote'
 import { ReminderModal } from '../components/reminder/ReminderModal'
 import { ReminderMarkers } from '../components/reminder/ReminderMarkers'
+import { ReminderToast } from '../components/reminder/ReminderToast'
 import { FolderPickerModal } from '../components/folder/FolderPickerModal'
 import { FolderMarkers } from '../components/folder/FolderMarkers'
 import { FolderOverlay } from '../components/folder/FolderOverlay'
@@ -25,9 +26,10 @@ export function StickyNoteCanvas() {
   const setReminder = useTodoStore((s) => s.setReminder)
   const setFolder = useTodoStore((s) => s.setFolder)
   const hasOpenFolder = useFolderStore((s) => s.folders.some((f) => f.isOpen))
+  const openFolderId = useFolderStore((s) => s.folders.find((f) => f.isOpen)?.id ?? null)
 
   // Boot reminder scheduler (idempotent)
-  useReminderScheduler()
+  const { activeToast, clearToast } = useReminderScheduler()
 
   // Reminder modal state
   const [reminderTarget, setReminderTarget] = useState<string | null>(null)
@@ -55,28 +57,55 @@ export function StickyNoteCanvas() {
 
   return (
     <div className="fixed inset-0 overflow-hidden" aria-label="Sticky notes canvas">
-      {/* Folder overlay (backdrop + frame) — renders below cards */}
+      {/* Folder overlay (backdrop + frame) — renders below folder cards */}
       <FolderOverlay />
 
+      {/* Folder todos — rendered after overlay so they appear above the backdrop (z-index 200+) */}
       <AnimatePresence>
-        {visibleTodos.map((todo) => (
-          <StickyNote
-            key={todo.id}
-            todo={todo}
-            onMove={moveTodo}
-            onBringToFront={bringToFront}
-            onDelete={deleteTodo}
-            onToggle={toggleTodo}
-            onUpdateTitle={updateTitle}
-            onSetPriority={setPriority}
-            onArchive={archiveTodo}
-            onAddSubTask={addSubTask}
-            onToggleSubTask={toggleSubTask}
-            onDeleteSubTask={deleteSubTask}
-            onRequestReminder={setReminderTarget}
-            onRequestFolder={setFolderTarget}
-          />
-        ))}
+        {openFolderId && visibleTodos
+          .filter((t) => t.folderId === openFolderId)
+          .map((todo) => (
+            <StickyNote
+              key={todo.id}
+              todo={todo}
+              onMove={moveTodo}
+              onBringToFront={bringToFront}
+              onDelete={deleteTodo}
+              onToggle={toggleTodo}
+              onUpdateTitle={updateTitle}
+              onSetPriority={setPriority}
+              onArchive={archiveTodo}
+              onAddSubTask={addSubTask}
+              onToggleSubTask={toggleSubTask}
+              onDeleteSubTask={deleteSubTask}
+              onRequestReminder={setReminderTarget}
+              onRequestFolder={setFolderTarget}
+              zIndexOverride={200 + todo.zIndex}
+            />
+          ))}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {visibleTodos
+          .filter((t) => !openFolderId || t.folderId !== openFolderId)
+          .map((todo) => (
+            <StickyNote
+              key={todo.id}
+              todo={todo}
+              onMove={moveTodo}
+              onBringToFront={bringToFront}
+              onDelete={deleteTodo}
+              onToggle={toggleTodo}
+              onUpdateTitle={updateTitle}
+              onSetPriority={setPriority}
+              onArchive={archiveTodo}
+              onAddSubTask={addSubTask}
+              onToggleSubTask={toggleSubTask}
+              onDeleteSubTask={deleteSubTask}
+              onRequestReminder={setReminderTarget}
+              onRequestFolder={setFolderTarget}
+            />
+          ))}
       </AnimatePresence>
 
       {/* Left-edge folder markers */}
@@ -99,6 +128,9 @@ export function StickyNoteCanvas() {
         onConfirm={handleFolderConfirm}
         onCancel={() => setFolderTarget(null)}
       />
+
+      {/* In-app reminder toast (fallback when browser notifications are denied) */}
+      <ReminderToast toast={activeToast} onDismiss={clearToast} />
     </div>
   )
 }

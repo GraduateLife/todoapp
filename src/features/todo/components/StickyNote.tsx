@@ -83,6 +83,7 @@ interface StickyNoteProps {
   onDeleteSubTask: (id: string, subtaskId: string) => void
   onRequestReminder: (id: string) => void   // opens the reminder modal
   onRequestFolder: (id: string) => void     // opens the folder picker modal
+  zIndexOverride?: number                   // elevate above folder overlay backdrop
 }
 
 export function StickyNote({
@@ -99,6 +100,7 @@ export function StickyNote({
   onDeleteSubTask,
   onRequestReminder,
   onRequestFolder,
+  zIndexOverride,
 }: StickyNoteProps) {
   const initX = todo.position?.x ?? 120
   const initY = todo.position?.y ?? 120
@@ -263,7 +265,7 @@ export function StickyNote({
           position: 'absolute',
           top: 0,
           left: 0,
-          zIndex: todo.zIndex,
+          zIndex: zIndexOverride ?? todo.zIndex,
           width: 256,
           touchAction: 'none',
           opacity: priority === 'low' ? 0.8 : 1,
