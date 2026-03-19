@@ -23,6 +23,7 @@ export function StickyNoteCanvas() {
   const addSubTask = useTodoStore((s) => s.addSubTask)
   const toggleSubTask = useTodoStore((s) => s.toggleSubTask)
   const deleteSubTask = useTodoStore((s) => s.deleteSubTask)
+  const updateSubTask = useTodoStore((s) => s.updateSubTask)
   const setReminder = useTodoStore((s) => s.setReminder)
   const setFolder = useTodoStore((s) => s.setFolder)
   const hasOpenFolder = useFolderStore((s) => s.folders.some((f) => f.isOpen))
@@ -68,6 +69,44 @@ export function StickyNoteCanvas() {
 
   return (
     <div className="fixed inset-0 overflow-hidden" aria-label="Sticky notes canvas">
+
+      {/* Drag-zone edge hints */}
+      {([
+        { label: '↑  archive', side: 'top',    style: { top: 62,   left: '50%', transform: 'translateX(-50%)' } },
+        { label: '↓  delete',  side: 'bottom', style: { bottom: 96, left: '50%', transform: 'translateX(-50%)' } },
+        { label: '↑  remind',  side: 'right',  style: { right: 12,  top: '50%',  transform: 'translateY(-50%) rotate(90deg)' } },
+        { label: '↑  folder',  side: 'left',   style: { left: 12,   top: '50%',  transform: 'translateY(-50%) rotate(-90deg)' } },
+      ] as const).map(({ label, style }) => (
+        <div
+          key={label}
+          className="absolute font-mono text-[8px] tracking-[0.22em] uppercase pointer-events-none select-none"
+          style={{ ...style, color: 'rgba(0,245,255,0.13)', whiteSpace: 'nowrap' }}
+        >
+          {label}
+        </div>
+      ))}
+
+      {/* Empty state */}
+      {visibleTodos.length === 0 && (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none"
+          style={{ paddingBottom: '80px' }}
+        >
+          <p
+            className="font-mono text-[11px] tracking-[0.22em] uppercase mb-2"
+            style={{ color: 'rgba(0, 245, 255, 0.25)' }}
+          >
+            {'> no tasks detected_'}
+          </p>
+          <p
+            className="font-mono text-[10px] tracking-[0.16em]"
+            style={{ color: 'rgba(0, 245, 255, 0.15)' }}
+          >
+            use the terminal below to initialize
+          </p>
+        </div>
+      )}
+
       {/* Folder drawer (slides in from left, includes backdrop) */}
       <FolderDrawer
         onMoveToMain={handleMoveToMain}
@@ -91,6 +130,7 @@ export function StickyNoteCanvas() {
             onAddSubTask={addSubTask}
             onToggleSubTask={toggleSubTask}
             onDeleteSubTask={deleteSubTask}
+            onUpdateSubTask={updateSubTask}
             onRequestReminder={setReminderTarget}
             onRequestFolder={setFolderTarget}
           />

@@ -2,6 +2,7 @@ import { motion, useMotionValue } from 'framer-motion'
 import { useState, useEffect, useCallback } from 'react'
 import { TodoContextMenu } from './TodoContextMenu'
 import { SubTaskList } from './note/SubTaskList'
+import { useUiStore } from '../store/uiStore'
 import type { Todo, NoteColor, Priority } from '../types'
 
 // ─── Color palettes per note color ──────────────────────────────────────────
@@ -64,8 +65,8 @@ const PRIORITY_BORDER_OPACITY: Record<Priority, number> = {
   high: 1,
 }
 
-const DELETE_ZONE_OFFSET = 120  // px from bottom of viewport
-const ARCHIVE_ZONE_OFFSET = 80  // px from top of viewport
+const DELETE_ZONE_OFFSET = 160  // px from bottom of viewport
+const ARCHIVE_ZONE_OFFSET = 48  // px from top of viewport — must clear the header
 const REMINDER_ZONE_OFFSET = 80 // px from right of viewport
 const FOLDER_ZONE_OFFSET = 80   // px from left of viewport
 
@@ -81,6 +82,7 @@ interface StickyNoteProps {
   onAddSubTask: (id: string, title: string) => void
   onToggleSubTask: (id: string, subtaskId: string) => void
   onDeleteSubTask: (id: string, subtaskId: string) => void
+  onUpdateSubTask: (id: string, subtaskId: string, title: string) => void
   onRequestReminder: (id: string) => void   // opens the reminder modal
   onRequestFolder: (id: string) => void     // opens the folder picker modal
   zIndexOverride?: number                   // elevate above folder overlay backdrop
@@ -98,6 +100,7 @@ export function StickyNote({
   onAddSubTask,
   onToggleSubTask,
   onDeleteSubTask,
+  onUpdateSubTask,
   onRequestReminder,
   onRequestFolder,
   zIndexOverride,
@@ -110,6 +113,7 @@ export function StickyNote({
 
   const x = useMotionValue(initX)
   const y = useMotionValue(initY)
+  const setDragging = useUiStore((s) => s.setDragging)
 
   const [isInDeleteZone, setIsInDeleteZone] = useState(false)
   const [isInArchiveZone, setIsInArchiveZone] = useState(false)
@@ -150,8 +154,9 @@ export function StickyNote({
 
   // ─── Drag zone states ──────────────────────────────────────────────────────
   const handleDragStart = useCallback(() => {
+    setDragging(true)
     onBringToFront(todo.id)
-  }, [todo.id, onBringToFront])
+  }, [todo.id, onBringToFront, setDragging])
 
   const handleDrag = useCallback(() => {
     if (typeof window === 'undefined') return
@@ -167,6 +172,7 @@ export function StickyNote({
   }, [x, y])
 
   const handleDragEnd = useCallback(() => {
+    setDragging(false)
     if (typeof window === 'undefined') return
     const cx = x.get() + 128
     if (y.get() > window.innerHeight - DELETE_ZONE_OFFSET) {
@@ -188,7 +194,7 @@ export function StickyNote({
       setIsInReminderZone(false)
       setIsInFolderZone(false)
     }
-  }, [todo.id, x, y, onMove, onDelete, onArchive, onRequestReminder, onRequestFolder])
+  }, [todo.id, x, y, onMove, onDelete, onArchive, onRequestReminder, onRequestFolder, setDragging])
 
   // ─── Context menu ──────────────────────────────────────────────────────────
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -268,7 +274,7 @@ export function StickyNote({
           zIndex: zIndexOverride ?? todo.zIndex,
           width: 256,
           touchAction: 'none',
-          opacity: priority === 'low' ? 0.8 : 1,
+          opacity: priority === 'low' ? 0.92 : 1,
         }}
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{
@@ -335,25 +341,33 @@ export function StickyNote({
             <div className="flex items-center gap-2">
               <span
                 style={{ color: ns.dim }}
-                className="font-mono text-[9px] tracking-[0.18em] uppercase"
+                className="font-mono text-[10px] tracking-[0.18em] uppercase"
               >
                 {todo.completed ? '// done' : '// todo'}
               </span>
-              {/* Priority badge — only show low/high, normal is silent */}
+              {/* Priority badge */}
               {priority === 'high' && (
                 <span
-                  className="font-mono text-[8px] tracking-[0.15em] uppercase"
+                  className="font-mono text-[8px] tracking-[0.15em]"
                   style={{ color: ns.border, textShadow: `0 0 6px ${ns.border}` }}
                 >
-                  [!!]
+                  high
+                </span>
+              )}
+              {priority === 'normal' && (
+                <span
+                  className="font-mono text-[8px] tracking-[0.15em] opacity-30"
+                  style={{ color: ns.dim }}
+                >
+                  normal
                 </span>
               )}
               {priority === 'low' && (
                 <span
-                  className="font-mono text-[8px] tracking-[0.15em] uppercase opacity-50"
+                  className="font-mono text-[8px] tracking-[0.15em] opacity-45"
                   style={{ color: ns.dim }}
                 >
-                  [low]
+                  low
                 </span>
               )}
             </div>
@@ -367,7 +381,7 @@ export function StickyNote({
           </div>
 
           {/* Content row: checkbox + title */}
-          <div className="flex items-start gap-3 min-h-[40px]">
+          <div className="flex items-start gap-3">
             {/* Checkbox */}
             <button
               type="button"
@@ -453,6 +467,7 @@ export function StickyNote({
             onToggle={(subtaskId) => onToggleSubTask(todo.id, subtaskId)}
             onDelete={(subtaskId) => onDeleteSubTask(todo.id, subtaskId)}
             onAdd={(title) => onAddSubTask(todo.id, title)}
+            onUpdate={(subtaskId, title) => onUpdateSubTask(todo.id, subtaskId, title)}
           />
 
           {/* Footer row */}
@@ -463,31 +478,18 @@ export function StickyNote({
             }}
             className="mt-3 pt-2 flex items-center justify-between"
           >
-            <span className="font-mono text-[8px] opacity-60">
+            <span className="font-mono text-[10px] opacity-75">
               {new Date(todo.createdAt).toLocaleDateString('en-US', {
                 month: '2-digit',
                 day: '2-digit',
                 year: '2-digit',
               })}
             </span>
-            <div className="flex items-center gap-2">
-              {todo.attachments.length > 0 && (
-                <span className="font-mono text-[8px] opacity-60">
-                  [{todo.attachments.length}]
-                </span>
-              )}
-              {/* Add subtask button */}
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => setIsAddingSubTask(true)}
-                className="font-mono text-[9px] opacity-40 hover:opacity-90 transition-opacity"
-                style={{ color: ns.border, cursor: 'pointer', lineHeight: 1 }}
-                title="Add subtask"
-              >
-                [+]
-              </button>
-            </div>
+            {todo.attachments.length > 0 && (
+              <span className="font-mono text-[8px] opacity-60" style={{ color: ns.dim }}>
+                [{todo.attachments.length}]
+              </span>
+            )}
           </div>
 
           {/* Scanline overlay */}

@@ -35,17 +35,10 @@ export default function Header() {
 
         {/* Right side */}
         <div className="ml-auto flex items-center gap-4">
-          <span
-            className="hidden md:block font-mono text-[9px] tracking-[0.14em] uppercase"
-            style={{ color: 'var(--rf-text-dim)' }}
-          >
-            ↓ delete · ↑ archive · → remind
-          </span>
           <button
             type="button"
-            className="nav-link"
+            className="rf-btn"
             onClick={() => setArchiveOpen(true)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
             archive
           </button>

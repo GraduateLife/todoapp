@@ -1,15 +1,19 @@
 import { useState, useCallback, useRef } from 'react'
 import { useTodoStore } from '../store'
+import { useUiStore } from '../store/uiStore'
 import { TodoInput } from '../components/TodoInput'
 import { ImageAttachment, fileToDataUrl } from '#/components/Attachment/ImageAttachment'
 import { VoiceAttachment, blobToDataUrl } from '#/components/Attachment/VoiceAttachment'
 import type { Attachment } from '../types'
+import type { ParsedTodo } from '../utils/parseMarkdownInput'
 
 export function TodoInputContainer() {
   const [value, setValue] = useState('')
   const valueRef = useRef('')
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([])
   const addTodo = useTodoStore((s) => s.addTodo)
+  const addTodoWithDetails = useTodoStore((s) => s.addTodoWithDetails)
+  const isDragging = useUiStore((s) => s.isDragging)
 
   const onChange = useCallback((nextValue: string) => {
     valueRef.current = nextValue
@@ -24,6 +28,18 @@ export function TodoInputContainer() {
     setValue('')
     setPendingAttachments([])
   }, [pendingAttachments, addTodo])
+
+  const handleSubmitExpanded = useCallback((parsed: ParsedTodo) => {
+    addTodoWithDetails(
+      parsed.title,
+      parsed.subtasks,
+      parsed.priority,
+      pendingAttachments.length > 0 ? pendingAttachments : undefined,
+    )
+    valueRef.current = ''
+    setValue('')
+    setPendingAttachments([])
+  }, [pendingAttachments, addTodoWithDetails])
 
   const handleImageSelect = useCallback(async (file: File) => {
     const url = await fileToDataUrl(file)
@@ -58,7 +74,9 @@ export function TodoInputContainer() {
       value={value}
       onChange={onChange}
       onSubmit={handleSubmit}
+      onSubmitExpanded={handleSubmitExpanded}
       attachments={attachments}
+      isDragging={isDragging}
     />
   )
 }

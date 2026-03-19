@@ -19,12 +19,12 @@
   --rf-green: #39ff14;
   --rf-purple: #bf5fff;
   --rf-text: #c0d8f0;
-  --rf-text-dim: #3a5a7a;
+  --rf-text-dim: #5a8aaa;
   --rf-border: rgba(0, 245, 255, 0.18);
   --rf-surface: rgba(0, 245, 255, 0.03);
   --rf-header: rgba(6, 8, 15, 0.95);
   --rf-grid: rgba(0, 200, 255, 0.04);
-  --rf-scanline: rgba(0, 0, 0, 0.18);
+  --rf-scanline: rgba(255, 255, 255, 0.018);
 
   /* Delete zone */
   --rf-danger: #ff3030;
@@ -92,7 +92,33 @@
   --rf-grid: rgba(0, 200, 255, 0.05);
   --rf-header: rgba(4, 6, 12, 0.96);
   --rf-text: #c8e0f4;
-  --rf-text-dim: #3a5a7a;
+  --rf-text-dim: #5a8aaa;
+}
+
+/* Light mode: bright canvas, dark text, muted teal accents */
+.light {
+  --rf-bg: #eef2f8;
+  --rf-bg-2: #e2e8f2;
+  --rf-cyan: #006e8a;           /* dark teal — readable on light bg */
+  --rf-border: rgba(0, 140, 180, 0.3);
+  --rf-surface: rgba(0, 140, 180, 0.05);
+  --rf-grid: rgba(0, 140, 180, 0.09);
+  --rf-header: rgba(238, 242, 248, 0.96);
+  --rf-text: #0d1b2e;
+  --rf-text-dim: #4a6a8a;
+  --rf-scanline: rgba(0, 0, 0, 0.03);
+
+  /* shadcn compat */
+  --background: #eef2f8;
+  --foreground: #0d1b2e;
+  --card: #e2e8f2;
+  --card-foreground: #0d1b2e;
+  --popover: #e2e8f2;
+  --popover-foreground: #0d1b2e;
+  --muted: rgba(0, 140, 180, 0.08);
+  --muted-foreground: #4a6a8a;
+  --border: rgba(0, 140, 180, 0.3);
+  --input: rgba(0, 140, 180, 0.1);
 }
 
 @theme inline {
@@ -163,6 +189,20 @@ body::before {
     var(--rf-bg);
 }
 
+/* Light mode: override background gradients */
+html.light body::before {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(0, 200, 240, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 85% 10%, rgba(160, 80, 255, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 50% 110%, rgba(0, 200, 240, 0.05) 0%, transparent 55%),
+    var(--rf-bg);
+}
+
+html.light body::after {
+  background-image: radial-gradient(circle, rgba(0, 180, 220, 0.2) 1px, transparent 1px);
+  opacity: 0.5;
+}
+
 /* Dot grid */
 body::after {
   content: '';
@@ -187,10 +227,35 @@ body::after {
     0deg,
     transparent,
     transparent 3px,
-    rgba(0, 0, 0, 0.06) 3px,
-    rgba(0, 0, 0, 0.06) 4px
+    var(--rf-scanline) 3px,
+    var(--rf-scanline) 4px
   );
   animation: scanline-drift 12s linear infinite;
+}
+
+/* Light mode: suppress neon glow on elements that hardcode cyan rgba */
+html.light .rf-logo {
+  text-shadow: 0 0 8px rgba(0, 110, 138, 0.35);
+}
+html.light .rf-logo-dot {
+  background: var(--rf-cyan);
+  box-shadow: 0 0 6px var(--rf-cyan), 0 0 12px rgba(0, 110, 138, 0.25);
+}
+html.light .rf-input-prompt {
+  text-shadow: none;
+}
+html.light .rf-header {
+  box-shadow: 0 0 16px rgba(0, 110, 138, 0.06);
+}
+html.light .rf-input-bar {
+  box-shadow: 0 0 20px rgba(0, 110, 138, 0.06), 0 -1px 0 rgba(0, 110, 138, 0.08);
+}
+html.light .nav-link:hover,
+html.light .nav-link.is-active {
+  text-shadow: none;
+}
+html.light .island-kicker {
+  text-shadow: none;
 }
 
 @keyframes scanline-drift {
@@ -362,6 +427,22 @@ pre code {
 
 .rf-input-field::placeholder {
   color: var(--rf-text-dim);
+}
+
+/* ─── Buffer-mode overlay: wavy underline rows ── */
+/* SVG wavy path drawn at bottom of each line row  */
+.rf-row-wavy-danger {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='4'%3E%3Cpath d='M0 3 Q2.5 0.5 5 3 Q7.5 5.5 10 3' stroke='%23ff3030' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: bottom 1px center;
+  background-size: 10px 4px;
+}
+
+.rf-row-wavy-warn {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='4'%3E%3Cpath d='M0 3 Q2.5 0.5 5 3 Q7.5 5.5 10 3' stroke='%23ffb800' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: bottom 1px center;
+  background-size: 10px 4px;
 }
 
 /* ─── Retro button ───────────────────────────── */

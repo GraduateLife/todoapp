@@ -62,17 +62,20 @@ export function TodoContextMenu({
 
   if (!open || typeof document === 'undefined') return null
 
-  // Clamp menu position so it doesn't overflow viewport
-  const menuWidth = 160
-  const menuHeight = 200
+  // Position menu: flip upward if not enough space below
+  const menuWidth = 170
+  const estimatedHeight = menuRef.current?.offsetHeight ?? 315
+  const spaceBelow = window.innerHeight - position.y - 8
+  const top = spaceBelow >= estimatedHeight
+    ? position.y
+    : Math.max(8, position.y - estimatedHeight)
   const left = Math.min(position.x, window.innerWidth - menuWidth - 8)
-  const top = Math.min(position.y, window.innerHeight - menuHeight - 8)
 
   const menu = (
     <div
       ref={menuRef}
       className="rf-context-menu fixed"
-      style={{ left, top }}
+      style={{ left, top, maxHeight: 'calc(100vh - 16px)', overflowY: 'auto' }}
       role="menu"
       aria-label="Note actions"
     >

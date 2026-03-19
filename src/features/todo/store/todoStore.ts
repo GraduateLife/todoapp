@@ -9,6 +9,12 @@ const STORAGE_KEY = 'todoai-storage'
 interface TodoState {
   todos: Todo[]
   addTodo: (title: string, attachments?: Attachment[]) => void
+  addTodoWithDetails: (
+    title: string,
+    subtasks: { title: string; completed: boolean }[],
+    priority: Priority,
+    attachments?: Attachment[],
+  ) => void
   deleteTodo: (id: string) => void
   toggleTodo: (id: string) => void
   updateTitle: (id: string, title: string) => void
@@ -22,6 +28,7 @@ interface TodoState {
   addSubTask: (todoId: string, title: string) => void
   toggleSubTask: (todoId: string, subtaskId: string) => void
   deleteSubTask: (todoId: string, subtaskId: string) => void
+  updateSubTask: (todoId: string, subtaskId: string, title: string) => void
   // Folder
   setFolder: (id: string, folderId: string | null) => void
   // Reminder
@@ -80,14 +87,44 @@ export const useTodoStore = create<TodoState>()(
           return { todos: [...state.todos, { ...next, zIndex: maxZ + 1 }] }
         }),
 
+      addTodoWithDetails: (title, subtasks, priority, attachments = []) =>
+        set((state) => {
+          const maxZ = state.todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
+          const next = createTodo(title, attachments)
+          return {
+            todos: [
+              ...state.todos,
+              {
+                ...next,
+                zIndex: maxZ + 1,
+                priority,
+                subtasks: subtasks.map((s) => ({
+                  id: crypto.randomUUID(),
+                  title: s.title,
+                  completed: s.completed,
+                })),
+              },
+            ],
+          }
+        }),
+
       deleteTodo: (id) =>
         set((state) => ({ todos: state.todos.filter((t) => t.id !== id) })),
 
       toggleTodo: (id) =>
         set((state) => ({
-          todos: state.todos.map((t) =>
-            t.id === id ? { ...t, completed: !t.completed } : t
-          ),
+          todos: state.todos.map((t) => {
+            if (t.id !== id) return t
+            const completing = !t.completed
+            return {
+              ...t,
+              completed: completing,
+              // Unchecking a todo resets all subtasks to incomplete
+              subtasks: completing
+                ? t.subtasks
+                : t.subtasks.map((s) => ({ ...s, completed: false })),
+            }
+          }),
         })),
 
       updateTitle: (id, title) =>
@@ -141,6 +178,8 @@ export const useTodoStore = create<TodoState>()(
             t.id === todoId
               ? {
                   ...t,
+                  // Adding a subtask always reverts the todo to incomplete
+                  completed: false,
                   subtasks: [
                     ...t.subtasks,
                     { id: crypto.randomUUID(), title, completed: false },
@@ -152,23 +191,38 @@ export const useTodoStore = create<TodoState>()(
 
       toggleSubTask: (todoId, subtaskId) =>
         set((state) => ({
+          todos: state.todos.map((t) => {
+            if (t.id !== todoId) return t
+            const updatedSubtasks = t.subtasks.map((s) =>
+              s.id === subtaskId ? { ...s, completed: !s.completed } : s
+            )
+            const allDone =
+              updatedSubtasks.length > 0 && updatedSubtasks.every((s) => s.completed)
+            return { ...t, subtasks: updatedSubtasks, completed: allDone }
+          }),
+        })),
+
+      deleteSubTask: (todoId, subtaskId) =>
+        set((state) => ({
+          todos: state.todos.map((t) => {
+            if (t.id !== todoId) return t
+            const updatedSubtasks = t.subtasks.filter((s) => s.id !== subtaskId)
+            const allDone =
+              updatedSubtasks.length > 0 && updatedSubtasks.every((s) => s.completed)
+            return { ...t, subtasks: updatedSubtasks, completed: allDone }
+          }),
+        })),
+
+      updateSubTask: (todoId, subtaskId, title) =>
+        set((state) => ({
           todos: state.todos.map((t) =>
             t.id === todoId
               ? {
                   ...t,
                   subtasks: t.subtasks.map((s) =>
-                    s.id === subtaskId ? { ...s, completed: !s.completed } : s
+                    s.id === subtaskId ? { ...s, title } : s
                   ),
                 }
-              : t
-          ),
-        })),
-
-      deleteSubTask: (todoId, subtaskId) =>
-        set((state) => ({
-          todos: state.todos.map((t) =>
-            t.id === todoId
-              ? { ...t, subtasks: t.subtasks.filter((s) => s.id !== subtaskId) }
               : t
           ),
         })),
