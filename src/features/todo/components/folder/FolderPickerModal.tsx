@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
 import { useState, useEffect } from 'react'
 import { useFolderStore } from '../../store'
+import { ARCHIVE_FOLDER_ID } from '../../store/folderStore'
 import type { Folder } from '../../types'
 
 const COLOR_VAR: Record<string, string> = {
@@ -18,7 +19,7 @@ interface FolderPickerModalProps {
 }
 
 export function FolderPickerModal({ open, onConfirm, onCancel }: FolderPickerModalProps) {
-  const folders = useFolderStore((s) => s.folders)
+  const folders = useFolderStore((s) => s.folders.filter((f) => !f.isArchive))
   const createFolder = useFolderStore((s) => s.createFolder)
   const [isCreating, setIsCreating] = useState(false)
   const [newName, setNewName] = useState('')

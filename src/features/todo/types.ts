@@ -47,4 +47,5 @@ export interface Folder {
   isOpen: boolean
   markerY: number          // Y position of left-side marker on screen
   orderedTodoIds: string[] // ordered list of todo IDs in this folder
+  isArchive?: boolean      // true for the built-in archive pseudo-folder
 }

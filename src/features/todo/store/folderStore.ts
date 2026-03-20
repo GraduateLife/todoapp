@@ -5,6 +5,19 @@ import { NOTE_COLORS } from '../types'
 
 const STORAGE_KEY = 'todoai-folders'
 
+export const ARCHIVE_FOLDER_ID = '__archive__'
+
+const ARCHIVE_FOLDER: import('../types').Folder = {
+  id: ARCHIVE_FOLDER_ID,
+  name: 'archive',
+  color: 'cyan',       // color unused for archive (rendered gray)
+  createdAt: 0,
+  isOpen: false,
+  markerY: 0,
+  orderedTodoIds: [],
+  isArchive: true,
+}
+
 interface FolderState {
   folders: Folder[]
   createFolder: (name: string) => Folder
@@ -27,7 +40,7 @@ function randomFolderColor(): NoteColor {
 export const useFolderStore = create<FolderState>()(
   persist(
     (set, get) => ({
-      folders: [],
+      folders: [ARCHIVE_FOLDER],
 
       createFolder: (name) => {
         const folder: Folder = {
@@ -111,7 +124,7 @@ export const useFolderStore = create<FolderState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 2,
+      version: 3,
       migrate: (persistedState: any, version: number) => {
         let state = persistedState
         if (version < 2) {
@@ -120,6 +133,13 @@ export const useFolderStore = create<FolderState>()(
               ...f,
               orderedTodoIds: f.orderedTodoIds ?? [],
             })),
+          }
+        }
+        if (version < 3) {
+          // Inject archive pseudo-folder if not already present
+          const folders: any[] = state?.folders ?? []
+          if (!folders.some((f: any) => f.id === ARCHIVE_FOLDER_ID)) {
+            state = { folders: [ARCHIVE_FOLDER, ...folders] }
           }
         }
         return state

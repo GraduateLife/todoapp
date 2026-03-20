@@ -7,7 +7,7 @@ import { StickyNote } from '../components/StickyNote'
 import { ReminderModal } from '../components/reminder/ReminderModal'
 import { ReminderMarkers } from '../components/reminder/ReminderMarkers'
 import { ReminderToast } from '../components/reminder/ReminderToast'
-import { FolderPickerModal } from '../components/folder/FolderPickerModal'
+// import { FolderPickerModal } from '../components/folder/FolderPickerModal'
 import { FolderMarkers } from '../components/folder/FolderMarkers'
 import { FolderDrawer } from '../components/folder/FolderDrawer'
 import { useReminderScheduler } from '../hooks/useReminderScheduler'
@@ -46,7 +46,7 @@ export function StickyNoteCanvas() {
   // Reminder modal state
   const [reminderTarget, setReminderTarget] = useState<string | null>(null)
   const reminderTodo = reminderTarget
-    ? todos.find((t) => t.id === reminderTarget) ?? null
+    ? (todos.find((t) => t.id === reminderTarget) ?? null)
     : null
 
   const handleReminderConfirm = (remindAt: number, interval?: number) => {
@@ -83,7 +83,7 @@ export function StickyNoteCanvas() {
 
   // Main canvas: non-archived, not in any folder, not stacked inside another
   const visibleTodos = todos.filter(
-    (t) => !t.archived && !t.folderId && !stackedSet.has(t.id)
+    (t) => !t.archived && !t.folderId && !stackedSet.has(t.id),
   )
 
   const handleDropOnNote = (draggedId: string, targetId: string) => {
@@ -113,28 +113,56 @@ export function StickyNoteCanvas() {
 
   // Precompute fan data so AnimatePresence can keep the last render during exit animation
   const fanRootTodo = expandedStackId
-    ? visibleTodos.find((t) => t.id === expandedStackId) ?? null
+    ? (visibleTodos.find((t) => t.id === expandedStackId) ?? null)
     : null
   const fanStackedNotes: typeof todos = fanRootTodo
-    ? (fanRootTodo.stackedIds ?? [])
+    ? ((fanRootTodo.stackedIds ?? [])
         .map((id) => todos.find((t) => t.id === id))
-        .filter(Boolean) as typeof todos
+        .filter(Boolean) as typeof todos)
     : []
 
   return (
-    <div className="fixed inset-0 overflow-hidden" aria-label="Sticky notes canvas">
-
+    <div
+      className="fixed inset-0 overflow-hidden"
+      aria-label="Sticky notes canvas"
+    >
       {/* Drag-zone edge hints */}
-      {([
-        { label: '↑  archive', style: { top: 62,   left: '50%', transform: 'translateX(-50%)' } },
-        { label: '↓  delete',  style: { bottom: 96, left: '50%', transform: 'translateX(-50%)' } },
-        { label: '↑  remind',  style: { right: 12,  top: '50%',  transform: 'translateY(-50%) rotate(90deg)' } },
-        { label: '↑  folder',  style: { left: 12,   top: '50%',  transform: 'translateY(-50%) rotate(-90deg)' } },
-      ] as const).map(({ label, style }) => (
+      {(
+        [
+          {
+            label: '↑  archive',
+            style: { top: 62, left: '50%', transform: 'translateX(-50%)' },
+          },
+          {
+            label: '↓  delete',
+            style: { bottom: 96, left: '50%', transform: 'translateX(-50%)' },
+          },
+          {
+            label: '↑  remind',
+            style: {
+              right: 12,
+              top: '50%',
+              transform: 'translateY(-50%) rotate(90deg)',
+            },
+          },
+          {
+            label: '↑  folder',
+            style: {
+              left: 12,
+              top: '50%',
+              transform: 'translateY(-50%) rotate(-90deg)',
+            },
+          },
+        ] as const
+      ).map(({ label, style }) => (
         <div
           key={label}
           className="absolute font-mono text-[8px] tracking-[0.22em] uppercase pointer-events-none select-none"
-          style={{ ...style, color: 'rgba(0,245,255,0.13)', whiteSpace: 'nowrap' }}
+          style={{
+            ...style,
+            color: 'rgba(0,245,255,0.13)',
+            whiteSpace: 'nowrap',
+          }}
         >
           {label}
         </div>
@@ -207,7 +235,9 @@ export function StickyNoteCanvas() {
               isExpanded={isExpanded}
               onStackTargetChange={setStackTargetId}
               onDropOnNote={(targetId) => handleDropOnNote(todo.id, targetId)}
-              onToggleExpand={() => setExpandedStack(isExpanded ? null : todo.id)}
+              onToggleExpand={() =>
+                setExpandedStack(isExpanded ? null : todo.id)
+              }
               onDisbandStack={() => handleDisbandStack(todo.id)}
             />
           )
@@ -222,9 +252,18 @@ export function StickyNoteCanvas() {
             key={expandedStackId}
             initial={{ opacity: 0, scale: 0.93 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.93, transition: { duration: 0.14, ease: 'easeIn' } }}
+            exit={{
+              opacity: 0,
+              scale: 0.93,
+              transition: { duration: 0.14, ease: 'easeIn' },
+            }}
             transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 900, pointerEvents: 'none' }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 900,
+              pointerEvents: 'none',
+            }}
           >
             {/* Invisible backdrop — click outside to close */}
             <div
@@ -257,11 +296,11 @@ export function StickyNoteCanvas() {
       />
 
       {/* Folder picker modal */}
-      <FolderPickerModal
+      {/* <FolderPickerModal
         open={!!folderTarget}
         onConfirm={handleFolderConfirm}
         onCancel={() => setFolderTarget(null)}
-      />
+      /> */}
 
       {/* In-app reminder toast (fallback when browser notifications are denied) */}
       <ReminderToast toast={activeToast} onDismiss={clearToast} />
