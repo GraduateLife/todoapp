@@ -18,6 +18,7 @@ interface TodoContextMenuProps {
   onAddSubTask: () => void
   onSetReminder: () => void
   onMoveToFolder: () => void
+  onDisbandStack?: () => void
   currentPriority: Priority
   noteColor: string
 }
@@ -32,6 +33,7 @@ export function TodoContextMenu({
   onAddSubTask,
   onSetReminder,
   onMoveToFolder,
+  onDisbandStack,
   currentPriority,
   noteColor,
 }: TodoContextMenuProps) {
@@ -142,6 +144,20 @@ export function TodoContextMenu({
       >
         [ archive ]
       </button>
+
+      {onDisbandStack && (
+        <>
+          <div className="rf-context-separator" />
+          <button
+            type="button"
+            className="rf-context-item"
+            role="menuitem"
+            onClick={() => handleAction(onDisbandStack)}
+          >
+            [ disband stack ]
+          </button>
+        </>
+      )}
 
       <div className="rf-context-separator" />
 

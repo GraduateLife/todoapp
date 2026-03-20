@@ -8,9 +8,16 @@ export default function Header() {
 
   return (
     <header className="rf-header relative" style={{ zIndex: 50 }}>
-      <nav className="page-wrap flex items-center gap-6 py-3" style={{ minHeight: 52 }}>
+      <nav
+        className="page-wrap flex items-center gap-6 py-3"
+        style={{ minHeight: 52 }}
+      >
         {/* Logo */}
-        <Link to="/" style={{ textDecoration: 'none' }} className="rf-logo flex items-center">
+        <Link
+          to="/"
+          style={{ textDecoration: 'none' }}
+          className="rf-logo flex items-center"
+        >
           <span className="rf-logo-dot" />
           NEURAL-TODO
         </Link>
@@ -42,7 +49,6 @@ export default function Header() {
           >
             archive
           </button>
-          <ThemeToggle />
         </div>
       </nav>
 
@@ -56,6 +62,7 @@ export default function Header() {
       />
 
       <ArchivePanel open={archiveOpen} onClose={() => setArchiveOpen(false)} />
+      <ThemeToggle />
     </header>
   )
 }

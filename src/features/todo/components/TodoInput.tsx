@@ -33,6 +33,9 @@ const TA_PAD_TOP = '0.35rem' // matches paddingTop on textarea
 const LABEL_W    = '4rem'    // right gutter width for labels
 const MAX_HEIGHT = 220       // ~10 lines before scrollbar appears
 
+// Title character limit: ~25 chars/line on main card × 4 lines  (fan card clamps to 3 lines visually)
+export const TITLE_MAX_LEN = 100
+
 const HINT_TEXT =
   'title · - subtask · - [] subtask · - [x] done · [!+] high · [!-] low · [!] normal'
 
@@ -177,7 +180,7 @@ export function TodoInput({
 
         <span
           className="font-mono px-4 flex items-center gap-2"
-          style={{ color: 'var(--rf-text-dim)', opacity: 0.55, fontSize: 7, letterSpacing: '0.18em' }}
+          style={{ color: 'var(--rf-text-dim)', opacity: 0.8, fontSize: 9, letterSpacing: '0.18em' }}
         >
           {isExpanded ? (
             <>
@@ -187,7 +190,7 @@ export function TodoInput({
             </>
           ) : (
             <>
-              <span style={{ opacity: 0.7 }}>ENTRY MODE</span>
+              <span style={{ color: 'var(--rf-cyan)', opacity: 0.85 }}>ENTRY MODE</span>
               <span style={{ opacity: 0.35 }}>·</span>
               <span>↑ drag to buffer mode</span>
             </>
@@ -204,10 +207,11 @@ export function TodoInput({
           <input
             type="text"
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => onChange(e.target.value.slice(0, TITLE_MAX_LEN))}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className="rf-input-field"
+            maxLength={TITLE_MAX_LEN}
             aria-label="New todo"
             autoComplete="off"
             spellCheck={false}
@@ -217,14 +221,21 @@ export function TodoInput({
           )}
           {value.trim() ? (
             <div className="flex items-center gap-2 flex-shrink-0">
+              <span
+                className="font-mono text-[9px] select-none flex-shrink-0"
+                style={{ color: 'var(--rf-text-dim)', opacity: 0.4 }}
+              >
+                {value.length}/{TITLE_MAX_LEN}
+              </span>
               <button type="button" onClick={handleExec} className="rf-btn flex-shrink-0">
                 [ exec ]
               </button>
               <span
-                className="font-mono text-[10px] select-none"
-                style={{ color: 'var(--rf-text-dim)', opacity: 0.55 }}
+                className="font-mono text-[10px] select-none flex flex-col items-center justify-center flex-shrink-0"
+                style={{ color: 'var(--rf-text-dim)', opacity: 0.75, lineHeight: 1.35 }}
               >
-                enter
+                <span>press</span>
+                <span>enter</span>
               </span>
             </div>
           ) : (
@@ -343,7 +354,12 @@ export function TodoInput({
               <textarea
                 ref={textareaRef}
                 value={value}
-                onChange={(e) => onChange(e.target.value)}
+                onChange={(e) => {
+                  // Limit only the first line (title) to TITLE_MAX_LEN
+                  const lines = e.target.value.split('\n')
+                  lines[0] = lines[0].slice(0, TITLE_MAX_LEN)
+                  onChange(lines.join('\n'))
+                }}
                 onKeyDown={handleKeyDown}
                 onScroll={handleScroll}
                 placeholder={`Buy something\n- [] apple\n- [x] milk\n[!+]`}
@@ -390,10 +406,11 @@ export function TodoInput({
                   [ exec ]
                 </button>
                 <span
-                  className="font-mono text-[10px] select-none"
-                  style={{ color: 'var(--rf-text-dim)', opacity: 0.55 }}
+                  className="font-mono text-[10px] select-none flex flex-col items-center justify-center flex-shrink-0"
+                  style={{ color: 'var(--rf-text-dim)', opacity: 0.75, lineHeight: 1.35 }}
                 >
-                  ctrl+enter
+                  <span>press</span>
+                  <span>ctrl+enter</span>
                 </span>
               </div>
             </div>

@@ -14,7 +14,21 @@
       "Bash(curl -s -o /dev/null -w \" | %{http_code}\" http://localhost:3001/)",
       "Bash(where npm:*)",
       "Bash(lsof -ti:3000,3001,3002,3003,3004)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(wc -l /c/_webCode/3-18/todoapp/src/features/todo/**/*.tsx /c/_webCode/3-18/todoapp/src/features/todo/**/*.ts)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":300\")",
+      "Bash(findstr LISTENING)",
+      "Bash(cmd /c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -ano ^| findstr \"\":300[0-7]\"\" ^| findstr LISTENING''\\) do taskkill /PID %a /F\")",
+      "Bash(powershell -Command \"13472,25972,7840,40580,38976,14876,47268 | ForEach-Object { Stop-Process -Id $_-Force -ErrorAction SilentlyContinue }\")",
+      "Bash(taskkill /PID 13472 /F)",
+      "Bash(taskkill /PID 25972 /F)",
+      "Bash(taskkill /PID 7840 /F)",
+      "Bash(taskkill /PID 40580 /F)",
+      "Bash(taskkill /PID 38976 /F)",
+      "Bash(taskkill /PID 14876 /F)",
+      "Bash(taskkill /PID 47268 /F)",
+      "Bash(cmd /c \"taskkill /PID 13472 /F & taskkill /PID 25972 /F & taskkill /PID 7840 /F & taskkill /PID 40580 /F & taskkill /PID 38976 /F & taskkill /PID 14876 /F & taskkill /PID 47268 /F\")"
     ]
   }
 }

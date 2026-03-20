@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware'
 import type { Todo, Attachment, NoteColor, Priority, Reminder } from '../types'
 import { NOTE_COLORS } from '../types'
 
+const TITLE_MAX_LEN = 100 // sync with TodoInput.TITLE_MAX_LEN
+
 // Keep original key so existing user data is preserved via migration
 const STORAGE_KEY = 'todoai-storage'
 
@@ -36,6 +38,11 @@ interface TodoState {
   // Archive
   archiveTodo: (id: string) => void
   unarchiveTodo: (id: string) => void
+  // Stack
+  stackOnto: (rootId: string, childId: string) => void
+  unstackTodo: (rootId: string, childId: string) => void
+  disbandStack: (rootId: string) => void
+  reorderStack: (rootId: string, fromIdx: number, toIdx: number) => void
 }
 
 function randomPosition(): { x: number; y: number } {
@@ -59,7 +66,7 @@ function randomRotation(): number {
 function createTodo(title: string, attachments: Attachment[] = []): Todo {
   return {
     id: crypto.randomUUID(),
-    title,
+    title: title.slice(0, TITLE_MAX_LEN),
     completed: false,
     createdAt: Date.now(),
     attachments,
@@ -72,6 +79,7 @@ function createTodo(title: string, attachments: Attachment[] = []): Todo {
     folderId: null,
     reminder: null,
     archived: false,
+    stackedIds: [],
   }
 }
 
@@ -250,10 +258,84 @@ export const useTodoStore = create<TodoState>()(
             t.id === id ? { ...t, archived: false } : t
           ),
         })),
+
+      // ── Stack actions ────────────────────────────────────────────────────
+      stackOnto: (rootId, childId) =>
+        set((state) => {
+          const root = state.todos.find((t) => t.id === rootId)
+          const child = state.todos.find((t) => t.id === childId)
+          if (!root || !child) return state
+          // Absorb child's own stacked notes into root's stack
+          const childOwnStack = child.stackedIds ?? []
+          const allChildIds = [childId, ...childOwnStack]
+          // Enforce max 5 stacked (6 total including root)
+          const currentCount = root.stackedIds?.length ?? 0
+          if (currentCount + allChildIds.length > 5) return state
+          return {
+            todos: state.todos.map((t) => {
+              if (t.id === rootId)
+                return { ...t, stackedIds: [...(t.stackedIds ?? []), ...allChildIds] }
+              if (t.id === childId)
+                return { ...t, stackedIds: [] } // no longer a root
+              return t
+            }),
+          }
+        }),
+
+      unstackTodo: (rootId, childId) =>
+        set((state) => {
+          const root = state.todos.find((t) => t.id === rootId)
+          if (!root) return state
+          // Scatter child near root position
+          const newPos = { x: root.position.x + 50, y: root.position.y - 20 }
+          return {
+            todos: state.todos.map((t) => {
+              if (t.id === rootId)
+                return { ...t, stackedIds: (t.stackedIds ?? []).filter((id) => id !== childId) }
+              if (t.id === childId)
+                return { ...t, position: newPos }
+              return t
+            }),
+          }
+        }),
+
+      reorderStack: (rootId, fromIdx, toIdx) =>
+        set((state) => {
+          const root = state.todos.find((t) => t.id === rootId)
+          if (!root) return state
+          const ids = [...(root.stackedIds ?? [])]
+          if (fromIdx < 0 || fromIdx >= ids.length || toIdx < 0 || toIdx >= ids.length) return state
+          const [moved] = ids.splice(fromIdx, 1)
+          ids.splice(toIdx, 0, moved)
+          return { todos: state.todos.map((t) => t.id === rootId ? { ...t, stackedIds: ids } : t) }
+        }),
+
+      disbandStack: (rootId) =>
+        set((state) => {
+          const root = state.todos.find((t) => t.id === rootId)
+          if (!root) return state
+          const stackedIds = root.stackedIds ?? []
+          return {
+            todos: state.todos.map((t) => {
+              if (t.id === rootId) return { ...t, stackedIds: [] }
+              const idx = stackedIds.indexOf(t.id)
+              if (idx !== -1) {
+                return {
+                  ...t,
+                  position: {
+                    x: root.position.x + (idx + 1) * 30,
+                    y: root.position.y + (idx + 1) * 30,
+                  },
+                }
+              }
+              return t
+            }),
+          }
+        }),
     }),
     {
       name: STORAGE_KEY,
-      version: 3,
+      version: 4,
       migrate: (persistedState: any, version: number) => {
         let state = persistedState
         if (version < 2) {
@@ -280,6 +362,14 @@ export const useTodoStore = create<TodoState>()(
               folderId: t.folderId ?? null,
               reminder: t.reminder ?? null,
               archived: t.archived ?? false,
+            })),
+          }
+        }
+        if (version < 4) {
+          state = {
+            todos: (state?.todos ?? []).map((t: any) => ({
+              ...t,
+              stackedIds: t.stackedIds ?? [],
             })),
           }
         }

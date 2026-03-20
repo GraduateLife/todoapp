@@ -13,7 +13,7 @@ export function TodoInputContainer() {
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([])
   const addTodo = useTodoStore((s) => s.addTodo)
   const addTodoWithDetails = useTodoStore((s) => s.addTodoWithDetails)
-  const isDragging = useUiStore((s) => s.isDragging)
+  const isDragging = useUiStore((s) => s.isDragging || !!s.expandedStackId)
 
   const onChange = useCallback((nextValue: string) => {
     valueRef.current = nextValue

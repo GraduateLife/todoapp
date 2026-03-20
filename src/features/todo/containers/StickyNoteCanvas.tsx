@@ -1,7 +1,8 @@
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useState } from 'react'
 import { useTodoStore } from '../store'
 import { useFolderStore } from '../store'
+import { useUiStore } from '../store/uiStore'
 import { StickyNote } from '../components/StickyNote'
 import { ReminderModal } from '../components/reminder/ReminderModal'
 import { ReminderMarkers } from '../components/reminder/ReminderMarkers'
@@ -10,6 +11,7 @@ import { FolderPickerModal } from '../components/folder/FolderPickerModal'
 import { FolderMarkers } from '../components/folder/FolderMarkers'
 import { FolderDrawer } from '../components/folder/FolderDrawer'
 import { useReminderScheduler } from '../hooks/useReminderScheduler'
+import { StackFan } from '../components/stack/StackFan'
 
 export function StickyNoteCanvas() {
   const todos = useTodoStore((s) => s.todos)
@@ -26,9 +28,17 @@ export function StickyNoteCanvas() {
   const updateSubTask = useTodoStore((s) => s.updateSubTask)
   const setReminder = useTodoStore((s) => s.setReminder)
   const setFolder = useTodoStore((s) => s.setFolder)
+  const stackOnto = useTodoStore((s) => s.stackOnto)
+  const unstackTodo = useTodoStore((s) => s.unstackTodo)
+  const disbandStack = useTodoStore((s) => s.disbandStack)
+  const reorderStack = useTodoStore((s) => s.reorderStack)
+
   const hasOpenFolder = useFolderStore((s) => s.folders.some((f) => f.isOpen))
   const appendToFolder = useFolderStore((s) => s.appendToFolder)
   const removeFromFolder = useFolderStore((s) => s.removeFromFolder)
+
+  const expandedStackId = useUiStore((s) => s.expandedStackId)
+  const setExpandedStack = useUiStore((s) => s.setExpandedStack)
 
   // Boot reminder scheduler (idempotent)
   const { activeToast, clearToast } = useReminderScheduler()
@@ -64,18 +74,62 @@ export function StickyNoteCanvas() {
     setFolder(todoId, null)
   }
 
-  // Main canvas: non-archived, not in any folder
-  const visibleTodos = todos.filter((t) => !t.archived && !t.folderId)
+  // ── Stack tracking ─────────────────────────────────────────────────────────
+  // Which note ID is currently being hovered as a stack target during drag
+  const [stackTargetId, setStackTargetId] = useState<string | null>(null)
+
+  // Build a set of all IDs that are "inside" a stack (not the root)
+  const stackedSet = new Set(todos.flatMap((t) => t.stackedIds ?? []))
+
+  // Main canvas: non-archived, not in any folder, not stacked inside another
+  const visibleTodos = todos.filter(
+    (t) => !t.archived && !t.folderId && !stackedSet.has(t.id)
+  )
+
+  const handleDropOnNote = (draggedId: string, targetId: string) => {
+    // Prevent stacking a note onto itself or onto one of its own stacked children
+    const dragged = todos.find((t) => t.id === draggedId)
+    if (!dragged) return
+    if (draggedId === targetId) return
+    if ((dragged.stackedIds ?? []).includes(targetId)) return
+    stackOnto(targetId, draggedId)
+    // If the dragged note was the expanded stack, close expansion
+    if (expandedStackId === draggedId) setExpandedStack(null)
+  }
+
+  const handleUnstack = (rootId: string, childId: string) => {
+    unstackTodo(rootId, childId)
+    // Auto-collapse if stack is now empty
+    const root = todos.find((t) => t.id === rootId)
+    if (root && (root.stackedIds ?? []).length <= 1) {
+      setExpandedStack(null)
+    }
+  }
+
+  const handleDisbandStack = (rootId: string) => {
+    disbandStack(rootId)
+    setExpandedStack(null)
+  }
+
+  // Precompute fan data so AnimatePresence can keep the last render during exit animation
+  const fanRootTodo = expandedStackId
+    ? visibleTodos.find((t) => t.id === expandedStackId) ?? null
+    : null
+  const fanStackedNotes: typeof todos = fanRootTodo
+    ? (fanRootTodo.stackedIds ?? [])
+        .map((id) => todos.find((t) => t.id === id))
+        .filter(Boolean) as typeof todos
+    : []
 
   return (
     <div className="fixed inset-0 overflow-hidden" aria-label="Sticky notes canvas">
 
       {/* Drag-zone edge hints */}
       {([
-        { label: '↑  archive', side: 'top',    style: { top: 62,   left: '50%', transform: 'translateX(-50%)' } },
-        { label: '↓  delete',  side: 'bottom', style: { bottom: 96, left: '50%', transform: 'translateX(-50%)' } },
-        { label: '↑  remind',  side: 'right',  style: { right: 12,  top: '50%',  transform: 'translateY(-50%) rotate(90deg)' } },
-        { label: '↑  folder',  side: 'left',   style: { left: 12,   top: '50%',  transform: 'translateY(-50%) rotate(-90deg)' } },
+        { label: '↑  archive', style: { top: 62,   left: '50%', transform: 'translateX(-50%)' } },
+        { label: '↓  delete',  style: { bottom: 96, left: '50%', transform: 'translateX(-50%)' } },
+        { label: '↑  remind',  style: { right: 12,  top: '50%',  transform: 'translateY(-50%) rotate(90deg)' } },
+        { label: '↑  folder',  style: { left: 12,   top: '50%',  transform: 'translateY(-50%) rotate(-90deg)' } },
       ] as const).map(({ label, style }) => (
         <div
           key={label}
@@ -116,25 +170,76 @@ export function StickyNoteCanvas() {
 
       {/* Main sticky note cards */}
       <AnimatePresence>
-        {visibleTodos.map((todo) => (
-          <StickyNote
-            key={todo.id}
-            todo={todo}
-            onMove={moveTodo}
-            onBringToFront={bringToFront}
-            onDelete={deleteTodo}
-            onToggle={toggleTodo}
-            onUpdateTitle={updateTitle}
-            onSetPriority={setPriority}
-            onArchive={archiveTodo}
-            onAddSubTask={addSubTask}
-            onToggleSubTask={toggleSubTask}
-            onDeleteSubTask={deleteSubTask}
-            onUpdateSubTask={updateSubTask}
-            onRequestReminder={setReminderTarget}
-            onRequestFolder={setFolderTarget}
-          />
-        ))}
+        {visibleTodos.map((todo) => {
+          // Resolve stacked note objects
+          const stackedNotes = (todo.stackedIds ?? [])
+            .map((id) => todos.find((t) => t.id === id))
+            .filter(Boolean) as typeof todos
+
+          // Other notes for stack-target detection (all visible notes except this one)
+          const otherNotes = visibleTodos
+            .filter((t) => t.id !== todo.id)
+            .map((t) => ({ id: t.id, position: t.position }))
+
+          const isExpanded = expandedStackId === todo.id
+
+          return (
+            <StickyNote
+              key={todo.id}
+              todo={todo}
+              onMove={moveTodo}
+              onBringToFront={bringToFront}
+              onDelete={deleteTodo}
+              onToggle={toggleTodo}
+              onUpdateTitle={updateTitle}
+              onSetPriority={setPriority}
+              onArchive={archiveTodo}
+              onAddSubTask={addSubTask}
+              onToggleSubTask={toggleSubTask}
+              onDeleteSubTask={deleteSubTask}
+              onUpdateSubTask={updateSubTask}
+              onRequestReminder={setReminderTarget}
+              onRequestFolder={setFolderTarget}
+              // Stack props
+              otherNotes={otherNotes}
+              isStackTarget={stackTargetId === todo.id}
+              stackedNotes={stackedNotes}
+              isExpanded={isExpanded}
+              onStackTargetChange={setStackTargetId}
+              onDropOnNote={(targetId) => handleDropOnNote(todo.id, targetId)}
+              onToggleExpand={() => setExpandedStack(isExpanded ? null : todo.id)}
+              onDisbandStack={() => handleDisbandStack(todo.id)}
+            />
+          )
+        })}
+      </AnimatePresence>
+
+      {/* Stack fan — expanded stacked notes rendered at canvas level */}
+      {/* Stack fan — always centered on screen, with open/close animation */}
+      <AnimatePresence>
+        {expandedStackId && fanRootTodo && (
+          <motion.div
+            key={expandedStackId}
+            initial={{ opacity: 0, scale: 0.93 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.93, transition: { duration: 0.14, ease: 'easeIn' } }}
+            transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 900, pointerEvents: 'none' }}
+          >
+            {/* Invisible backdrop — click outside to close */}
+            <div
+              className="absolute inset-0"
+              style={{ pointerEvents: 'auto' }}
+              onPointerDown={() => setExpandedStack(null)}
+            />
+            <StackFan
+              root={fanRootTodo}
+              stackedNotes={fanStackedNotes}
+              onUnstack={(childId) => handleUnstack(expandedStackId, childId)}
+              onReorder={(from, to) => reorderStack(expandedStackId, from, to)}
+            />
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Left-edge folder markers (hidden when drawer is open) */}
