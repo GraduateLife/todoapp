@@ -1,4 +1,4 @@
-import type { Priority } from '../types'
+import type { Priority, NoteColor } from '../types'
 
 export type ParsedSubTask = { title: string; completed: boolean }
 
@@ -6,6 +6,7 @@ export type ParsedTodo = {
   title: string
   subtasks: ParsedSubTask[]
   priority: Priority
+  color?: NoteColor
 }
 
 /** Classification of a single raw line */
@@ -13,6 +14,7 @@ export type LineToken =
   | { kind: 'title';    text: string }
   | { kind: 'subtask';  text: string; completed: boolean }
   | { kind: 'priority'; text: string; value: Priority }
+  | { kind: 'color';    text: string; value: NoteColor }
   | { kind: 'warn';     text: string }   // e.g. "-milk" — looks like a subtask missing a space
   | { kind: 'extra';    text: string }   // extra plain line = CONFLICT
   | { kind: 'empty' }
@@ -33,6 +35,14 @@ function tokenise(lines: string[]): LineToken[] {
     if (line === '[!+]') return { kind: 'priority', text: line, value: 'high'   }
     if (line === '[!-]') return { kind: 'priority', text: line, value: 'low'    }
     if (line === '[!]')  return { kind: 'priority', text: line, value: 'normal' }
+
+    // ── Color markers ────────────────────────────────────────────────────────
+    // [cyan] [pink] [amber] [green] [purple]
+    if (line === '[cyan]')   return { kind: 'color', text: line, value: 'cyan'   }
+    if (line === '[pink]')   return { kind: 'color', text: line, value: 'pink'   }
+    if (line === '[amber]')  return { kind: 'color', text: line, value: 'amber'  }
+    if (line === '[green]')  return { kind: 'color', text: line, value: 'green'  }
+    if (line === '[purple]') return { kind: 'color', text: line, value: 'purple' }
 
     // ── Subtask — full form: "- [x] text" or "- [] text" or "- [ ] text" ──
     const subFull = line.match(/^-\s+\[(x|\s*)\]\s+(.+)/)
@@ -76,6 +86,10 @@ export function parseMarkdownInput(raw: string): ParseResult | null {
     .filter((t): t is Extract<LineToken, { kind: 'priority' }> => t.kind === 'priority')
     .at(-1)
   const priority: Priority = priorityTok?.value ?? 'normal'
+  const colorTok = tokens
+    .filter((t): t is Extract<LineToken, { kind: 'color' }> => t.kind === 'color')
+    .at(-1)
+  const color: NoteColor | undefined = colorTok?.value
 
   if (titleTokens.length === 0) {
     return {
@@ -96,7 +110,7 @@ export function parseMarkdownInput(raw: string): ParseResult | null {
 
   return {
     ok: true,
-    data:        { title: titleTokens[0].text, subtasks, priority },
+    data:        { title: titleTokens[0].text, subtasks, priority, color },
     tokens,
     hasWarnings: warnTokens.length > 0,
   }

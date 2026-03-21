@@ -1,33 +1,38 @@
 import { useState, useCallback, useRef } from 'react'
 import { useTodoStore } from '../store'
 import { useUiStore } from '../store/uiStore'
+import { useFolderStore } from '../store'
 import { TodoInput } from '../components/TodoInput'
 import { ImageAttachment, fileToDataUrl } from '#/components/Attachment/ImageAttachment'
 import { VoiceAttachment, blobToDataUrl } from '#/components/Attachment/VoiceAttachment'
-import type { Attachment } from '../types'
+import type { Attachment, NoteColor } from '../types'
 import type { ParsedTodo } from '../utils/parseMarkdownInput'
 
 export function TodoInputContainer() {
   const [value, setValue] = useState('')
   const valueRef = useRef('')
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([])
+  const [selectedColor, setSelectedColor] = useState<NoteColor | 'random'>('random')
   const addTodo = useTodoStore((s) => s.addTodo)
   const addTodoWithDetails = useTodoStore((s) => s.addTodoWithDetails)
-  const isDragging = useUiStore((s) => s.isDragging || !!s.expandedStackId)
+  const hasOpenFolder = useFolderStore((s) => s.folders.some((f) => f.isOpen))
+  const isDragging = useUiStore((s) => s.isDragging || !!s.expandedStackId) || hasOpenFolder
 
   const onChange = useCallback((nextValue: string) => {
     valueRef.current = nextValue
     setValue(nextValue)
   }, [])
 
+  const resolvedColor = selectedColor === 'random' ? undefined : selectedColor
+
   const handleSubmit = useCallback(() => {
     const trimmed = valueRef.current.trim()
     if (!trimmed) return
-    addTodo(trimmed, pendingAttachments.length > 0 ? pendingAttachments : undefined)
+    addTodo(trimmed, pendingAttachments.length > 0 ? pendingAttachments : undefined, resolvedColor)
     valueRef.current = ''
     setValue('')
     setPendingAttachments([])
-  }, [pendingAttachments, addTodo])
+  }, [pendingAttachments, addTodo, resolvedColor])
 
   const handleSubmitExpanded = useCallback((parsed: ParsedTodo) => {
     addTodoWithDetails(
@@ -35,11 +40,12 @@ export function TodoInputContainer() {
       parsed.subtasks,
       parsed.priority,
       pendingAttachments.length > 0 ? pendingAttachments : undefined,
+      parsed.color ?? resolvedColor,
     )
     valueRef.current = ''
     setValue('')
     setPendingAttachments([])
-  }, [pendingAttachments, addTodoWithDetails])
+  }, [pendingAttachments, addTodoWithDetails, resolvedColor])
 
   const handleImageSelect = useCallback(async (file: File) => {
     const url = await fileToDataUrl(file)
@@ -77,6 +83,8 @@ export function TodoInputContainer() {
       onSubmitExpanded={handleSubmitExpanded}
       attachments={attachments}
       isDragging={isDragging}
+      selectedColor={selectedColor}
+      onColorChange={setSelectedColor}
     />
   )
 }

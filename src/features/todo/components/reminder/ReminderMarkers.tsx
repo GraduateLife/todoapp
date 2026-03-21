@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useTodoStore } from '../../store'
 
 // Update every second so the countdown shows live seconds
@@ -28,86 +29,174 @@ function truncateTitle(title: string, max = 16): string {
   return title.length > max ? title.slice(0, max).trimEnd() + '…' : title
 }
 
-export function ReminderMarkers() {
+interface ReminderMarkersProps {
+  onEditReminder: (todoId: string) => void
+}
+
+export function ReminderMarkers({ onEditReminder }: ReminderMarkersProps) {
   const todos = useTodoStore((s) => s.todos)
   const setReminder = useTodoStore((s) => s.setReminder)
   const now = useNow()
 
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number; todoId: string } | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Close context menu on outside click or Escape
+  useEffect(() => {
+    if (!menuPos) return
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuPos(null)
+    }
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuPos(null) }
+    document.addEventListener('mousedown', handleClick, true)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick, true)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [menuPos])
+
   const scheduled = todos.filter((t) => t.reminder && !t.archived)
   if (scheduled.length === 0) return null
 
-  return (
+  const contextMenu = menuPos && typeof document !== 'undefined' && createPortal(
     <div
-      className="fixed right-0 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 pointer-events-none"
-      style={{ zIndex: 200 }}
+      ref={menuRef}
+      className="rf-context-menu fixed"
+      style={{ left: menuPos.x, top: menuPos.y, zIndex: 9800 }}
+      role="menu"
     >
-      {scheduled.map((todo) => {
-        const reminder = todo.reminder!
-        const remaining = reminder.remindAt - now
-        const isOverdue = remaining <= 0
-        const color = isOverdue ? '#ff6060' : 'var(--rf-cyan)'
-        const borderC = isOverdue
-          ? 'rgba(255,48,48,0.4)'
-          : 'rgba(0,245,255,0.25)'
-        const bg = isOverdue ? 'rgba(255,48,48,0.12)' : 'rgba(0,245,255,0.05)'
+      <button
+        type="button"
+        className="rf-context-item"
+        role="menuitem"
+        onClick={() => { onEditReminder(menuPos.todoId); setMenuPos(null) }}
+      >
+        [ edit reminder ]
+      </button>
+      <div className="rf-context-separator" />
+      <button
+        type="button"
+        className="rf-context-item rf-context-item--delete"
+        role="menuitem"
+        onClick={() => { setReminder(menuPos.todoId, null); setMenuPos(null) }}
+      >
+        [ cancel ]
+      </button>
+    </div>,
+    document.body
+  )
 
-        return (
-          <div
-            key={todo.id}
-            className="pointer-events-auto group flex items-center justify-end"
-          >
-            {/* Pill */}
+  return (
+    <>
+      <div
+        className="fixed right-0 top-1/3 -translate-y-1/2 flex flex-col gap-1.5 pointer-events-none"
+        style={{ zIndex: 200 }}
+      >
+        {scheduled.map((todo) => {
+          const reminder = todo.reminder!
+          const remaining = reminder.remindAt - now
+          const isOverdue = remaining <= 0
+          const color = isOverdue ? '#ff6060' : 'var(--rf-cyan)'
+          const borderC = isOverdue
+            ? 'rgba(255,48,48,0.4)'
+            : 'rgba(0,245,255,0.25)'
+          const bg = isOverdue ? 'rgba(255,48,48,0.12)' : 'rgba(0,245,255,0.05)'
+
+          const ringColor = isOverdue ? '#ff6060' : '#00f5ff'
+
+          return (
             <div
-              className="flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-l-[3px]"
-              style={{
-                background: bg,
-                borderTop: `1px solid ${borderC}`,
-                borderBottom: `1px solid ${borderC}`,
-                borderLeft: `1px solid ${borderC}`,
-                borderRight: 'none',
+              key={todo.id}
+              className="pointer-events-auto flex items-center justify-end"
+              onContextMenu={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                const menuW = 160, menuH = 72
+                setMenuPos({
+                  x: Math.min(e.clientX, window.innerWidth - menuW - 8),
+                  y: Math.min(e.clientY, window.innerHeight - menuH - 8),
+                  todoId: todo.id,
+                })
               }}
             >
-              {/* Dot */}
-              <span
-                className={`w-[6px] h-[6px] rounded-full block flex-shrink-0 ${isOverdue ? 'animate-pulse' : ''}`}
-                style={{ background: color, boxShadow: `0 0 5px ${color}` }}
-              />
-
-              {/* "title in countdown" */}
-              <span
-                className="font-mono text-[9px] tracking-[0.08em] whitespace-nowrap"
-                style={{ color, opacity: 0.9 }}
-              >
-                {isOverdue
-                  ? truncateTitle(todo.title)
-                  : `${truncateTitle(todo.title)} in ${formatCountdown(remaining)}`}
-              </span>
-
-              {/* Recurring indicator */}
-              {reminder.interval && (
-                <span
-                  className="font-mono text-[7px] opacity-40"
-                  style={{ color }}
+              {/* Flowing ring wrapper */}
+              <div style={{ position: 'relative' }}>
+                {/* Ring: container clips the spinning gradient */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: -8, left: -8, right: -8, bottom: -8,
+                    borderRadius: 8, overflow: 'hidden',
+                    zIndex: 0, pointerEvents: 'none',
+                  }}
                 >
-                  ↻
-                </span>
-              )}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: '200%', height: '200%',
+                      top: '-50%', left: '-50%',
+                      background: `conic-gradient(from 0deg, transparent 0%, transparent 55%, ${ringColor}44 65%, ${ringColor}cc 73%, ${ringColor} 78%, ${ringColor}cc 83%, ${ringColor}44 91%, transparent 100%)`,
+                      animation: 'rf-reminder-spin 3s linear infinite',
+                    }}
+                  />
+                  {/* Inner mask — punch out pill area, leave 3px ring */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 3, left: 3, right: 3, bottom: 3,
+                      borderRadius: 5,
+                      background: '#04060c',
+                    }}
+                  />
+                </div>
 
-              {/* Cancel button — appears on hover */}
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => setReminder(todo.id, null)}
-                className="font-mono text-[8px] opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
-                style={{ color: '#ff3030', cursor: 'pointer', lineHeight: 1 }}
-                title="Cancel reminder"
+              {/* Pill */}
+              <div
+                className="flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-l-[3px] cursor-context-menu"
+                style={{
+                  position: 'relative', zIndex: 1,
+                  background: bg,
+                  borderTop: `1px solid ${borderC}`,
+                  borderBottom: `1px solid ${borderC}`,
+                  borderLeft: `1px solid ${borderC}`,
+                  borderRight: 'none',
+                }}
               >
-                ✕
-              </button>
+                {/* Two-line label */}
+                <div
+                  className="font-mono tracking-[0.18em] uppercase"
+                  style={{ color, textShadow: `0 0 10px ${color}`, maxWidth: 140, lineHeight: 1.6 }}
+                >
+                  {/* Line 1: title (larger) */}
+                  <div
+                    className="font-bold whitespace-nowrap overflow-hidden text-ellipsis"
+                    style={{ fontSize: 11, fontWeight: 700 }}
+                  >
+                    {truncateTitle(todo.title, 18)}
+                    {reminder.interval && (
+                      <span className="opacity-40 ml-1 font-normal">↻</span>
+                    )}
+                  </div>
+                  {/* Line 2: countdown (smaller) */}
+                  <div className="text-[8px]" style={{ opacity: isOverdue ? 1 : 0.65 }}>
+                    {isOverdue ? 'overdue!' : `in: ${formatCountdown(remaining)}`}
+                  </div>
+                </div>
+
+                {/* Dot — right side */}
+                <span
+                  className={`w-[6px] h-[6px] rounded-full block flex-shrink-0 ${isOverdue ? 'animate-pulse' : ''}`}
+                  style={{ background: color, boxShadow: `0 0 5px ${color}` }}
+                />
+              </div>
+              </div>{/* end flowing ring wrapper */}
             </div>
-          </div>
-        )
-      })}
-    </div>
+          )
+        })}
+      </div>
+
+      {contextMenu}
+    </>
   )
 }

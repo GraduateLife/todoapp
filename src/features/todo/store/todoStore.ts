@@ -10,12 +10,13 @@ const STORAGE_KEY = 'todoai-storage'
 
 interface TodoState {
   todos: Todo[]
-  addTodo: (title: string, attachments?: Attachment[]) => void
+  addTodo: (title: string, attachments?: Attachment[], color?: NoteColor) => void
   addTodoWithDetails: (
     title: string,
     subtasks: { title: string; completed: boolean }[],
     priority: Priority,
     attachments?: Attachment[],
+    color?: NoteColor,
   ) => void
   deleteTodo: (id: string) => void
   toggleTodo: (id: string) => void
@@ -63,7 +64,7 @@ function randomRotation(): number {
   return parseFloat(((Math.random() - 0.5) * 10).toFixed(2))
 }
 
-function createTodo(title: string, attachments: Attachment[] = []): Todo {
+function createTodo(title: string, attachments: Attachment[] = [], color?: NoteColor): Todo {
   return {
     id: crypto.randomUUID(),
     title: title.slice(0, TITLE_MAX_LEN),
@@ -72,7 +73,7 @@ function createTodo(title: string, attachments: Attachment[] = []): Todo {
     attachments,
     position: randomPosition(),
     zIndex: 10,
-    color: randomColor(),
+    color: color ?? randomColor(),
     rotation: randomRotation(),
     priority: 'normal',
     subtasks: [],
@@ -88,17 +89,17 @@ export const useTodoStore = create<TodoState>()(
     (set) => ({
       todos: [],
 
-      addTodo: (title, attachments = []) =>
+      addTodo: (title, attachments = [], color) =>
         set((state) => {
           const maxZ = state.todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
-          const next = createTodo(title, attachments)
+          const next = createTodo(title, attachments, color)
           return { todos: [...state.todos, { ...next, zIndex: maxZ + 1 }] }
         }),
 
-      addTodoWithDetails: (title, subtasks, priority, attachments = []) =>
+      addTodoWithDetails: (title, subtasks, priority, attachments = [], color) =>
         set((state) => {
           const maxZ = state.todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
-          const next = createTodo(title, attachments)
+          const next = createTodo(title, attachments, color)
           return {
             todos: [
               ...state.todos,

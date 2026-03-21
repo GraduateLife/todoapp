@@ -477,6 +477,11 @@ pre code {
   animation: priority-high-pulse 1.8s ease-in-out infinite;
 }
 
+@keyframes rf-reminder-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* ─── Context menu ───────────────────────────── */
 .rf-context-menu {
   font-family: var(--font-mono);
@@ -484,7 +489,7 @@ pre code {
   border: 1px solid var(--rf-border);
   box-shadow: 0 0 20px rgba(0, 245, 255, 0.15), 0 8px 32px rgba(0, 0, 0, 0.6);
   border-radius: 2px;
-  min-width: 160px;
+  min-width: 180px;
   padding: 4px 0;
   z-index: 9000;
 }
@@ -514,6 +519,7 @@ pre code {
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--rf-text-dim);
   background: transparent;
   border: none;
@@ -573,4 +579,38 @@ pre code {
     background-color: var(--background);
     color: var(--foreground);
   }
+}
+
+/* ─── Custom scrollbar ───────────────────────────
+   Usage: add class "rf-scrollbar" to any scrollable element.
+   Works in Chromium/Safari. Firefox gets a minimal fallback via scrollbar-color.
+   ─────────────────────────────────────────────── */
+.rf-scrollbar {
+  /* Firefox fallback */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 245, 255, 0.25) transparent;
+}
+
+.rf-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.rf-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rf-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 245, 255, 0.22);
+  border-radius: 2px;
+  transition: background 150ms ease;
+}
+
+.rf-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 245, 255, 0.5);
+  box-shadow: 0 0 6px rgba(0, 245, 255, 0.4);
+}
+
+.rf-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
 }

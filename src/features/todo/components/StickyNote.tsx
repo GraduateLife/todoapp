@@ -385,6 +385,38 @@ export function StickyNote({
           )
         })}
 
+        {/* ── Reminder flowing ring (outside card border) ──────────────────── */}
+        {todo.reminder && !isInZone && (
+          <div
+            style={{
+              position: 'absolute',
+              top: -8, left: -8, right: -8, bottom: -8,
+              borderRadius: 10, overflow: 'hidden',
+              zIndex: 0, pointerEvents: 'none',
+            }}
+          >
+            {/* Rotating conic gradient fills the whole container */}
+            <div
+              style={{
+                position: 'absolute',
+                width: '200%', height: '200%',
+                top: '-50%', left: '-50%',
+                background: `conic-gradient(from 0deg, transparent 0%, transparent 55%, ${ns.border}44 65%, ${ns.border}cc 73%, ${ns.border} 78%, ${ns.border}cc 83%, ${ns.border}44 91%, transparent 100%)`,
+                animation: 'rf-reminder-spin 3s linear infinite',
+              }}
+            />
+            {/* Inner mask punches out the card area, leaving only the outer ring visible */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 3, left: 3, right: 3, bottom: 3,
+                borderRadius: 7,
+                background: ns.bg,
+              }}
+            />
+          </div>
+        )}
+
         {/* ── Main note card ────────────────────────────────────────────────── */}
         <div
           style={{
@@ -415,11 +447,6 @@ export function StickyNote({
             />
           )}
 
-          {/* Corner bracket decorations */}
-          <span style={{ color: ns.dim }} className="absolute top-[5px] left-[5px] font-mono text-[9px] leading-none pointer-events-none opacity-70">┌─</span>
-          <span style={{ color: ns.dim }} className="absolute top-[5px] right-[5px] font-mono text-[9px] leading-none pointer-events-none opacity-70">─┐</span>
-          <span style={{ color: ns.dim }} className="absolute bottom-[5px] left-[5px] font-mono text-[9px] leading-none pointer-events-none opacity-70">└─</span>
-          <span style={{ color: ns.dim }} className="absolute bottom-[5px] right-[5px] font-mono text-[9px] leading-none pointer-events-none opacity-70">─┘</span>
 
           {/* Header row */}
           <div
@@ -428,16 +455,16 @@ export function StickyNote({
           >
             <div className="flex items-center gap-2">
               <span style={{ color: ns.dim }} className="font-mono text-[10px] tracking-[0.18em] uppercase">
-                {todo.completed ? '// done' : '// todo'}
+                {todo.completed ? 'done' : 'todo'}
               </span>
               {priority === 'high' && (
-                <span className="font-mono text-[8px] tracking-[0.15em]" style={{ color: ns.border, textShadow: `0 0 6px ${ns.border}` }}>high</span>
+                <span className="font-mono text-[10px] tracking-[0.12em]" style={{ color: ns.border, textShadow: `0 0 8px ${ns.border}, 0 0 16px ${ns.border}66` }}>high [!+]</span>
               )}
               {priority === 'normal' && (
-                <span className="font-mono text-[8px] tracking-[0.15em] opacity-30" style={{ color: ns.dim }}>normal</span>
+                <span className="font-mono text-[9px] tracking-[0.12em]" style={{ color: ns.border, opacity: 0.55 }}>normal [!]</span>
               )}
               {priority === 'low' && (
-                <span className="font-mono text-[8px] tracking-[0.15em] opacity-45" style={{ color: ns.dim }}>low</span>
+                <span className="font-mono text-[9px] tracking-[0.12em]" style={{ color: ns.dim, opacity: 0.4 }}>low [!-]</span>
               )}
             </div>
             <span

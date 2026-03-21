@@ -134,7 +134,7 @@ export function StickyNoteCanvas() {
         <div
           key={label}
           className="absolute font-mono text-[8px] tracking-[0.22em] uppercase pointer-events-none select-none"
-          style={{ ...style, color: 'rgba(0,245,255,0.13)', whiteSpace: 'nowrap' }}
+          style={{ ...style, color: 'var(--rf-text-dim, rgba(0,245,255,0.3))', opacity: 0.4, whiteSpace: 'nowrap' }}
         >
           {label}
         </div>
@@ -148,13 +148,13 @@ export function StickyNoteCanvas() {
         >
           <p
             className="font-mono text-[11px] tracking-[0.22em] uppercase mb-2"
-            style={{ color: 'rgba(0, 245, 255, 0.25)' }}
+            style={{ color: 'var(--rf-text-dim)', opacity: 0.55 }}
           >
             {'> no tasks detected_'}
           </p>
           <p
             className="font-mono text-[10px] tracking-[0.16em]"
-            style={{ color: 'rgba(0, 245, 255, 0.15)' }}
+            style={{ color: 'var(--rf-text-dim)', opacity: 0.35 }}
           >
             use the terminal below to initialize
           </p>
@@ -246,7 +246,7 @@ export function StickyNoteCanvas() {
       {!hasOpenFolder && <FolderMarkers />}
 
       {/* Right-edge reminder countdown markers */}
-      <ReminderMarkers />
+      <ReminderMarkers onEditReminder={setReminderTarget} />
 
       {/* Reminder setup modal */}
       <ReminderModal
@@ -254,6 +254,7 @@ export function StickyNoteCanvas() {
         todoTitle={reminderTodo?.title ?? ''}
         onConfirm={handleReminderConfirm}
         onCancel={() => setReminderTarget(null)}
+        onTitleChange={(newTitle) => { if (reminderTarget) updateTitle(reminderTarget, newTitle) }}
       />
 
       {/* Folder picker modal */}

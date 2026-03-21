@@ -5,7 +5,8 @@ type ThemeMode = 'light' | 'dark' | 'auto'
 function getInitialMode(): ThemeMode {
   if (typeof window === 'undefined') return 'auto'
   const stored = window.localStorage.getItem('theme')
-  if (stored === 'light' || stored === 'dark' || stored === 'auto') return stored
+  if (stored === 'light' || stored === 'dark' || stored === 'auto')
+    return stored
   return 'auto'
 }
 
@@ -22,15 +23,14 @@ function applyThemeMode(mode: ThemeMode) {
   document.documentElement.style.colorScheme = resolved
 }
 
-const SYMBOLS: Record<ThemeMode, string> = {
-  auto:  '◐',
-  dark:  '●',
-  light: '○',
-}
+const ITEMS: { mode: ThemeMode; label: string }[] = [
+  { mode: 'light', label: 'LIT' },
+  { mode: 'dark',  label: 'DRK' },
+  { mode: 'auto',  label: 'AUT' },
+]
 
 export default function ThemeToggle() {
   const [mode, setMode] = useState<ThemeMode>('auto')
-  const [hovered, setHovered] = useState(false)
 
   useEffect(() => {
     const m = getInitialMode()
@@ -46,41 +46,76 @@ export default function ThemeToggle() {
     return () => media.removeEventListener('change', onChange)
   }, [mode])
 
-  function toggleMode() {
-    const next: ThemeMode = mode === 'light' ? 'dark' : mode === 'dark' ? 'auto' : 'light'
-    setMode(next)
-    applyThemeMode(next)
-    window.localStorage.setItem('theme', next)
+  function selectMode(m: ThemeMode) {
+    setMode(m)
+    applyThemeMode(m)
+    window.localStorage.setItem('theme', m)
   }
 
   return (
-    <button
-      type="button"
-      onClick={toggleMode}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      aria-label={`Theme: ${mode}`}
-      title={`Theme: ${mode}. Click to cycle.`}
+    <div
       style={{
-        position:    'fixed',
-        top:         14,
-        right:       18,
-        zIndex:      200,
-        background:  'none',
-        border:      'none',
-        cursor:      'pointer',
-        padding:     '4px 6px',
-        fontFamily:  "'Space Mono', ui-monospace, monospace",
-        fontSize:    9,
-        letterSpacing: '0.2em',
-        color:       'var(--rf-text-dim)',
-        opacity:     hovered ? 0.85 : 0.32,
-        transition:  'opacity 180ms',
-        userSelect:  'none',
-        lineHeight:  1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 2,
+        padding: '0 4px',
+        userSelect: 'none',
       }}
     >
-      {SYMBOLS[mode]} {mode.toUpperCase()}
-    </button>
+      {ITEMS.map(({ mode: m, label }) => {
+        const active = mode === m
+        return (
+          <button
+            key={m}
+            type="button"
+            onClick={() => selectMode(m)}
+            title={m.charAt(0).toUpperCase() + m.slice(1)}
+            aria-label={`Theme: ${m}`}
+            aria-pressed={active}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '2px 5px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 3,
+            }}
+          >
+            {/* LED light */}
+            <span
+              style={{
+                display: 'block',
+                width: 6,
+                height: 6,
+                borderRadius: 1,
+                backgroundColor: active ? '#f5d000' : 'var(--rf-text-dim, #8899aa)',
+                opacity: active ? 1 : 0.2,
+                boxShadow: active
+                  ? '0 0 3px 1px #f5d000'
+                  : 'none',
+                transition: 'box-shadow 200ms, opacity 200ms, background-color 200ms',
+              }}
+            />
+            {/* Label */}
+            <span
+              style={{
+                fontFamily: "'Space Mono', ui-monospace, monospace",
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                color: active ? '#f5d000' : 'var(--rf-text-dim, #8899aa)',
+                opacity: active ? 1 : 0.3,
+                transition: 'opacity 200ms, color 200ms',
+                lineHeight: 1,
+              }}
+            >
+              {label}
+            </span>
+          </button>
+        )
+      })}
+    </div>
   )
 }

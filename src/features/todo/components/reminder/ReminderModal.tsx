@@ -14,21 +14,37 @@ interface ReminderModalProps {
   todoTitle: string
   onConfirm: (remindAt: number, interval?: number) => void
   onCancel: () => void
+  onTitleChange?: (newTitle: string) => void
 }
 
-export function ReminderModal({ open, todoTitle, onConfirm, onCancel }: ReminderModalProps) {
+export function ReminderModal({ open, todoTitle, onConfirm, onCancel, onTitleChange }: ReminderModalProps) {
   const [customMinutes, setCustomMinutes] = useState('')
   const [repeat, setRepeat] = useState(false)
   const [selectedMs, setSelectedMs] = useState<number | null>(null)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (open) {
       setCustomMinutes('')
       setRepeat(false)
       setSelectedMs(null)
+      setEditingTitle(false)
+      setTitleDraft('')
     }
   }, [open])
+
+  useEffect(() => {
+    if (editingTitle) titleInputRef.current?.select()
+  }, [editingTitle])
+
+  const commitTitle = () => {
+    const trimmed = titleDraft.trim()
+    if (trimmed && trimmed !== todoTitle) onTitleChange?.(trimmed)
+    setEditingTitle(false)
+  }
 
   if (!open || typeof document === 'undefined') return null
 
@@ -74,9 +90,30 @@ export function ReminderModal({ open, todoTitle, onConfirm, onCancel }: Reminder
             style={{ color: 'var(--rf-cyan)' }}>
             set reminder
           </p>
-          <p className="font-mono text-[0.78rem] truncate" style={{ color: 'var(--rf-text)' }}>
-            {todoTitle}
-          </p>
+          {editingTitle ? (
+            <input
+              ref={titleInputRef}
+              className="rf-input-field font-mono text-[0.78rem] w-full"
+              style={{ color: 'var(--rf-text)', borderBottom: '1px solid rgba(0,245,255,0.3)', paddingBottom: 1 }}
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter') { e.preventDefault(); commitTitle() }
+                if (e.key === 'Escape') { e.preventDefault(); setEditingTitle(false) }
+              }}
+            />
+          ) : (
+            <p
+              className="font-mono text-[0.78rem] truncate cursor-text"
+              style={{ color: 'var(--rf-text)' }}
+              title="double-click to edit"
+              onDoubleClick={() => { setTitleDraft(todoTitle); setEditingTitle(true) }}
+            >
+              {todoTitle}
+            </p>
+          )}
         </div>
 
         {/* Quick options */}
@@ -131,7 +168,7 @@ export function ReminderModal({ open, todoTitle, onConfirm, onCancel }: Reminder
               textShadow: repeat ? '0 0 8px rgba(0,245,255,0.5)' : 'none',
             }}
           >
-            {repeat ? '[✓] repeat' : '[ ] repeat'}
+            {repeat ? '[✕] repeat' : '[ ] repeat'}
           </button>
           {repeat && (
             <span className="font-mono text-[8px] opacity-40" style={{ color: 'var(--rf-text-dim)' }}>

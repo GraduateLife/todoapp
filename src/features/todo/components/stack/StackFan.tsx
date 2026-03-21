@@ -135,9 +135,6 @@ function StackCard({ todo, slot, totalSlots, gridX, gridY, isRoot, onUnstack, on
           userSelect: 'none',
         }}
       >
-        {/* Corner brackets */}
-        <span style={{ color: sNs.dim, position: 'absolute', top: 4, left: 4, fontFamily: 'monospace', fontSize: 8, opacity: 0.55, lineHeight: 1, pointerEvents: 'none' }}>┌─</span>
-        <span style={{ color: sNs.dim, position: 'absolute', top: 4, right: 4, fontFamily: 'monospace', fontSize: 8, opacity: 0.55, lineHeight: 1, pointerEvents: 'none' }}>─┐</span>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${sNs.dim}`, paddingBottom: 5, marginBottom: 7 }}>

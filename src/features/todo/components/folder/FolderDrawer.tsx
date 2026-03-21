@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { motion, AnimatePresence, Reorder } from 'framer-motion'
+import { useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useFolderStore } from '../../store'
 import { useTodoStore } from '../../store'
 import { FolderTodoCard } from './FolderTodoCard'
@@ -30,14 +30,16 @@ interface FolderDrawerProps {
 export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: FolderDrawerProps) {
   const folders = useFolderStore((s) => s.folders)
   const closeAllFolders = useFolderStore((s) => s.closeAllFolders)
+  const deleteFolder = useFolderStore((s) => s.deleteFolder)
   const appendToFolder = useFolderStore((s) => s.appendToFolder)
-  const setOrderedTodoIds = useFolderStore((s) => s.setOrderedTodoIds)
   const todos = useTodoStore((s) => s.todos)
+  const setFolder = useTodoStore((s) => s.setFolder)
 
   const openFolder = folders.find((f) => f.isOpen) ?? null
 
-  // ── Build the canonical ordered list from the store ──────────────────────
-  const storeTodos: Todo[] = openFolder
+  // Build the ordered list directly from the store — no local state needed
+  // since Zustand re-renders on every relevant change (toggle, delete, move).
+  const visibleTodos: Todo[] = openFolder
     ? (openFolder.orderedTodoIds
         .map((id) =>
           todos.find((t) => t.id === id && !t.archived && t.folderId === openFolder.id)
@@ -45,18 +47,7 @@ export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: Folde
         .filter(Boolean) as Todo[])
     : []
 
-  // ── Local state drives the Reorder animation (no store writes mid-drag) ──
-  const [localTodos, setLocalTodos] = useState<Todo[]>(storeTodos)
-
-  // Sync local state when the open folder changes or storeTodos changes from
-  // outside (e.g. a todo is moved to main, deleted, or the migration effect
-  // appends missing IDs).
-  useEffect(() => {
-    setLocalTodos(storeTodos)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openFolder?.id, openFolder?.orderedTodoIds.length, todos.length])
-
-  // ── Migration: add any todos with folderId not yet in orderedTodoIds ──────
+  // Migration: add any todos with folderId not yet in orderedTodoIds
   useEffect(() => {
     if (!openFolder) return
     todos
@@ -70,15 +61,13 @@ export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: Folde
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openFolder?.id])
 
-  // ── During drag: only update local state (smooth animation) ──────────────
-  const handleReorder = (reordered: Todo[]) => {
-    setLocalTodos(reordered)
-  }
-
-  // ── On drag end: persist the final order to the store once ───────────────
-  const handleDragEnd = () => {
+  const handleDeleteFolder = () => {
     if (!openFolder) return
-    setOrderedTodoIds(openFolder.id, localTodos.map((t) => t.id))
+    todos
+      .filter((t) => t.folderId === openFolder.id)
+      .forEach((t) => setFolder(t.id, null))
+    deleteFolder(openFolder.id)
+    closeAllFolders()
   }
 
   const color = openFolder ? COLOR_VAR[openFolder.color] : 'var(--rf-cyan)'
@@ -109,7 +98,7 @@ export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: Folde
             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
             className="fixed top-[60px] left-0 bottom-0 flex flex-col"
             style={{
-              width: 'min(540px, 88vw)',
+              width: 'min(800px, 95vw)',
               zIndex: 150,
               background: '#05080f',
               borderRight: `1px solid rgba(${rgb}, 0.18)`,
@@ -130,16 +119,24 @@ export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: Folde
                 style={{ color, textShadow: `0 0 10px ${color}` }}
               >
                 {openFolder.name}
-              </span>
-              <span
-                className="font-mono text-[9px] opacity-40 flex-shrink-0"
-                style={{ color: 'var(--rf-text-dim)' }}
-              >
-                ({localTodos.length})
+                <span
+                  className="opacity-40 normal-case"
+                  style={{ letterSpacing: '0.08em', fontSize: 9 }}
+                >
+                  {' '}({visibleTodos.length})
+                </span>
               </span>
               <button
                 type="button"
-                className="rf-btn ml-3 flex-shrink-0"
+                className="rf-btn flex-shrink-0"
+                onClick={handleDeleteFolder}
+                style={{ color: 'var(--rf-pink, #ff2d78)', borderColor: 'currentColor', opacity: 0.7 }}
+              >
+                [ del ]
+              </button>
+              <button
+                type="button"
+                className="rf-btn ml-1 flex-shrink-0"
                 onClick={closeAllFolders}
               >
                 [ close ]
@@ -151,12 +148,12 @@ export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: Folde
               className="font-mono text-[8px] tracking-[0.12em] opacity-25 px-5 pt-3 pb-1 flex-shrink-0"
               style={{ color: 'var(--rf-text-dim)' }}
             >
-              drag to reorder · right-click to move or delete
+              right-click to move or delete
             </p>
 
             {/* Card area */}
-            <div className="flex-1 overflow-y-auto px-5 pb-6 pt-2">
-              {localTodos.length === 0 ? (
+            <div className="rf-scrollbar flex-1 overflow-y-auto px-5 pb-6 pt-2">
+              {visibleTodos.length === 0 ? (
                 <p
                   className="font-mono text-[0.78rem] opacity-25 text-center mt-12"
                   style={{ color: 'var(--rf-text-dim)' }}
@@ -164,29 +161,21 @@ export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: Folde
                   empty folder
                 </p>
               ) : (
-                <Reorder.Group
-                  axis="x"
-                  values={localTodos}
-                  onReorder={handleReorder}
+                <ul
                   className="flex flex-wrap gap-2"
                   style={{ listStyle: 'none', padding: 0, margin: 0 }}
                 >
-                  {localTodos.map((todo) => (
-                    <Reorder.Item
-                      key={todo.id}
-                      value={todo}
-                      style={{ display: 'inline-flex' }}
-                      onDragEnd={handleDragEnd}
-                    >
+                  {visibleTodos.map((todo) => (
+                    <li key={todo.id} style={{ display: 'inline-flex' }}>
                       <FolderTodoCard
                         todo={todo}
                         onMoveToMain={onMoveToMain}
                         onDelete={onDeleteTodo}
                         onToggle={onToggleTodo}
                       />
-                    </Reorder.Item>
+                    </li>
                   ))}
-                </Reorder.Group>
+                </ul>
               )}
             </div>
           </motion.div>

@@ -1,11 +1,7 @@
 import { Link } from '@tanstack/react-router'
-import { useState } from 'react'
 import ThemeToggle from './ThemeToggle'
-import { ArchivePanel } from '#/features/todo/components/archive/ArchivePanel'
 
 export default function Header() {
-  const [archiveOpen, setArchiveOpen] = useState(false)
-
   return (
     <header className="rf-header relative" style={{ zIndex: 50 }}>
       <nav
@@ -38,17 +34,18 @@ export default function Header() {
           >
             about
           </Link>
+          <Link
+            to="/archive"
+            className="nav-link"
+            activeProps={{ className: 'nav-link is-active' }}
+          >
+            archive
+          </Link>
         </div>
 
         {/* Right side */}
-        <div className="ml-auto flex items-center gap-4">
-          <button
-            type="button"
-            className="rf-btn"
-            onClick={() => setArchiveOpen(true)}
-          >
-            archive
-          </button>
+        <div className="ml-auto flex items-center">
+          <ThemeToggle />
         </div>
       </nav>
 
@@ -60,9 +57,6 @@ export default function Header() {
             'linear-gradient(90deg, transparent, rgba(0,245,255,0.45) 30%, rgba(191,95,255,0.3) 70%, transparent)',
         }}
       />
-
-      <ArchivePanel open={archiveOpen} onClose={() => setArchiveOpen(false)} />
-      <ThemeToggle />
     </header>
   )
 }

@@ -2,20 +2,15 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { Todo, NoteColor } from '../../types'
 
-const COLOR_VAR: Record<NoteColor, string> = {
-  cyan: 'var(--rf-cyan)',
-  pink: 'var(--rf-pink)',
-  amber: 'var(--rf-amber)',
-  green: 'var(--rf-green)',
-  purple: 'var(--rf-purple)',
-}
-
-const COLOR_RGB: Record<NoteColor, string> = {
-  cyan: '0,245,255',
-  pink: '255,45,120',
-  amber: '255,184,0',
-  green: '57,255,20',
-  purple: '191,95,255',
+const NOTE_STYLES: Record<
+  NoteColor,
+  { bg: string; border: string; glow: string; text: string; dim: string }
+> = {
+  cyan:   { bg: '#04161b', border: '#00f5ff', glow: 'rgba(0,245,255,0.35)',  text: '#9ae8f0', dim: 'rgba(0,245,255,0.45)'  },
+  pink:   { bg: '#1c040f', border: '#ff2d78', glow: 'rgba(255,45,120,0.35)', text: '#f0a0be', dim: 'rgba(255,45,120,0.45)' },
+  amber:  { bg: '#181000', border: '#ffb800', glow: 'rgba(255,184,0,0.35)',  text: '#f0d890', dim: 'rgba(255,184,0,0.45)'  },
+  green:  { bg: '#041604', border: '#39ff14', glow: 'rgba(57,255,20,0.35)',  text: '#9cf09a', dim: 'rgba(57,255,20,0.45)'  },
+  purple: { bg: '#0e0418', border: '#bf5fff', glow: 'rgba(191,95,255,0.35)', text: '#d4a8f4', dim: 'rgba(191,95,255,0.45)' },
 }
 
 interface FolderTodoCardProps {
@@ -29,9 +24,7 @@ export function FolderTodoCard({ todo, onMoveToMain, onDelete, onToggle }: Folde
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const color = todo.color as NoteColor
-  const colorVar = COLOR_VAR[color]
-  const rgb = COLOR_RGB[color]
+  const sNs = NOTE_STYLES[todo.color as NoteColor] ?? NOTE_STYLES.cyan
 
   // Close context menu on outside click
   useEffect(() => {
@@ -55,9 +48,7 @@ export function FolderTodoCard({ todo, onMoveToMain, onDelete, onToggle }: Folde
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    // Clamp so menu doesn't overflow viewport
-    const menuW = 150
-    const menuH = 80
+    const menuW = 150, menuH = 80
     setMenuPos({
       x: Math.min(e.clientX, window.innerWidth - menuW - 8),
       y: Math.min(e.clientY, window.innerHeight - menuH - 8),
@@ -94,62 +85,99 @@ export function FolderTodoCard({ todo, onMoveToMain, onDelete, onToggle }: Folde
       document.body
     )
 
+  const totalSubs = todo.subTasks?.length ?? 0
+  const doneSubs  = todo.subTasks?.filter((s) => s.completed).length ?? 0
+
   return (
     <>
       <div
-        className="relative inline-flex"
+        className="relative select-none"
         onContextMenu={handleContextMenu}
+        style={{
+          background: sNs.bg,
+          border: `1px solid ${sNs.border}99`,
+          boxShadow: `0 0 8px ${sNs.glow}, 0 3px 12px rgba(0,0,0,0.45)`,
+          borderRadius: 3,
+          padding: '8px 11px',
+          width: 170,
+          minHeight: 124,
+          overflow: 'hidden',
+          position: 'relative',
+          fontFamily: "'Space Mono', monospace",
+          userSelect: 'none',
+        }}
       >
-        <div
-          className="font-mono cursor-grab active:cursor-grabbing select-none"
+
+        {/* Square checkbox — absolute top-left */}
+        <button
+          onClick={() => onToggle(todo.id)}
+          title={todo.completed ? 'Mark incomplete' : 'Mark complete'}
           style={{
-            background: `rgba(${rgb}, 0.06)`,
-            border: `1px solid rgba(${rgb}, 0.28)`,
-            borderRadius: 3,
-            boxShadow: `0 0 10px rgba(${rgb}, 0.07)`,
-            padding: '8px 10px',
-            minWidth: 80,
-            maxWidth: 192,
+            position: 'absolute', top: 8, left: 11, zIndex: 1,
+            width: 13, height: 13,
+            border: `1px solid ${sNs.border}`,
+            background: todo.completed ? `${sNs.border}30` : 'transparent',
+            boxShadow: todo.completed ? `0 0 5px ${sNs.glow}` : 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', borderRadius: 1,
+            padding: 0,
           }}
         >
-          {/* Completion dot + title */}
-          <div className="flex items-start gap-2">
-            {/* Dot — click to toggle */}
-            <span
-              className="flex-shrink-0 mt-[3px] w-[7px] h-[7px] rounded-full cursor-pointer"
-              style={{
-                background: todo.completed ? colorVar : 'transparent',
-                border: `1px solid rgba(${rgb}, 0.55)`,
-                boxShadow: todo.completed ? `0 0 5px ${colorVar}` : 'none',
-                transition: 'all 120ms ease',
-              }}
-              onClick={(e) => { e.stopPropagation(); onToggle(todo.id) }}
-            />
-            {/* Title */}
-            <span
-              className="text-[0.72rem] leading-snug"
-              style={{
-                color: todo.completed ? `rgba(${rgb}, 0.35)` : 'var(--rf-text)',
-                textDecoration: todo.completed ? 'line-through' : 'none',
-                wordBreak: 'break-word',
-                display: '-webkit-box',
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-              }}
-            >
-              {todo.title}
-            </span>
-          </div>
-
-          {/* Priority indicator (bottom accent line) */}
-          {todo.priority === 'high' && (
-            <div
-              className="mt-[6px] h-[1px] w-full"
-              style={{ background: colorVar, boxShadow: `0 0 4px ${colorVar}`, opacity: 0.7 }}
-            />
+          {todo.completed && (
+            <span style={{ color: sNs.text, fontSize: 8, lineHeight: 1, fontFamily: 'monospace' }}>✕</span>
           )}
-        </div>
+        </button>
+
+        {/* Eject button — absolute top-right */}
+        <button
+          onClick={() => onMoveToMain(todo.id)}
+          title="move to main"
+          style={{
+            position: 'absolute', top: 5, right: 9, zIndex: 1,
+            color: sNs.border, background: 'none', border: 'none',
+            cursor: 'pointer', padding: 0,
+            fontFamily: "'Space Mono', monospace",
+            fontSize: 13, fontWeight: 700, lineHeight: 1,
+            opacity: 0.75,
+          }}
+        >
+          ↗
+        </button>
+
+        {/* Title */}
+        <p
+          style={{
+            color: todo.completed ? sNs.dim : sNs.text,
+            fontFamily: "'Space Mono', monospace",
+            fontSize: '0.72rem',
+            lineHeight: 1.4,
+            margin: 0,
+            paddingTop: 22,
+            opacity: todo.completed ? 0.5 : 1,
+            textDecoration: todo.completed ? 'line-through' : 'none',
+            wordBreak: 'break-word',
+            display: '-webkit-box',
+            WebkitLineClamp: totalSubs > 0 ? 4 : 5,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          } as React.CSSProperties}
+        >
+          {todo.title || 'Untitled'}
+        </p>
+
+        {/* Subtask progress */}
+        {totalSubs > 0 && (
+          <p style={{ color: sNs.dim, fontFamily: "'Space Mono', monospace", fontSize: '0.62rem', marginTop: 4, opacity: 0.65 }}>
+            {doneSubs}/{totalSubs} done
+          </p>
+        )}
+
+        {/* High-priority bottom accent */}
+        {todo.priority === 'high' && (
+          <div
+            style={{ marginTop: 6, height: 1, width: '100%', background: sNs.border, boxShadow: `0 0 4px ${sNs.border}`, opacity: 0.7 }}
+          />
+        )}
       </div>
 
       {contextMenu}
