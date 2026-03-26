@@ -27,7 +27,11 @@ interface FolderDrawerProps {
   onToggleTodo: (todoId: string) => void
 }
 
-export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: FolderDrawerProps) {
+export function FolderDrawer({
+  onMoveToMain,
+  onDeleteTodo,
+  onToggleTodo,
+}: FolderDrawerProps) {
   const folders = useFolderStore((s) => s.folders)
   const closeAllFolders = useFolderStore((s) => s.closeAllFolders)
   const deleteFolder = useFolderStore((s) => s.deleteFolder)
@@ -42,7 +46,9 @@ export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: Folde
   const visibleTodos: Todo[] = openFolder
     ? (openFolder.orderedTodoIds
         .map((id) =>
-          todos.find((t) => t.id === id && !t.archived && t.folderId === openFolder.id)
+          todos.find(
+            (t) => t.id === id && !t.archived && t.folderId === openFolder.id,
+          ),
         )
         .filter(Boolean) as Todo[])
     : []
@@ -55,7 +61,7 @@ export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: Folde
         (t) =>
           t.folderId === openFolder.id &&
           !t.archived &&
-          !openFolder.orderedTodoIds.includes(t.id)
+          !openFolder.orderedTodoIds.includes(t.id),
       )
       .forEach((t) => appendToFolder(openFolder.id, t.id))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,7 +91,11 @@ export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: Folde
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0"
-            style={{ zIndex: 140, background: 'rgba(4,6,12,0.55)', backdropFilter: 'blur(2px)' }}
+            style={{
+              zIndex: 140,
+              background: 'rgba(4,6,12,0.55)',
+              backdropFilter: 'blur(2px)',
+            }}
             onClick={closeAllFolders}
           />
 
@@ -123,14 +133,19 @@ export function FolderDrawer({ onMoveToMain, onDeleteTodo, onToggleTodo }: Folde
                   className="opacity-40 normal-case"
                   style={{ letterSpacing: '0.08em', fontSize: 9 }}
                 >
-                  {' '}({visibleTodos.length})
+                  {' '}
+                  ({visibleTodos.length})
                 </span>
               </span>
               <button
                 type="button"
                 className="rf-btn flex-shrink-0"
                 onClick={handleDeleteFolder}
-                style={{ color: 'var(--rf-pink, #ff2d78)', borderColor: 'currentColor', opacity: 0.7 }}
+                style={{
+                  color: 'var(--rf-pink, #ff2d78)',
+                  borderColor: 'currentColor',
+                  opacity: 0.7,
+                }}
               >
                 [ del ]
               </button>

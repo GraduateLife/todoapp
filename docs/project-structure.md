@@ -49,12 +49,12 @@ src/
 
 ## 分层职责
 
-| 层 | 职责 | 示例 |
-|---|---|---|
-| routes/ | 路由定义，页面级组装 | index.tsx 渲染 MainLayout + Containers |
-| layouts/ | 页面骨架，响应式布局 | MainLayout 包含 header + content |
-| containers/ | 桥接 store 和 UI | TodoListContainer 读 store，传 props 给 TodoList |
-| components/ | 纯展示，只通过 props 接收数据 | TodoItem 渲染 checkbox + title + attachments |
-| hooks/ | 可复用交互逻辑 | useLongPress 返回 pointer 事件处理器 |
-| animations/ | Framer Motion variants | shakeAndShatter 导出抖动/粉碎动画配置 |
-| store.ts | 业务逻辑 + 状态 | addTodo, deleteTodo, toggleTodo, updateTitle |
+| 层          | 职责                          | 示例                                             |
+| ----------- | ----------------------------- | ------------------------------------------------ |
+| routes/     | 路由定义，页面级组装          | index.tsx 渲染 MainLayout + Containers           |
+| layouts/    | 页面骨架，响应式布局          | MainLayout 包含 header + content                 |
+| containers/ | 桥接 store 和 UI              | TodoListContainer 读 store，传 props 给 TodoList |
+| components/ | 纯展示，只通过 props 接收数据 | TodoItem 渲染 checkbox + title + attachments     |
+| hooks/      | 可复用交互逻辑                | useLongPress 返回 pointer 事件处理器             |
+| animations/ | Framer Motion variants        | shakeAndShatter 导出抖动/粉碎动画配置            |
+| store.ts    | 业务逻辑 + 状态               | addTodo, deleteTodo, toggleTodo, updateTitle     |

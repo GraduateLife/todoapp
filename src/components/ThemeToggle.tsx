@@ -25,8 +25,8 @@ function applyThemeMode(mode: ThemeMode) {
 
 const ITEMS: { mode: ThemeMode; label: string }[] = [
   { mode: 'light', label: 'LIT' },
-  { mode: 'dark',  label: 'DRK' },
-  { mode: 'auto',  label: 'AUT' },
+  { mode: 'dark', label: 'DRK' },
+  { mode: 'auto', label: 'AUT' },
 ]
 
 export default function ThemeToggle() {
@@ -90,12 +90,13 @@ export default function ThemeToggle() {
                 width: 6,
                 height: 6,
                 borderRadius: 1,
-                backgroundColor: active ? '#f5d000' : 'var(--rf-text-dim, #8899aa)',
+                backgroundColor: active
+                  ? '#f5d000'
+                  : 'var(--rf-text-dim, #8899aa)',
                 opacity: active ? 1 : 0.2,
-                boxShadow: active
-                  ? '0 0 3px 1px #f5d000'
-                  : 'none',
-                transition: 'box-shadow 200ms, opacity 200ms, background-color 200ms',
+                boxShadow: active ? '0 0 3px 1px #f5d000' : 'none',
+                transition:
+                  'box-shadow 200ms, opacity 200ms, background-color 200ms',
               }}
             />
             {/* Label */}

@@ -23,6 +23,7 @@
 **初始思路**：所有 StickyNote 始终挂在同一个 DOM 父节点，文件夹打开时叠加一个视觉 overlay（backdrop + frame），将属于该文件夹的卡片重定位到 grid 布局坐标。
 
 **核心问题**：
+
 - Backdrop 的 `z-index: 90` 高于普通卡片（`z-index: ~10-50`），导致文件夹卡片被遮挡、不可见
 - 临时修复：在 `StickyNoteCanvas` 中将文件夹卡片单独渲染在 `<FolderOverlay />` 之后，并注入 `zIndexOverride={200 + todo.zIndex}`
 
@@ -34,20 +35,22 @@
 
 **架构变化**：
 
-| 旧方案 | 新方案 |
-|--------|--------|
-| 所有 todo 始终在画布 DOM 中 | 有 folderId 的 todo 从画布过滤掉 |
+| 旧方案                                 | 新方案                           |
+| -------------------------------------- | -------------------------------- |
+| 所有 todo 始终在画布 DOM 中            | 有 folderId 的 todo 从画布过滤掉 |
 | FolderOverlay（固定 backdrop + frame） | FolderDrawer（从左侧滑入的面板） |
-| 卡片保持 StickyNote 完整样式 | 新建 FolderTodoCard 紧凑组件 |
-| 拖出即可移回主画布 | 仅右键菜单可移回 |
+| 卡片保持 StickyNote 完整样式           | 新建 FolderTodoCard 紧凑组件     |
+| 拖出即可移回主画布                     | 仅右键菜单可移回                 |
 
 **新增文件**：
+
 - `types.ts` → `Folder` 新增 `orderedTodoIds: string[]`
 - `store/folderStore.ts` → 新增 `appendToFolder` / `removeFromFolder` / `reorderTodo` / `setOrderedTodoIds`
 - `components/folder/FolderTodoCard.tsx` → 紧凑卡片组件
 - `components/folder/FolderDrawer.tsx` → Drawer 主体
 
 **废弃文件**：
+
 - `FolderOverlay.tsx` → 重命名为 `.bak`
 
 ---
@@ -121,9 +124,9 @@ appendToFolder(folderId, todoId) → folderStore：追加到 orderedTodoIds
 
 ## 五、总结
 
-| 问题 | 根因 | 解法 |
-|------|------|------|
-| Overlay 卡片不可见 | z-index 层叠顺序错误 | 改为 Drawer 架构，彻底隔离 |
-| @dnd-kit 崩溃 | React 19 SSR 不兼容 | 换用 framer-motion Reorder |
-| 排序卡顿/错乱 | store 直接驱动动画 + 多次写入旧引用 | 本地 state 驱动动画，dragEnd 后单次写 store |
-| Vite 缓存残留 | 预打包 chunk 版本 hash 固定 | 重启 dev server |
+| 问题               | 根因                                | 解法                                        |
+| ------------------ | ----------------------------------- | ------------------------------------------- |
+| Overlay 卡片不可见 | z-index 层叠顺序错误                | 改为 Drawer 架构，彻底隔离                  |
+| @dnd-kit 崩溃      | React 19 SSR 不兼容                 | 换用 framer-motion Reorder                  |
+| 排序卡顿/错乱      | store 直接驱动动画 + 多次写入旧引用 | 本地 state 驱动动画，dragEnd 后单次写 store |
+| Vite 缓存残留      | 预打包 chunk 版本 hash 固定         | 重启 dev server                             |

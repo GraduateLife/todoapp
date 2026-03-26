@@ -38,7 +38,10 @@ export function VoiceAttachment({
   }, [onRecorded])
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== 'inactive'
+    ) {
       mediaRecorderRef.current.stop()
       mediaRecorderRef.current = null
       setIsRecording(false)

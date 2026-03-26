@@ -10,8 +10,8 @@ interface SubTaskListProps {
   dimColor: string
   checkColor: string
   glowColor: string
-  isAddingExternal?: boolean   // set true from outside (e.g. context menu)
-  onAddingClose?: () => void   // called when the input closes
+  isAddingExternal?: boolean // set true from outside (e.g. context menu)
+  onAddingClose?: () => void // called when the input closes
   onToggle: (subtaskId: string) => void
   onDelete: (subtaskId: string) => void
   onAdd: (title: string) => void
@@ -56,7 +56,8 @@ export function SubTaskList({
   const visibleSubtasks = isExpanded ? subtasks : subtasks.slice(0, MAX_VISIBLE)
   const hiddenCount = subtasks.length - MAX_VISIBLE
   const completedCount = subtasks.filter((s) => s.completed).length
-  const progressPct = subtasks.length > 0 ? (completedCount / subtasks.length) * 100 : 0
+  const progressPct =
+    subtasks.length > 0 ? (completedCount / subtasks.length) * 100 : 0
 
   const handleAddSubmit = () => {
     const trimmed = newTitle.trim()
@@ -122,10 +123,16 @@ export function SubTaskList({
             />
           </div>
           <div className="flex justify-between mt-0.5">
-            <span className="font-mono text-[9px] opacity-50" style={{ color: dimColor }}>
+            <span
+              className="font-mono text-[9px] opacity-50"
+              style={{ color: dimColor }}
+            >
               subtasks
             </span>
-            <span className="font-mono text-[9px] opacity-60" style={{ color: dimColor }}>
+            <span
+              className="font-mono text-[9px] opacity-60"
+              style={{ color: dimColor }}
+            >
               {completedCount}/{subtasks.length}
             </span>
           </div>
@@ -155,7 +162,10 @@ export function SubTaskList({
                 }}
               >
                 {s.completed && (
-                  <span style={{ color: checkColor, fontSize: 8, lineHeight: 1 }} className="font-mono">
+                  <span
+                    style={{ color: checkColor, fontSize: 8, lineHeight: 1 }}
+                    className="font-mono"
+                  >
                     ✕
                   </span>
                 )}
@@ -202,7 +212,12 @@ export function SubTaskList({
                 type="button"
                 onClick={() => onDelete(s.id)}
                 className="opacity-0 group-hover:opacity-100 transition-opacity font-mono text-[10px]"
-                style={{ color: '#ff3030', lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}
+                style={{
+                  color: '#ff3030',
+                  lineHeight: 1,
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
               >
                 ✕
               </button>
@@ -227,7 +242,12 @@ export function SubTaskList({
       {isAdding ? (
         <div className="flex items-center gap-1.5 mt-1.5">
           <span
-            style={{ color: dimColor, fontSize: 9, lineHeight: 1, flexShrink: 0 }}
+            style={{
+              color: dimColor,
+              fontSize: 9,
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
             className="font-mono opacity-60"
           >
             +

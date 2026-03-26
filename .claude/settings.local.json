@@ -28,7 +28,12 @@
       "Bash(taskkill /PID 38976 /F)",
       "Bash(taskkill /PID 14876 /F)",
       "Bash(taskkill /PID 47268 /F)",
-      "Bash(cmd /c \"taskkill /PID 13472 /F & taskkill /PID 25972 /F & taskkill /PID 7840 /F & taskkill /PID 40580 /F & taskkill /PID 38976 /F & taskkill /PID 14876 /F & taskkill /PID 47268 /F\")"
+      "Bash(cmd /c \"taskkill /PID 13472 /F & taskkill /PID 25972 /F & taskkill /PID 7840 /F & taskkill /PID 40580 /F & taskkill /PID 38976 /F & taskkill /PID 14876 /F & taskkill /PID 47268 /F\")",
+      "Read(//Users/zhangyuntao/**)",
+      "Bash(npx eslint:*)",
+      "Bash(npx --yes eslint src/features/todo/containers/StickyNoteContainer.tsx)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm exec:*)"
     ]
   }
 }

@@ -10,7 +10,11 @@ const STORAGE_KEY = 'todoai-storage'
 
 interface TodoState {
   todos: Todo[]
-  addTodo: (title: string, attachments?: Attachment[], color?: NoteColor) => void
+  addTodo: (
+    title: string,
+    attachments?: Attachment[],
+    color?: NoteColor,
+  ) => void
   addTodoWithDetails: (
     title: string,
     subtasks: { title: string; completed: boolean }[],
@@ -64,7 +68,11 @@ function randomRotation(): number {
   return parseFloat(((Math.random() - 0.5) * 10).toFixed(2))
 }
 
-function createTodo(title: string, attachments: Attachment[] = [], color?: NoteColor): Todo {
+function createTodo(
+  title: string,
+  attachments: Attachment[] = [],
+  color?: NoteColor,
+): Todo {
   return {
     id: crypto.randomUUID(),
     title: title.slice(0, TITLE_MAX_LEN),
@@ -96,7 +104,13 @@ export const useTodoStore = create<TodoState>()(
           return { todos: [...state.todos, { ...next, zIndex: maxZ + 1 }] }
         }),
 
-      addTodoWithDetails: (title, subtasks, priority, attachments = [], color) =>
+      addTodoWithDetails: (
+        title,
+        subtasks,
+        priority,
+        attachments = [],
+        color,
+      ) =>
         set((state) => {
           const maxZ = state.todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
           const next = createTodo(title, attachments, color)
@@ -144,7 +158,7 @@ export const useTodoStore = create<TodoState>()(
       moveTodo: (id, x, y) =>
         set((state) => ({
           todos: state.todos.map((t) =>
-            t.id === id ? { ...t, position: { x, y } } : t
+            t.id === id ? { ...t, position: { x, y } } : t,
           ),
         })),
 
@@ -153,7 +167,7 @@ export const useTodoStore = create<TodoState>()(
           const maxZ = state.todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
           return {
             todos: state.todos.map((t) =>
-              t.id === id ? { ...t, zIndex: maxZ + 1 } : t
+              t.id === id ? { ...t, zIndex: maxZ + 1 } : t,
             ),
           }
         }),
@@ -163,7 +177,7 @@ export const useTodoStore = create<TodoState>()(
           todos: state.todos.map((t) =>
             t.id === todoId
               ? { ...t, attachments: [...t.attachments, attachment] }
-              : t
+              : t,
           ),
         })),
 
@@ -171,8 +185,13 @@ export const useTodoStore = create<TodoState>()(
         set((state) => ({
           todos: state.todos.map((t) =>
             t.id === todoId
-              ? { ...t, attachments: t.attachments.filter((a) => a.id !== attachmentId) }
-              : t
+              ? {
+                  ...t,
+                  attachments: t.attachments.filter(
+                    (a) => a.id !== attachmentId,
+                  ),
+                }
+              : t,
           ),
         })),
 
@@ -194,7 +213,7 @@ export const useTodoStore = create<TodoState>()(
                     { id: crypto.randomUUID(), title, completed: false },
                   ],
                 }
-              : t
+              : t,
           ),
         })),
 
@@ -203,10 +222,11 @@ export const useTodoStore = create<TodoState>()(
           todos: state.todos.map((t) => {
             if (t.id !== todoId) return t
             const updatedSubtasks = t.subtasks.map((s) =>
-              s.id === subtaskId ? { ...s, completed: !s.completed } : s
+              s.id === subtaskId ? { ...s, completed: !s.completed } : s,
             )
             const allDone =
-              updatedSubtasks.length > 0 && updatedSubtasks.every((s) => s.completed)
+              updatedSubtasks.length > 0 &&
+              updatedSubtasks.every((s) => s.completed)
             return { ...t, subtasks: updatedSubtasks, completed: allDone }
           }),
         })),
@@ -217,7 +237,8 @@ export const useTodoStore = create<TodoState>()(
             if (t.id !== todoId) return t
             const updatedSubtasks = t.subtasks.filter((s) => s.id !== subtaskId)
             const allDone =
-              updatedSubtasks.length > 0 && updatedSubtasks.every((s) => s.completed)
+              updatedSubtasks.length > 0 &&
+              updatedSubtasks.every((s) => s.completed)
             return { ...t, subtasks: updatedSubtasks, completed: allDone }
           }),
         })),
@@ -229,10 +250,10 @@ export const useTodoStore = create<TodoState>()(
               ? {
                   ...t,
                   subtasks: t.subtasks.map((s) =>
-                    s.id === subtaskId ? { ...s, title } : s
+                    s.id === subtaskId ? { ...s, title } : s,
                   ),
                 }
-              : t
+              : t,
           ),
         })),
 
@@ -249,14 +270,14 @@ export const useTodoStore = create<TodoState>()(
       archiveTodo: (id) =>
         set((state) => ({
           todos: state.todos.map((t) =>
-            t.id === id ? { ...t, archived: true, folderId: null } : t
+            t.id === id ? { ...t, archived: true, folderId: null } : t,
           ),
         })),
 
       unarchiveTodo: (id) =>
         set((state) => ({
           todos: state.todos.map((t) =>
-            t.id === id ? { ...t, archived: false } : t
+            t.id === id ? { ...t, archived: false } : t,
           ),
         })),
 
@@ -275,9 +296,11 @@ export const useTodoStore = create<TodoState>()(
           return {
             todos: state.todos.map((t) => {
               if (t.id === rootId)
-                return { ...t, stackedIds: [...(t.stackedIds ?? []), ...allChildIds] }
-              if (t.id === childId)
-                return { ...t, stackedIds: [] } // no longer a root
+                return {
+                  ...t,
+                  stackedIds: [...(t.stackedIds ?? []), ...allChildIds],
+                }
+              if (t.id === childId) return { ...t, stackedIds: [] } // no longer a root
               return t
             }),
           }
@@ -292,9 +315,13 @@ export const useTodoStore = create<TodoState>()(
           return {
             todos: state.todos.map((t) => {
               if (t.id === rootId)
-                return { ...t, stackedIds: (t.stackedIds ?? []).filter((id) => id !== childId) }
-              if (t.id === childId)
-                return { ...t, position: newPos }
+                return {
+                  ...t,
+                  stackedIds: (t.stackedIds ?? []).filter(
+                    (id) => id !== childId,
+                  ),
+                }
+              if (t.id === childId) return { ...t, position: newPos }
               return t
             }),
           }
@@ -305,10 +332,20 @@ export const useTodoStore = create<TodoState>()(
           const root = state.todos.find((t) => t.id === rootId)
           if (!root) return state
           const ids = [...(root.stackedIds ?? [])]
-          if (fromIdx < 0 || fromIdx >= ids.length || toIdx < 0 || toIdx >= ids.length) return state
+          if (
+            fromIdx < 0 ||
+            fromIdx >= ids.length ||
+            toIdx < 0 ||
+            toIdx >= ids.length
+          )
+            return state
           const [moved] = ids.splice(fromIdx, 1)
           ids.splice(toIdx, 0, moved)
-          return { todos: state.todos.map((t) => t.id === rootId ? { ...t, stackedIds: ids } : t) }
+          return {
+            todos: state.todos.map((t) =>
+              t.id === rootId ? { ...t, stackedIds: ids } : t,
+            ),
+          }
         }),
 
       disbandStack: (rootId) =>
@@ -348,8 +385,12 @@ export const useTodoStore = create<TodoState>()(
                 y: Math.floor(Math.random() * 300 + 100),
               },
               zIndex: t.zIndex ?? 10,
-              color: t.color ?? NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)],
-              rotation: t.rotation ?? parseFloat(((Math.random() - 0.5) * 10).toFixed(2)),
+              color:
+                t.color ??
+                NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)],
+              rotation:
+                t.rotation ??
+                parseFloat(((Math.random() - 0.5) * 10).toFixed(2)),
               attachments: t.attachments ?? [],
             })),
           }
@@ -376,6 +417,6 @@ export const useTodoStore = create<TodoState>()(
         }
         return state
       },
-    }
-  )
+    },
+  ),
 )

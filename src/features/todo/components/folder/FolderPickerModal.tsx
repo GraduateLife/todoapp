@@ -17,19 +17,28 @@ interface FolderPickerModalProps {
   onCancel: () => void
 }
 
-export function FolderPickerModal({ open, onConfirm, onCancel }: FolderPickerModalProps) {
+export function FolderPickerModal({
+  open,
+  onConfirm,
+  onCancel,
+}: FolderPickerModalProps) {
   const folders = useFolderStore((s) => s.folders)
   const createFolder = useFolderStore((s) => s.createFolder)
   const [isCreating, setIsCreating] = useState(false)
   const [newName, setNewName] = useState('')
 
   useEffect(() => {
-    if (open) { setIsCreating(false); setNewName('') }
+    if (open) {
+      setIsCreating(false)
+      setNewName('')
+    }
   }, [open])
 
   useEffect(() => {
     if (!open) return
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+    }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [open, onCancel])
@@ -46,22 +55,31 @@ export function FolderPickerModal({ open, onConfirm, onCancel }: FolderPickerMod
   const modal = (
     <div
       className="fixed inset-0 flex items-center justify-center"
-      style={{ zIndex: 9500, background: 'rgba(4,6,12,0.75)', backdropFilter: 'blur(4px)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onCancel() }}
+      style={{
+        zIndex: 9500,
+        background: 'rgba(4,6,12,0.75)',
+        backdropFilter: 'blur(4px)',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel()
+      }}
     >
       <div
         className="relative rounded-[3px] p-6"
         style={{
           background: '#080c18',
           border: '1px solid rgba(191,95,255,0.25)',
-          boxShadow: '0 0 40px rgba(191,95,255,0.08), 0 16px 48px rgba(0,0,0,0.7)',
+          boxShadow:
+            '0 0 40px rgba(191,95,255,0.08), 0 16px 48px rgba(0,0,0,0.7)',
           minWidth: 300,
           maxWidth: 380,
         }}
       >
         {/* Header */}
-        <p className="font-mono text-[9px] tracking-[0.2em] uppercase opacity-50 mb-4"
-          style={{ color: 'var(--rf-purple)' }}>
+        <p
+          className="font-mono text-[9px] tracking-[0.2em] uppercase opacity-50 mb-4"
+          style={{ color: 'var(--rf-purple)' }}
+        >
           move to folder
         </p>
 
@@ -88,13 +106,24 @@ export function FolderPickerModal({ open, onConfirm, onCancel }: FolderPickerMod
                   e.currentTarget.style.borderColor = 'rgba(191,95,255,0.12)'
                 }}
               >
-                <span className="font-mono text-[10px]" style={{ color: COLOR_VAR[folder.color] ?? 'var(--rf-purple)' }}>
+                <span
+                  className="font-mono text-[10px]"
+                  style={{
+                    color: COLOR_VAR[folder.color] ?? 'var(--rf-purple)',
+                  }}
+                >
                   ▣
                 </span>
-                <span className="font-mono text-[0.78rem]" style={{ color: 'var(--rf-text)' }}>
+                <span
+                  className="font-mono text-[0.78rem]"
+                  style={{ color: 'var(--rf-text)' }}
+                >
                   {folder.name}
                 </span>
-                <span className="ml-auto font-mono text-[8px] opacity-40" style={{ color: 'var(--rf-text-dim)' }}>
+                <span
+                  className="ml-auto font-mono text-[8px] opacity-40"
+                  style={{ color: 'var(--rf-text-dim)' }}
+                >
                   open →
                 </span>
               </button>
@@ -114,7 +143,12 @@ export function FolderPickerModal({ open, onConfirm, onCancel }: FolderPickerMod
         ) : (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className="font-mono text-[0.9rem]" style={{ color: 'var(--rf-purple)' }}>›</span>
+              <span
+                className="font-mono text-[0.9rem]"
+                style={{ color: 'var(--rf-purple)' }}
+              >
+                ›
+              </span>
               <input
                 autoFocus
                 type="text"
@@ -126,18 +160,28 @@ export function FolderPickerModal({ open, onConfirm, onCancel }: FolderPickerMod
                 }}
                 placeholder="folder name..."
                 className="rf-input-field flex-1"
-                style={{ borderBottom: '1px solid rgba(191,95,255,0.3)', paddingBottom: 2 }}
+                style={{
+                  borderBottom: '1px solid rgba(191,95,255,0.3)',
+                  paddingBottom: 2,
+                }}
               />
             </div>
             <div className="flex gap-2">
-              <button type="button" className="rf-btn flex-1" onClick={() => setIsCreating(false)}>
+              <button
+                type="button"
+                className="rf-btn flex-1"
+                onClick={() => setIsCreating(false)}
+              >
                 [ cancel ]
               </button>
               <button
                 type="button"
                 className="rf-btn flex-1"
                 onClick={handleCreateConfirm}
-                style={{ borderColor: 'var(--rf-purple)', color: 'var(--rf-purple)' }}
+                style={{
+                  borderColor: 'var(--rf-purple)',
+                  color: 'var(--rf-purple)',
+                }}
               >
                 [ create ]
               </button>
@@ -147,7 +191,11 @@ export function FolderPickerModal({ open, onConfirm, onCancel }: FolderPickerMod
 
         {/* Cancel */}
         {!isCreating && (
-          <button type="button" className="rf-btn w-full mt-2" onClick={onCancel}>
+          <button
+            type="button"
+            className="rf-btn w-full mt-2"
+            onClick={onCancel}
+          >
             [ cancel ]
           </button>
         )}

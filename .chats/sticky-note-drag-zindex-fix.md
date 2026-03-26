@@ -40,4 +40,3 @@
 ## 备注
 
 输入栏 `.rf-input-bar` 在 `src/styles/globals.css` 中有 `z-index: 50`，高于画布层（画布 `zIndex: 10`），因此恢复 pointer events 后也不会影响底部输入栏点击。
-

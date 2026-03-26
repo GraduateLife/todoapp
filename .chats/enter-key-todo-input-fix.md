@@ -5,7 +5,7 @@
 在 TodoInput 输入框中输入内容后按 **Enter** 键，有时无法生成新的 todo 项。
 
 - **涉及组件**：`TodoInput`（`src/features/todo/components/TodoInput.tsx`）
-- **输入框 DOM**：`input.rf-input-field`（placeholder: "type a task and press enter_"）
+- **输入框 DOM**：`input.rf-input-field`（placeholder: "type a task and press enter\_"）
 
 ## 原因
 
@@ -27,18 +27,18 @@
 
 ### 具体改动
 
-1. **增加 `useRef` 与 `valueRef`**  
+1. **增加 `useRef` 与 `valueRef`**
    - 用 `valueRef` 保存当前输入内容，与输入框保持同步。
 
-2. **新增 `onChange` 回调**  
+2. **新增 `onChange` 回调**
    - 在调用 `setValue(nextValue)` 的同时执行 `valueRef.current = nextValue`，保证每次输入后 ref 都是最新值。
 
-3. **修改 `handleSubmit`**  
-   - 使用 `valueRef.current.trim()` 替代 `value.trim()` 作为提交内容。  
-   - 提交后清空时同时执行 `valueRef.current = ''` 和 `setValue('')`。  
+3. **修改 `handleSubmit`**
+   - 使用 `valueRef.current.trim()` 替代 `value.trim()` 作为提交内容。
+   - 提交后清空时同时执行 `valueRef.current = ''` 和 `setValue('')`。
    - `useCallback` 依赖数组中移除 `value`，只保留 `pendingAttachments` 和 `addTodo`。
 
-4. **TodoInput 使用新的 onChange**  
+4. **TodoInput 使用新的 onChange**
    - 将 `onChange={setValue}` 改为 `onChange={onChange}`。
 
 这样在输入后立即按 Enter 时，`handleSubmit` 会从 `valueRef.current` 读到最新内容，能正确创建 todo，且不改变 `TodoInput` 的组件接口。

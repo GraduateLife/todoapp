@@ -1,17 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { Todo, NoteColor } from '../../types'
-
-const NOTE_STYLES: Record<
-  NoteColor,
-  { bg: string; border: string; glow: string; text: string; dim: string }
-> = {
-  cyan:   { bg: '#04161b', border: '#00f5ff', glow: 'rgba(0,245,255,0.35)',  text: '#9ae8f0', dim: 'rgba(0,245,255,0.45)'  },
-  pink:   { bg: '#1c040f', border: '#ff2d78', glow: 'rgba(255,45,120,0.35)', text: '#f0a0be', dim: 'rgba(255,45,120,0.45)' },
-  amber:  { bg: '#181000', border: '#ffb800', glow: 'rgba(255,184,0,0.35)',  text: '#f0d890', dim: 'rgba(255,184,0,0.45)'  },
-  green:  { bg: '#041604', border: '#39ff14', glow: 'rgba(57,255,20,0.35)',  text: '#9cf09a', dim: 'rgba(57,255,20,0.45)'  },
-  purple: { bg: '#0e0418', border: '#bf5fff', glow: 'rgba(191,95,255,0.35)', text: '#d4a8f4', dim: 'rgba(191,95,255,0.45)' },
-}
+import { NOTE_STYLES } from '../../constants/noteColors'
 
 interface FolderTodoCardProps {
   todo: Todo
@@ -20,7 +10,12 @@ interface FolderTodoCardProps {
   onToggle: (todoId: string) => void
 }
 
-export function FolderTodoCard({ todo, onMoveToMain, onDelete, onToggle }: FolderTodoCardProps) {
+export function FolderTodoCard({
+  todo,
+  onMoveToMain,
+  onDelete,
+  onToggle,
+}: FolderTodoCardProps) {
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -48,14 +43,16 @@ export function FolderTodoCard({ todo, onMoveToMain, onDelete, onToggle }: Folde
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    const menuW = 150, menuH = 80
+    const menuW = 150,
+      menuH = 80
     setMenuPos({
       x: Math.min(e.clientX, window.innerWidth - menuW - 8),
       y: Math.min(e.clientY, window.innerHeight - menuH - 8),
     })
   }
 
-  const contextMenu = menuPos &&
+  const contextMenu =
+    menuPos &&
     typeof document !== 'undefined' &&
     createPortal(
       <div
@@ -68,7 +65,10 @@ export function FolderTodoCard({ todo, onMoveToMain, onDelete, onToggle }: Folde
           type="button"
           className="rf-context-item"
           role="menuitem"
-          onClick={() => { onMoveToMain(todo.id); setMenuPos(null) }}
+          onClick={() => {
+            onMoveToMain(todo.id)
+            setMenuPos(null)
+          }}
         >
           [ move to main ]
         </button>
@@ -77,16 +77,19 @@ export function FolderTodoCard({ todo, onMoveToMain, onDelete, onToggle }: Folde
           type="button"
           className="rf-context-item rf-context-item--delete"
           role="menuitem"
-          onClick={() => { onDelete(todo.id); setMenuPos(null) }}
+          onClick={() => {
+            onDelete(todo.id)
+            setMenuPos(null)
+          }}
         >
           [ delete ]
         </button>
       </div>,
-      document.body
+      document.body,
     )
 
-  const totalSubs = todo.subTasks?.length ?? 0
-  const doneSubs  = todo.subTasks?.filter((s) => s.completed).length ?? 0
+  const totalSubs = todo.subtasks?.length ?? 0
+  const doneSubs = todo.subtasks?.filter((s) => s.completed).length ?? 0
 
   return (
     <>
@@ -107,24 +110,39 @@ export function FolderTodoCard({ todo, onMoveToMain, onDelete, onToggle }: Folde
           userSelect: 'none',
         }}
       >
-
         {/* Square checkbox — absolute top-left */}
         <button
           onClick={() => onToggle(todo.id)}
           title={todo.completed ? 'Mark incomplete' : 'Mark complete'}
           style={{
-            position: 'absolute', top: 8, left: 11, zIndex: 1,
-            width: 13, height: 13,
+            position: 'absolute',
+            top: 8,
+            left: 11,
+            zIndex: 1,
+            width: 13,
+            height: 13,
             border: `1px solid ${sNs.border}`,
             background: todo.completed ? `${sNs.border}30` : 'transparent',
             boxShadow: todo.completed ? `0 0 5px ${sNs.glow}` : 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', borderRadius: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            borderRadius: 1,
             padding: 0,
           }}
         >
           {todo.completed && (
-            <span style={{ color: sNs.text, fontSize: 8, lineHeight: 1, fontFamily: 'monospace' }}>✕</span>
+            <span
+              style={{
+                color: sNs.text,
+                fontSize: 8,
+                lineHeight: 1,
+                fontFamily: 'monospace',
+              }}
+            >
+              ✕
+            </span>
           )}
         </button>
 
@@ -133,11 +151,19 @@ export function FolderTodoCard({ todo, onMoveToMain, onDelete, onToggle }: Folde
           onClick={() => onMoveToMain(todo.id)}
           title="move to main"
           style={{
-            position: 'absolute', top: 5, right: 9, zIndex: 1,
-            color: sNs.border, background: 'none', border: 'none',
-            cursor: 'pointer', padding: 0,
+            position: 'absolute',
+            top: 5,
+            right: 9,
+            zIndex: 1,
+            color: sNs.border,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
             fontFamily: "'Space Mono', monospace",
-            fontSize: 13, fontWeight: 700, lineHeight: 1,
+            fontSize: 13,
+            fontWeight: 700,
+            lineHeight: 1,
             opacity: 0.75,
           }}
         >
@@ -146,28 +172,38 @@ export function FolderTodoCard({ todo, onMoveToMain, onDelete, onToggle }: Folde
 
         {/* Title */}
         <p
-          style={{
-            color: todo.completed ? sNs.dim : sNs.text,
-            fontFamily: "'Space Mono', monospace",
-            fontSize: '0.72rem',
-            lineHeight: 1.4,
-            margin: 0,
-            paddingTop: 22,
-            opacity: todo.completed ? 0.5 : 1,
-            textDecoration: todo.completed ? 'line-through' : 'none',
-            wordBreak: 'break-word',
-            display: '-webkit-box',
-            WebkitLineClamp: totalSubs > 0 ? 4 : 5,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          } as React.CSSProperties}
+          style={
+            {
+              color: todo.completed ? sNs.dim : sNs.text,
+              fontFamily: "'Space Mono', monospace",
+              fontSize: '0.72rem',
+              lineHeight: 1.4,
+              margin: 0,
+              paddingTop: 22,
+              opacity: todo.completed ? 0.5 : 1,
+              textDecoration: todo.completed ? 'line-through' : 'none',
+              wordBreak: 'break-word',
+              display: '-webkit-box',
+              WebkitLineClamp: totalSubs > 0 ? 4 : 5,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            } as React.CSSProperties
+          }
         >
           {todo.title || 'Untitled'}
         </p>
 
         {/* Subtask progress */}
         {totalSubs > 0 && (
-          <p style={{ color: sNs.dim, fontFamily: "'Space Mono', monospace", fontSize: '0.62rem', marginTop: 4, opacity: 0.65 }}>
+          <p
+            style={{
+              color: sNs.dim,
+              fontFamily: "'Space Mono', monospace",
+              fontSize: '0.62rem',
+              marginTop: 4,
+              opacity: 0.65,
+            }}
+          >
             {doneSubs}/{totalSubs} done
           </p>
         )}
@@ -175,7 +211,14 @@ export function FolderTodoCard({ todo, onMoveToMain, onDelete, onToggle }: Folde
         {/* High-priority bottom accent */}
         {todo.priority === 'high' && (
           <div
-            style={{ marginTop: 6, height: 1, width: '100%', background: sNs.border, boxShadow: `0 0 4px ${sNs.border}`, opacity: 0.7 }}
+            style={{
+              marginTop: 6,
+              height: 1,
+              width: '100%',
+              background: sNs.border,
+              boxShadow: `0 0 4px ${sNs.border}`,
+              opacity: 0.7,
+            }}
           />
         )}
       </div>

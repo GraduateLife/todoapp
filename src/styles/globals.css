@@ -99,7 +99,7 @@
 .light {
   --rf-bg: #eef2f8;
   --rf-bg-2: #e2e8f2;
-  --rf-cyan: #006e8a;           /* dark teal — readable on light bg */
+  --rf-cyan: #006e8a; /* dark teal — readable on light bg */
   --rf-border: rgba(0, 140, 180, 0.3);
   --rf-surface: rgba(0, 140, 180, 0.05);
   --rf-grid: rgba(0, 140, 180, 0.09);
@@ -183,23 +183,51 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(0, 245, 255, 0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 85% 10%, rgba(191, 95, 255, 0.05) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 60% at 50% 110%, rgba(0, 245, 255, 0.04) 0%, transparent 55%),
+    radial-gradient(
+      ellipse 80% 50% at 20% 0%,
+      rgba(0, 245, 255, 0.06) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 85% 10%,
+      rgba(191, 95, 255, 0.05) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 50% 60% at 50% 110%,
+      rgba(0, 245, 255, 0.04) 0%,
+      transparent 55%
+    ),
     var(--rf-bg);
 }
 
 /* Light mode: override background gradients */
 html.light body::before {
   background:
-    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(0, 200, 240, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 85% 10%, rgba(160, 80, 255, 0.06) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 60% at 50% 110%, rgba(0, 200, 240, 0.05) 0%, transparent 55%),
+    radial-gradient(
+      ellipse 80% 50% at 20% 0%,
+      rgba(0, 200, 240, 0.08) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 85% 10%,
+      rgba(160, 80, 255, 0.06) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 50% 60% at 50% 110%,
+      rgba(0, 200, 240, 0.05) 0%,
+      transparent 55%
+    ),
     var(--rf-bg);
 }
 
 html.light body::after {
-  background-image: radial-gradient(circle, rgba(0, 180, 220, 0.2) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    rgba(0, 180, 220, 0.2) 1px,
+    transparent 1px
+  );
   opacity: 0.5;
 }
 
@@ -210,11 +238,18 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image:
-    radial-gradient(circle, rgba(0, 245, 255, 0.15) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    rgba(0, 245, 255, 0.15) 1px,
+    transparent 1px
+  );
   background-size: 32px 32px;
   opacity: 0.4;
-  mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, black 30%, transparent 80%);
+  mask-image: radial-gradient(
+    ellipse 90% 80% at 50% 40%,
+    black 30%,
+    transparent 80%
+  );
 }
 
 /* Global scanline overlay */
@@ -239,7 +274,9 @@ html.light .rf-logo {
 }
 html.light .rf-logo-dot {
   background: var(--rf-cyan);
-  box-shadow: 0 0 6px var(--rf-cyan), 0 0 12px rgba(0, 110, 138, 0.25);
+  box-shadow:
+    0 0 6px var(--rf-cyan),
+    0 0 12px rgba(0, 110, 138, 0.25);
 }
 html.light .rf-input-prompt {
   text-shadow: none;
@@ -248,7 +285,9 @@ html.light .rf-header {
   box-shadow: 0 0 16px rgba(0, 110, 138, 0.06);
 }
 html.light .rf-input-bar {
-  box-shadow: 0 0 20px rgba(0, 110, 138, 0.06), 0 -1px 0 rgba(0, 110, 138, 0.08);
+  box-shadow:
+    0 0 20px rgba(0, 110, 138, 0.06),
+    0 -1px 0 rgba(0, 110, 138, 0.08);
 }
 html.light .nav-link:hover,
 html.light .nav-link.is-active {
@@ -259,8 +298,12 @@ html.light .island-kicker {
 }
 
 @keyframes scanline-drift {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 100px; }
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 100px;
+  }
 }
 
 /* ─── Typography ─────────────────────────────── */
@@ -333,7 +376,9 @@ pre code {
   height: 6px;
   border-radius: 50%;
   background: var(--rf-cyan);
-  box-shadow: 0 0 8px var(--rf-cyan), 0 0 16px rgba(0, 245, 255, 0.5);
+  box-shadow:
+    0 0 8px var(--rf-cyan),
+    0 0 16px rgba(0, 245, 255, 0.5);
   animation: pulse-dot 2.4s ease-in-out infinite;
   vertical-align: middle;
   margin-right: 8px;
@@ -341,8 +386,17 @@ pre code {
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--rf-cyan), 0 0 16px rgba(0, 245, 255, 0.5); }
-  50% { opacity: 0.5; box-shadow: 0 0 4px var(--rf-cyan); }
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow:
+      0 0 8px var(--rf-cyan),
+      0 0 16px rgba(0, 245, 255, 0.5);
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0 0 4px var(--rf-cyan);
+  }
 }
 
 .nav-link {
@@ -469,8 +523,15 @@ pre code {
 
 /* ─── Priority animations ────────────────────── */
 @keyframes priority-high-pulse {
-  0%, 100% { opacity: 0.75; box-shadow: 0 0 0 0 transparent; }
-  50%       { opacity: 0.25; box-shadow: 0 0 8px 2px currentColor; }
+  0%,
+  100% {
+    opacity: 0.75;
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    opacity: 0.25;
+    box-shadow: 0 0 8px 2px currentColor;
+  }
 }
 
 .rf-priority-ring {
@@ -478,8 +539,12 @@ pre code {
 }
 
 @keyframes rf-reminder-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ─── Context menu ───────────────────────────── */
@@ -487,7 +552,9 @@ pre code {
   font-family: var(--font-mono);
   background: #080c18;
   border: 1px solid var(--rf-border);
-  box-shadow: 0 0 20px rgba(0, 245, 255, 0.15), 0 8px 32px rgba(0, 0, 0, 0.6);
+  box-shadow:
+    0 0 20px rgba(0, 245, 255, 0.15),
+    0 8px 32px rgba(0, 0, 0, 0.6);
   border-radius: 2px;
   min-width: 180px;
   padding: 4px 0;
@@ -553,8 +620,14 @@ pre code {
 }
 
 @keyframes rise-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .island-kicker {

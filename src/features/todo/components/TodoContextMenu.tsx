@@ -68,9 +68,10 @@ export function TodoContextMenu({
   const menuWidth = 170
   const estimatedHeight = menuRef.current?.offsetHeight ?? 315
   const spaceBelow = window.innerHeight - position.y - 8
-  const top = spaceBelow >= estimatedHeight
-    ? position.y
-    : Math.max(8, position.y - estimatedHeight)
+  const top =
+    spaceBelow >= estimatedHeight
+      ? position.y
+      : Math.max(8, position.y - estimatedHeight)
   const left = Math.min(position.x, window.innerWidth - menuWidth - 8)
 
   const menu = (

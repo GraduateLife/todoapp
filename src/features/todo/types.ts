@@ -6,7 +6,13 @@ export interface Attachment {
 }
 
 export type NoteColor = 'cyan' | 'pink' | 'amber' | 'green' | 'purple'
-export const NOTE_COLORS: NoteColor[] = ['cyan', 'pink', 'amber', 'green', 'purple']
+export const NOTE_COLORS: NoteColor[] = [
+  'cyan',
+  'pink',
+  'amber',
+  'green',
+  'purple',
+]
 
 export type Priority = 'low' | 'normal' | 'high'
 
@@ -17,7 +23,7 @@ export interface SubTask {
 }
 
 export interface Reminder {
-  remindAt: number  // next trigger timestamp (ms)
+  remindAt: number // next trigger timestamp (ms)
   interval?: number // ms — if set, recurring; if absent, one-shot
 }
 
@@ -45,6 +51,6 @@ export interface Folder {
   color: NoteColor
   createdAt: number
   isOpen: boolean
-  markerY: number          // Y position of left-side marker on screen
+  markerY: number // Y position of left-side marker on screen
   orderedTodoIds: string[] // ordered list of todo IDs in this folder
 }

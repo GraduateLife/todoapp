@@ -25,7 +25,8 @@ class BrowserNotificationService implements INotificationService {
   }
 
   notify(title: string, body?: string): void {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    if (!('Notification' in window) || Notification.permission !== 'granted')
+      return
     new Notification(title, {
       body,
       icon: '/favicon.ico',
@@ -52,8 +53,8 @@ export function getNotificationService(): INotificationService {
 export interface ScheduledReminder {
   todoId: string
   title: string
-  remindAt: number    // next fire timestamp
-  interval?: number   // ms — if set, reschedule after firing
+  remindAt: number // next fire timestamp
+  interval?: number // ms — if set, reschedule after firing
 }
 
 type ReminderCallback = (todoId: string) => void
@@ -70,7 +71,10 @@ class ReminderScheduler {
     this.cancel(reminder.todoId)
     const delay = Math.max(0, reminder.remindAt - Date.now())
     const timer = setTimeout(() => {
-      getNotificationService().notify(`⏰ ${reminder.title}`, 'Reminder from your todo list')
+      getNotificationService().notify(
+        `⏰ ${reminder.title}`,
+        'Reminder from your todo list',
+      )
       this.onFire?.(reminder.todoId)
       // Reschedule if recurring
       if (reminder.interval && reminder.interval > 0) {

@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTodoStore } from '../store'
-import { reminderScheduler, getNotificationService } from '../services/reminderService'
+import {
+  reminderScheduler,
+  getNotificationService,
+} from '../services/reminderService'
 
 export interface ReminderToast {
   todoId: string

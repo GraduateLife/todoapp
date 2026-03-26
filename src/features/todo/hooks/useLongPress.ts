@@ -32,7 +32,7 @@ export function useLongPress({
         clearTimer()
       }, thresholdMs)
     },
-    [onLongPress, thresholdMs, clearTimer]
+    [onLongPress, thresholdMs, clearTimer],
   )
 
   const handlePointerUp = useCallback(() => {

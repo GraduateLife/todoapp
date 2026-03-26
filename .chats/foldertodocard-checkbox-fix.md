@@ -143,12 +143,19 @@ toggle 不改变 `todos.length`，所以 `localTodos` 不会更新。
 
 ```tsx
 const folderCompletedCount = openFolder
-  ? todos.filter((t) => t.folderId === openFolder.id && !t.archived && t.completed).length
+  ? todos.filter(
+      (t) => t.folderId === openFolder.id && !t.archived && t.completed,
+    ).length
   : 0
 
 useEffect(() => {
   setLocalTodos(storeTodos)
-}, [openFolder?.id, openFolder?.orderedTodoIds.length, todos.length, folderCompletedCount])
+}, [
+  openFolder?.id,
+  openFolder?.orderedTodoIds.length,
+  todos.length,
+  folderCompletedCount,
+])
 ```
 
 `folderCompletedCount` 在任意 todo 被 toggle 时都会变化，触发同步，实时更新界面。
@@ -157,8 +164,8 @@ useEffect(() => {
 
 ## 总结
 
-| 尝试 | 方案 | 失败原因 |
-|------|------|----------|
-| 1 | React `onPointerDown` + `stopPropagation` | React 合成事件代理在 root，bubble 阶段比 framer capture 晚 |
-| 2 | 原生 `addEventListener` 绑在 button 上 | framer 使用 capture 阶段监听，比 button 的 bubble 监听早 |
-| ✓ | `onPointerDownCapture` 在容器 + `onPointerUp` 在 button | React capture 代理在 root，早于 framer 的 capture；`pointerup` 独立事件不受影响 |
+| 尝试 | 方案                                                    | 失败原因                                                                        |
+| ---- | ------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 1    | React `onPointerDown` + `stopPropagation`               | React 合成事件代理在 root，bubble 阶段比 framer capture 晚                      |
+| 2    | 原生 `addEventListener` 绑在 button 上                  | framer 使用 capture 阶段监听，比 button 的 bubble 监听早                        |
+| ✓    | `onPointerDownCapture` 在容器 + `onPointerUp` 在 button | React capture 代理在 root，早于 framer 的 capture；`pointerup` 独立事件不受影响 |

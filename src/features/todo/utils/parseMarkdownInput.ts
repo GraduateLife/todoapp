@@ -11,17 +11,17 @@ export type ParsedTodo = {
 
 /** Classification of a single raw line */
 export type LineToken =
-  | { kind: 'title';    text: string }
-  | { kind: 'subtask';  text: string; completed: boolean }
+  | { kind: 'title'; text: string }
+  | { kind: 'subtask'; text: string; completed: boolean }
   | { kind: 'priority'; text: string; value: Priority }
-  | { kind: 'color';    text: string; value: NoteColor }
-  | { kind: 'warn';     text: string }   // e.g. "-milk" — looks like a subtask missing a space
-  | { kind: 'extra';    text: string }   // extra plain line = CONFLICT
+  | { kind: 'color'; text: string; value: NoteColor }
+  | { kind: 'warn'; text: string } // e.g. "-milk" — looks like a subtask missing a space
+  | { kind: 'extra'; text: string } // extra plain line = CONFLICT
   | { kind: 'empty' }
 
 export type ParseResult =
-  | { ok: true;  data: ParsedTodo; tokens: LineToken[]; hasWarnings: boolean }
-  | { ok: false; error: string;    tokens: LineToken[] }
+  | { ok: true; data: ParsedTodo; tokens: LineToken[]; hasWarnings: boolean }
+  | { ok: false; error: string; tokens: LineToken[] }
 
 /** Tokenise every raw line */
 function tokenise(lines: string[]): LineToken[] {
@@ -32,22 +32,27 @@ function tokenise(lines: string[]): LineToken[] {
 
     // ── Priority markers ────────────────────────────────────────────────────
     // [!+] = high · [!-] = low · [!] = normal (explicit)
-    if (line === '[!+]') return { kind: 'priority', text: line, value: 'high'   }
-    if (line === '[!-]') return { kind: 'priority', text: line, value: 'low'    }
-    if (line === '[!]')  return { kind: 'priority', text: line, value: 'normal' }
+    if (line === '[!+]') return { kind: 'priority', text: line, value: 'high' }
+    if (line === '[!-]') return { kind: 'priority', text: line, value: 'low' }
+    if (line === '[!]') return { kind: 'priority', text: line, value: 'normal' }
 
     // ── Color markers ────────────────────────────────────────────────────────
     // [cyan] [pink] [amber] [green] [purple]
-    if (line === '[cyan]')   return { kind: 'color', text: line, value: 'cyan'   }
-    if (line === '[pink]')   return { kind: 'color', text: line, value: 'pink'   }
-    if (line === '[amber]')  return { kind: 'color', text: line, value: 'amber'  }
-    if (line === '[green]')  return { kind: 'color', text: line, value: 'green'  }
-    if (line === '[purple]') return { kind: 'color', text: line, value: 'purple' }
+    if (line === '[cyan]') return { kind: 'color', text: line, value: 'cyan' }
+    if (line === '[pink]') return { kind: 'color', text: line, value: 'pink' }
+    if (line === '[amber]') return { kind: 'color', text: line, value: 'amber' }
+    if (line === '[green]') return { kind: 'color', text: line, value: 'green' }
+    if (line === '[purple]')
+      return { kind: 'color', text: line, value: 'purple' }
 
     // ── Subtask — full form: "- [x] text" or "- [] text" or "- [ ] text" ──
     const subFull = line.match(/^-\s+\[(x|\s*)\]\s+(.+)/)
     if (subFull) {
-      return { kind: 'subtask', text: subFull[2].trim(), completed: subFull[1] === 'x' }
+      return {
+        kind: 'subtask',
+        text: subFull[2].trim(),
+        completed: subFull[1] === 'x',
+      }
     }
 
     // ── Subtask — short form: "- text" ─────────────────────────────────────
@@ -60,7 +65,10 @@ function tokenise(lines: string[]): LineToken[] {
     if (/^-\S/.test(line)) return { kind: 'warn', text: line }
 
     // ── Plain lines ─────────────────────────────────────────────────────────
-    if (!titleSeen) { titleSeen = true; return { kind: 'title', text: line } }
+    if (!titleSeen) {
+      titleSeen = true
+      return { kind: 'title', text: line }
+    }
     return { kind: 'extra', text: line }
   })
 }
@@ -70,7 +78,7 @@ function tokenise(lines: string[]): LineToken[] {
  * Returns null when the input is completely empty.
  */
 export function parseMarkdownInput(raw: string): ParseResult | null {
-  const lines  = raw.split('\n')
+  const lines = raw.split('\n')
   const tokens = tokenise(lines)
 
   const nonEmpty = tokens.filter((t) => t.kind !== 'empty')
@@ -78,16 +86,23 @@ export function parseMarkdownInput(raw: string): ParseResult | null {
 
   const titleTokens = tokens.filter((t) => t.kind === 'title')
   const extraTokens = tokens.filter((t) => t.kind === 'extra')
-  const warnTokens  = tokens.filter((t) => t.kind === 'warn')
-  const subtasks    = tokens
-    .filter((t): t is Extract<LineToken, { kind: 'subtask' }> => t.kind === 'subtask')
+  const warnTokens = tokens.filter((t) => t.kind === 'warn')
+  const subtasks = tokens
+    .filter(
+      (t): t is Extract<LineToken, { kind: 'subtask' }> => t.kind === 'subtask',
+    )
     .map((t) => ({ title: t.text, completed: t.completed }))
   const priorityTok = tokens
-    .filter((t): t is Extract<LineToken, { kind: 'priority' }> => t.kind === 'priority')
+    .filter(
+      (t): t is Extract<LineToken, { kind: 'priority' }> =>
+        t.kind === 'priority',
+    )
     .at(-1)
   const priority: Priority = priorityTok?.value ?? 'normal'
   const colorTok = tokens
-    .filter((t): t is Extract<LineToken, { kind: 'color' }> => t.kind === 'color')
+    .filter(
+      (t): t is Extract<LineToken, { kind: 'color' }> => t.kind === 'color',
+    )
     .at(-1)
   const color: NoteColor | undefined = colorTok?.value
 
@@ -110,7 +125,7 @@ export function parseMarkdownInput(raw: string): ParseResult | null {
 
   return {
     ok: true,
-    data:        { title: titleTokens[0].text, subtasks, priority, color },
+    data: { title: titleTokens[0].text, subtasks, priority, color },
     tokens,
     hasWarnings: warnTokens.length > 0,
   }

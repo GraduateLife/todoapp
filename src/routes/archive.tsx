@@ -22,7 +22,10 @@ function ArchivePage() {
         >
           archive
         </p>
-        <p className="font-mono text-[0.75rem]" style={{ color: 'var(--rf-text-dim)' }}>
+        <p
+          className="font-mono text-[0.75rem]"
+          style={{ color: 'var(--rf-text-dim)' }}
+        >
           {archived.length} item{archived.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -68,7 +71,10 @@ function ArchivePage() {
               {/* Title */}
               <span
                 className="flex-1 font-mono text-[0.75rem] truncate opacity-60"
-                style={{ color: 'var(--rf-text)', textDecoration: 'line-through' }}
+                style={{
+                  color: 'var(--rf-text)',
+                  textDecoration: 'line-through',
+                }}
               >
                 {todo.title}
               </span>

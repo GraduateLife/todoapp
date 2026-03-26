@@ -4,10 +4,10 @@
 
 ```ts
 interface Todo {
-  id: string           // crypto.randomUUID()
-  title: string        // 标题文本
-  completed: boolean   // 是否完成
-  createdAt: number    // Date.now() 时间戳
+  id: string // crypto.randomUUID()
+  title: string // 标题文本
+  completed: boolean // 是否完成
+  createdAt: number // Date.now() 时间戳
   attachments: Attachment[]
 }
 ```
@@ -18,8 +18,8 @@ interface Todo {
 interface Attachment {
   id: string
   type: 'image' | 'voice'
-  url: string          // base64 data URL
-  name: string         // 文件名
+  url: string // base64 data URL
+  name: string // 文件名
 }
 ```
 

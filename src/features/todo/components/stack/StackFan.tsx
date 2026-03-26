@@ -1,26 +1,15 @@
 import { motion, useMotionValue, animate } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import type { Todo, NoteColor } from '../../types'
-
-// ─── Palette (mirrors StickyNote) ─────────────────────────────────────────────
-const NOTE_STYLES: Record<
-  NoteColor,
-  { bg: string; border: string; glow: string; text: string; dim: string }
-> = {
-  cyan:   { bg: '#04161b', border: '#00f5ff', glow: 'rgba(0,245,255,0.35)',  text: '#9ae8f0', dim: 'rgba(0,245,255,0.45)'  },
-  pink:   { bg: '#1c040f', border: '#ff2d78', glow: 'rgba(255,45,120,0.35)', text: '#f0a0be', dim: 'rgba(255,45,120,0.45)' },
-  amber:  { bg: '#181000', border: '#ffb800', glow: 'rgba(255,184,0,0.35)',  text: '#f0d890', dim: 'rgba(255,184,0,0.45)'  },
-  green:  { bg: '#041604', border: '#39ff14', glow: 'rgba(57,255,20,0.35)',  text: '#9cf09a', dim: 'rgba(57,255,20,0.45)'  },
-  purple: { bg: '#0e0418', border: '#bf5fff', glow: 'rgba(191,95,255,0.35)', text: '#d4a8f4', dim: 'rgba(191,95,255,0.45)' },
-}
+import type { Todo } from '../../types'
+import { NOTE_STYLES } from '../../constants/noteColors'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const ROWS = 3
 const COLS = 2
 const CARD_W = 168
-const CARD_H = 140             // tall enough for 5 lines of title text
-const COL_STEP = CARD_W + 12   // 180
-const ROW_STEP = CARD_H + 10   // 150
+const CARD_H = 140 // tall enough for 5 lines of title text
+const COL_STEP = CARD_W + 12 // 180
+const ROW_STEP = CARD_H + 10 // 150
 const SHEAR_X = 18
 // Fan is always centered on screen — no attach gap needed
 
@@ -43,12 +32,21 @@ interface StackCardProps {
   totalSlots: number
   gridX: number
   gridY: number
-  isRoot: boolean       // root card: display only, not draggable, no unstack
+  isRoot: boolean // root card: display only, not draggable, no unstack
   onUnstack?: () => void
   onSwap: (fromSlot: number, toSlot: number) => void
 }
 
-function StackCard({ todo, slot, totalSlots, gridX, gridY, isRoot, onUnstack, onSwap }: StackCardProps) {
+function StackCard({
+  todo,
+  slot,
+  totalSlots,
+  gridX,
+  gridY,
+  isRoot,
+  onUnstack,
+  onSwap,
+}: StackCardProps) {
   const pos = slotPos(slot, gridX, gridY)
   const motionX = useMotionValue(pos.x)
   const motionY = useMotionValue(pos.y)
@@ -107,16 +105,30 @@ function StackCard({ todo, slot, totalSlots, gridX, gridY, isRoot, onUnstack, on
         for (let s = 1; s < totalSlots; s++) {
           if (s === slot) continue
           const sp = slotPos(s, gridX, gridY)
-          const dist = Math.hypot(finalCx - (sp.x + CARD_W / 2), finalCy - (sp.y + CARD_H / 2))
-          if (dist < minDist) { minDist = dist; nearestSlot = s }
+          const dist = Math.hypot(
+            finalCx - (sp.x + CARD_W / 2),
+            finalCy - (sp.y + CARD_H / 2),
+          )
+          if (dist < minDist) {
+            minDist = dist
+            nearestSlot = s
+          }
         }
         if (nearestSlot !== slot) {
           // Swap detected — let useEffect animate to new slot after store update
           onSwap(slot, nearestSlot)
         } else {
           // No swap — spring back to current slot
-          animate(motionX, pos.x, { type: 'spring', stiffness: 380, damping: 30 })
-          animate(motionY, pos.y, { type: 'spring', stiffness: 380, damping: 30 })
+          animate(motionX, pos.x, {
+            type: 'spring',
+            stiffness: 380,
+            damping: 30,
+          })
+          animate(motionY, pos.y, {
+            type: 'spring',
+            stiffness: 380,
+            damping: 30,
+          })
         }
       }}
     >
@@ -135,9 +147,17 @@ function StackCard({ todo, slot, totalSlots, gridX, gridY, isRoot, onUnstack, on
           userSelect: 'none',
         }}
       >
-
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${sNs.dim}`, paddingBottom: 5, marginBottom: 7 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: `1px solid ${sNs.dim}`,
+            paddingBottom: 5,
+            marginBottom: 7,
+          }}
+        >
           <span
             style={{
               color: isRoot ? sNs.border : sNs.dim,
@@ -151,58 +171,95 @@ function StackCard({ todo, slot, totalSlots, gridX, gridY, isRoot, onUnstack, on
           </span>
 
           {/* Unstack button (root card has none) */}
-          {!isRoot && (
-            onUnstack && (
-              <button
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); onUnstack() }}
-                style={{
-                  color: sNs.dim, background: 'none', border: 'none',
-                  cursor: 'pointer', padding: '0 0 0 4px',
-                  fontFamily: "'Space Mono', monospace", fontSize: 11, lineHeight: 1, opacity: 0.6,
-                }}
-                title="remove from stack"
-              >
-                ✕
-              </button>
-            )
+          {!isRoot && onUnstack && (
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                onUnstack()
+              }}
+              style={{
+                color: sNs.dim,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0 0 0 4px',
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 11,
+                lineHeight: 1,
+                opacity: 0.6,
+              }}
+              title="remove from stack"
+            >
+              ✕
+            </button>
           )}
         </div>
 
         {/* Title */}
         <p
-          style={{
-            color: sNs.text,
-            fontFamily: "'Space Mono', monospace",
-            fontSize: '0.72rem',
-            lineHeight: 1.4,
-            margin: 0,
-            opacity: todo.completed ? 0.4 : 1,
-            textDecoration: todo.completed ? 'line-through' : 'none',
-            wordBreak: 'break-word',
-            display: '-webkit-box',
-            WebkitLineClamp: totalSubs > 0 ? 4 : 5,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          } as React.CSSProperties}
+          style={
+            {
+              color: sNs.text,
+              fontFamily: "'Space Mono', monospace",
+              fontSize: '0.72rem',
+              lineHeight: 1.4,
+              margin: 0,
+              opacity: todo.completed ? 0.4 : 1,
+              textDecoration: todo.completed ? 'line-through' : 'none',
+              wordBreak: 'break-word',
+              display: '-webkit-box',
+              WebkitLineClamp: totalSubs > 0 ? 4 : 5,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            } as React.CSSProperties
+          }
         >
           {todo.title || 'Untitled'}
         </p>
 
         {/* Subtask progress */}
         {totalSubs > 0 && (
-          <p style={{ color: sNs.dim, fontFamily: "'Space Mono', monospace", fontSize: '0.62rem', marginTop: 4, opacity: 0.65 }}>
+          <p
+            style={{
+              color: sNs.dim,
+              fontFamily: "'Space Mono', monospace",
+              fontSize: '0.62rem',
+              marginTop: 4,
+              opacity: 0.65,
+            }}
+          >
             {doneSubs}/{totalSubs} done
           </p>
         )}
 
         {/* High priority dot */}
         {todo.priority === 'high' && (
-          <div style={{ position: 'absolute', bottom: 6, right: 8, width: 5, height: 5, borderRadius: '50%', background: sNs.border, boxShadow: `0 0 5px ${sNs.glow}` }} />
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 6,
+              right: 8,
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              background: sNs.border,
+              boxShadow: `0 0 5px ${sNs.glow}`,
+            }}
+          />
         )}
 
         {/* Scanline */}
-        <div style={{ position: 'absolute', inset: 0, borderRadius: 3, pointerEvents: 'none', backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px)' }} />
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 3,
+            pointerEvents: 'none',
+            backgroundImage:
+              'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px)',
+          }}
+        />
       </div>
     </motion.div>
   )
@@ -216,7 +273,12 @@ interface StackFanProps {
   onReorder: (fromIdx: number, toIdx: number) => void
 }
 
-export function StackFan({ root, stackedNotes, onUnstack, onReorder }: StackFanProps) {
+export function StackFan({
+  root,
+  stackedNotes,
+  onUnstack,
+  onReorder,
+}: StackFanProps) {
   // Slot 0 = root card (displayed, non-draggable)
   // Slots 1…5 = stacked children (draggable, reorderable)
   const allCards = [root, ...stackedNotes.slice(0, 5)]

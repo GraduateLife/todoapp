@@ -54,13 +54,15 @@ export const useFolderStore = create<FolderState>()(
       openFolder: (id) =>
         set((state) => ({
           folders: state.folders.map((f) =>
-            f.id === id ? { ...f, isOpen: true } : { ...f, isOpen: false }
+            f.id === id ? { ...f, isOpen: true } : { ...f, isOpen: false },
           ),
         })),
 
       closeFolder: (id) =>
         set((state) => ({
-          folders: state.folders.map((f) => (f.id === id ? { ...f, isOpen: false } : f)),
+          folders: state.folders.map((f) =>
+            f.id === id ? { ...f, isOpen: false } : f,
+          ),
         })),
 
       closeAllFolders: () =>
@@ -70,7 +72,9 @@ export const useFolderStore = create<FolderState>()(
 
       updateMarkerY: (id, markerY) =>
         set((state) => ({
-          folders: state.folders.map((f) => (f.id === id ? { ...f, markerY } : f)),
+          folders: state.folders.map((f) =>
+            f.id === id ? { ...f, markerY } : f,
+          ),
         })),
 
       appendToFolder: (folderId, todoId) =>
@@ -78,7 +82,7 @@ export const useFolderStore = create<FolderState>()(
           folders: state.folders.map((f) =>
             f.id === folderId && !f.orderedTodoIds.includes(todoId)
               ? { ...f, orderedTodoIds: [...f.orderedTodoIds, todoId] }
-              : f
+              : f,
           ),
         })),
 
@@ -86,8 +90,13 @@ export const useFolderStore = create<FolderState>()(
         set((state) => ({
           folders: state.folders.map((f) =>
             f.id === folderId
-              ? { ...f, orderedTodoIds: f.orderedTodoIds.filter((id) => id !== todoId) }
-              : f
+              ? {
+                  ...f,
+                  orderedTodoIds: f.orderedTodoIds.filter(
+                    (id) => id !== todoId,
+                  ),
+                }
+              : f,
           ),
         })),
 
@@ -105,7 +114,7 @@ export const useFolderStore = create<FolderState>()(
       setOrderedTodoIds: (folderId, ids) =>
         set((state) => ({
           folders: state.folders.map((f) =>
-            f.id === folderId ? { ...f, orderedTodoIds: ids } : f
+            f.id === folderId ? { ...f, orderedTodoIds: ids } : f,
           ),
         })),
     }),
@@ -124,6 +133,6 @@ export const useFolderStore = create<FolderState>()(
         }
         return state
       },
-    }
-  )
+    },
+  ),
 )

@@ -40,7 +40,14 @@ export function ReminderToast({ toast, onDismiss }: ReminderToastProps) {
       aria-live="assertive"
     >
       {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+        }}
+      >
         <span
           className="font-mono"
           style={{
@@ -116,6 +123,6 @@ export function ReminderToast({ toast, onDismiss }: ReminderToastProps) {
         }
       `}</style>
     </div>,
-    document.body
+    document.body,
   )
 }
