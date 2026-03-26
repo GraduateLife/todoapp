@@ -233,20 +233,9 @@ function StackCard({
           </p>
         )}
 
-        {/* High priority dot */}
+        {/* High priority accent line (replaces dot) */}
         {todo.priority === 'high' && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 6,
-              right: 8,
-              width: 5,
-              height: 5,
-              borderRadius: '50%',
-              background: sNs.border,
-              boxShadow: `0 0 5px ${sNs.glow}`,
-            }}
-          />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, background: sNs.border, opacity: 0.7, boxShadow: `0 0 4px ${sNs.glow}` }} />
         )}
 
         {/* Scanline */}
@@ -271,6 +260,7 @@ interface StackFanProps {
   stackedNotes: Todo[]
   onUnstack: (childId: string) => void
   onReorder: (fromIdx: number, toIdx: number) => void
+  onRename: (name: string) => void
 }
 
 export function StackFan({
@@ -278,7 +268,21 @@ export function StackFan({
   stackedNotes,
   onUnstack,
   onReorder,
+  onRename,
 }: StackFanProps) {
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [nameValue, setNameValue] = useState(root.stackName ?? '')
+
+  // Sync if root.stackName changes from outside
+  useEffect(() => { setNameValue(root.stackName ?? '') }, [root.stackName])
+
+  const saveNameEdit = () => {
+    setIsEditingName(false)
+    const trimmed = nameValue.trim()
+    if (trimmed && trimmed !== root.stackName) onRename(trimmed)
+    else setNameValue(root.stackName ?? '')
+  }
+
   // Slot 0 = root card (displayed, non-draggable)
   // Slots 1…5 = stacked children (draggable, reorderable)
   const allCards = [root, ...stackedNotes.slice(0, 5)]
@@ -292,8 +296,66 @@ export function StackFan({
   const gridX = Math.round((vw - gridTotalW) / 2)
   const gridY = Math.round((vh - gridTotalH) / 2)
 
+  const rootNs = NOTE_STYLES[root.color ?? 'cyan']
+
   return (
     <>
+      {/* ── Editable stack name title ────────────────────────────────────── */}
+      <div
+        style={{
+          position: 'fixed',
+          right: 20,
+          top: 64,
+          zIndex: 901,
+          pointerEvents: 'auto',
+          textAlign: 'right',
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        {isEditingName ? (
+          <input
+            autoFocus
+            value={nameValue}
+            onChange={(e) => setNameValue(e.target.value.slice(0, 24))}
+            onBlur={saveNameEdit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveNameEdit()
+              if (e.key === 'Escape') { setIsEditingName(false); setNameValue(root.stackName ?? '') }
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              borderBottom: `1px solid ${rootNs.border}`,
+              outline: 'none',
+              color: rootNs.border,
+              fontFamily: "'Space Mono', monospace",
+              fontSize: '0.72rem',
+              letterSpacing: '0.18em',
+              caretColor: rootNs.border,
+              width: 200,
+              textShadow: `0 0 8px ${rootNs.glow}`,
+            }}
+          />
+        ) : (
+          <span
+            onDoubleClick={() => setIsEditingName(true)}
+            title="double-click to rename"
+            style={{
+              color: rootNs.border,
+              fontFamily: "'Space Mono', monospace",
+              fontSize: '0.72rem',
+              letterSpacing: '0.18em',
+              opacity: 0.75,
+              cursor: 'text',
+              textShadow: `0 0 8px ${rootNs.glow}`,
+              userSelect: 'none',
+            }}
+          >
+            {root.stackName ?? ''}
+          </span>
+        )}
+      </div>
+
       {allCards.map((card, slotIdx) => {
         const isRoot = slotIdx === 0
         return (

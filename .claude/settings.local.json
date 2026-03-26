@@ -33,7 +33,8 @@
       "Bash(npx eslint:*)",
       "Bash(npx --yes eslint src/features/todo/containers/StickyNoteContainer.tsx)",
       "Bash(pnpm lint:*)",
-      "Bash(pnpm exec:*)"
+      "Bash(pnpm exec:*)",
+      "Bash(python3 -c \":*)"
     ]
   }
 }

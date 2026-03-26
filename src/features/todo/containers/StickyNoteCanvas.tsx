@@ -32,6 +32,7 @@ export function StickyNoteCanvas() {
   const unstackTodo = useTodoStore((s) => s.unstackTodo)
   const disbandStack = useTodoStore((s) => s.disbandStack)
   const reorderStack = useTodoStore((s) => s.reorderStack)
+  const renameStack = useTodoStore((s) => s.renameStack)
 
   const hasOpenFolder = useFolderStore((s) => s.folders.some((f) => f.isOpen))
   const appendToFolder = useFolderStore((s) => s.appendToFolder)
@@ -277,6 +278,7 @@ export function StickyNoteCanvas() {
               stackedNotes={fanStackedNotes}
               onUnstack={(childId) => handleUnstack(expandedStackId, childId)}
               onReorder={(from, to) => reorderStack(expandedStackId, from, to)}
+              onRename={(name) => renameStack(expandedStackId, name)}
             />
           </motion.div>
         )}

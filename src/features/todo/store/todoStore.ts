@@ -48,6 +48,7 @@ interface TodoState {
   unstackTodo: (rootId: string, childId: string) => void
   disbandStack: (rootId: string) => void
   reorderStack: (rootId: string, fromIdx: number, toIdx: number) => void
+  renameStack: (rootId: string, name: string) => void
 }
 
 function randomPosition(): { x: number; y: number } {
@@ -58,6 +59,14 @@ function randomPosition(): { x: number; y: number } {
     x: Math.floor(Math.random() * maxX + 40),
     y: Math.floor(Math.random() * maxY + 80),
   }
+}
+
+const STACK_PREFIXES = ['alpha', 'beta', 'delta', 'echo', 'nova', 'omega', 'sigma', 'theta', 'zeta', 'proto', 'meta', 'hyper']
+const STACK_SUFFIXES = ['arc', 'bit', 'core', 'flux', 'grid', 'hex', 'kit', 'link', 'net', 'pod', 'set', 'tag']
+function randomStackName(): string {
+  const p = STACK_PREFIXES[Math.floor(Math.random() * STACK_PREFIXES.length)]
+  const s = STACK_SUFFIXES[Math.floor(Math.random() * STACK_SUFFIXES.length)]
+  return `${p}-${s}`
 }
 
 function randomColor(): NoteColor {
@@ -299,6 +308,7 @@ export const useTodoStore = create<TodoState>()(
                 return {
                   ...t,
                   stackedIds: [...(t.stackedIds ?? []), ...allChildIds],
+                  stackName: t.stackName ?? randomStackName(),
                 }
               if (t.id === childId) return { ...t, stackedIds: [] } // no longer a root
               return t
@@ -347,6 +357,13 @@ export const useTodoStore = create<TodoState>()(
             ),
           }
         }),
+
+      renameStack: (rootId, name) =>
+        set((state) => ({
+          todos: state.todos.map((t) =>
+            t.id === rootId ? { ...t, stackName: name.trim() || t.stackName } : t,
+          ),
+        })),
 
       disbandStack: (rootId) =>
         set((state) => {

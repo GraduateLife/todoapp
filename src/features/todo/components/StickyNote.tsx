@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useState } from 'react'
 import type { MotionValue } from 'framer-motion'
 import { TodoContextMenu } from './TodoContextMenu'
 import { SubTaskList } from './note/SubTaskList'
@@ -70,6 +71,66 @@ export interface StickyNoteProps {
   onRequestFolder: () => void
   onDisbandStack?: () => void
   onCloseContextMenu: () => void
+}
+
+// ─── Stack count badge (expands on hover to show stack name) ──────────────────
+function StackBadge({
+  ghostOffset, stackCount, stackName, isExpanded,
+  borderColor, bgColor, glow, onToggleExpand,
+}: {
+  ghostOffset: number; stackCount: number; stackName?: string
+  isExpanded: boolean; borderColor: string; bgColor: string; glow: string
+  onToggleExpand: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  const showName = hovered && !!stackName
+
+  return (
+    <button
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={(e) => { e.stopPropagation(); onToggleExpand() }}
+      style={{
+        position: 'absolute',
+        top: `${ghostOffset - 8}px`,
+        left: `${244 + ghostOffset}px`,
+        zIndex: 10,
+        background: borderColor,
+        color: bgColor,
+        borderRadius: 11,
+        height: 22,
+        maxWidth: showName ? 160 : 22,
+        overflow: 'hidden',
+        padding: showName ? '0 8px 0 0' : 0,
+        display: 'flex',
+        alignItems: 'center',
+        cursor: 'pointer',
+        border: 'none',
+        boxShadow: `0 0 10px ${glow}, 0 0 4px rgba(0,0,0,0.6)`,
+        whiteSpace: 'nowrap',
+        transition: 'max-width 220ms ease, padding 220ms ease',
+        letterSpacing: 0,
+      }}
+      title={isExpanded ? 'collapse stack' : 'expand stack'}
+    >
+      <span style={{
+        width: 22, height: 22, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 10, fontFamily: "'Space Mono', monospace", fontWeight: 700,
+      }}>
+        {stackCount + 1}
+      </span>
+      <span style={{
+        fontSize: 9, fontFamily: "'Space Mono', monospace", fontWeight: 400,
+        letterSpacing: '0.07em',
+        opacity: showName ? 0.9 : 0,
+        transition: 'opacity 140ms ease 60ms',
+      }}>
+        · {stackName}
+      </span>
+    </button>
+  )
 }
 
 export function StickyNote({
@@ -304,7 +365,7 @@ export function StickyNote({
                 background: borderColor,
                 boxShadow: `0 0 6px ${glowColor}`,
               }}
-              className={`w-[6px] h-[6px] rounded-full block ${priority === 'high' ? 'rf-priority-ring' : ''}`}
+              className="w-[6px] h-[6px] rounded-full block"
             />
           </div>
 
@@ -460,38 +521,18 @@ export function StickyNote({
         {stackCount > 0 &&
           (() => {
             const ghostOffset = stackCount * 3
+            const stackName = todo.stackName
             return (
-              <button
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleExpand()
-                }}
-                style={{
-                  position: 'absolute',
-                  top: `${ghostOffset - 8}px`,
-                  right: `${-(ghostOffset + 10)}px`,
-                  zIndex: 10,
-                  background: ns.border,
-                  color: ns.bg,
-                  borderRadius: '50%',
-                  width: 22,
-                  height: 22,
-                  fontSize: 10,
-                  fontFamily: "'Space Mono', monospace",
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  border: 'none',
-                  boxShadow: `0 0 10px ${ns.glow}, 0 0 4px rgba(0,0,0,0.6)`,
-                  letterSpacing: 0,
-                }}
-                title={isExpanded ? 'collapse stack' : 'expand stack'}
-              >
-                {stackCount + 1}
-              </button>
+              <StackBadge
+                ghostOffset={ghostOffset}
+                stackCount={stackCount}
+                stackName={stackName}
+                isExpanded={isExpanded}
+                borderColor={ns.border}
+                bgColor={ns.bg}
+                glow={ns.glow}
+                onToggleExpand={onToggleExpand}
+              />
             )
           })()}
       </motion.div>
@@ -513,3 +554,5 @@ export function StickyNote({
     </>
   )
 }
+
+

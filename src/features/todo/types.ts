@@ -43,6 +43,7 @@ export interface Todo {
   reminder: Reminder | null
   archived: boolean
   stackedIds: string[] // IDs of todos stacked beneath this one (this is the root)
+  stackName?: string   // display name for the stack (set when first stacked)
 }
 
 export interface Folder {
