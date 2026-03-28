@@ -1,15 +1,22 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { Todo, Attachment, NoteColor, Priority, Reminder } from '../types'
 import { NOTE_COLORS } from '../types'
+import { getAdapter } from '../../../lib/adapters'
 
 const TITLE_MAX_LEN = 100 // sync with TodoInput.TITLE_MAX_LEN
 
-// Keep original key so existing user data is preserved via migration
-const STORAGE_KEY = 'todoai-storage'
+// ── Debounce helper for high-frequency saves (drag) ──────────────────────────
+
+const _debounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
+function debouncedSave(key: string, fn: () => void, ms = 300) {
+  const t = _debounceTimers.get(key)
+  if (t) clearTimeout(t)
+  _debounceTimers.set(key, setTimeout(() => { _debounceTimers.delete(key); fn() }, ms))
+}
 
 interface TodoState {
   todos: Todo[]
+  initialize: (todos: Todo[]) => void
   addTodo: (
     title: string,
     attachments?: Attachment[],
@@ -102,338 +109,330 @@ function createTodo(
 }
 
 export const useTodoStore = create<TodoState>()(
-  persist(
-    (set) => ({
-      todos: [],
+  (set, get) => ({
+    todos: [],
 
-      addTodo: (title, attachments = [], color) =>
-        set((state) => {
-          const maxZ = state.todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
-          const next = createTodo(title, attachments, color)
-          return { todos: [...state.todos, { ...next, zIndex: maxZ + 1 }] }
-        }),
+    initialize: (todos) => set({ todos }),
 
-      addTodoWithDetails: (
-        title,
-        subtasks,
+    addTodo: (title, attachments = [], color) => {
+      const maxZ = get().todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
+      const todo = { ...createTodo(title, attachments, color), zIndex: maxZ + 1 }
+      set((state) => ({ todos: [...state.todos, todo] }))
+      getAdapter().saveTodo(todo).catch(console.error)
+    },
+
+    addTodoWithDetails: (title, subtasks, priority, attachments = [], color) => {
+      const maxZ = get().todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
+      const todo = {
+        ...createTodo(title, attachments, color),
+        zIndex: maxZ + 1,
         priority,
-        attachments = [],
-        color,
-      ) =>
-        set((state) => {
-          const maxZ = state.todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
-          const next = createTodo(title, attachments, color)
+        subtasks: subtasks.map((s) => ({
+          id: crypto.randomUUID(),
+          title: s.title,
+          completed: s.completed,
+        })),
+      }
+      set((state) => ({ todos: [...state.todos, todo] }))
+      getAdapter().saveTodo(todo).catch(console.error)
+    },
+
+    deleteTodo: (id) => {
+      set((state) => ({ todos: state.todos.filter((t) => t.id !== id) }))
+      getAdapter().deleteTodo(id).catch(console.error)
+    },
+
+    toggleTodo: (id) => {
+      set((state) => ({
+        todos: state.todos.map((t) => {
+          if (t.id !== id) return t
+          const completing = !t.completed
           return {
-            todos: [
-              ...state.todos,
-              {
-                ...next,
-                zIndex: maxZ + 1,
-                priority,
-                subtasks: subtasks.map((s) => ({
-                  id: crypto.randomUUID(),
-                  title: s.title,
-                  completed: s.completed,
-                })),
-              },
-            ],
+            ...t,
+            completed: completing,
+            subtasks: completing
+              ? t.subtasks
+              : t.subtasks.map((s) => ({ ...s, completed: false })),
           }
         }),
+      }))
+      const updated = get().todos.find((t) => t.id === id)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
 
-      deleteTodo: (id) =>
-        set((state) => ({ todos: state.todos.filter((t) => t.id !== id) })),
+    updateTitle: (id, title) => {
+      set((state) => ({
+        todos: state.todos.map((t) => (t.id === id ? { ...t, title } : t)),
+      }))
+      const updated = get().todos.find((t) => t.id === id)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
 
-      toggleTodo: (id) =>
-        set((state) => ({
-          todos: state.todos.map((t) => {
-            if (t.id !== id) return t
-            const completing = !t.completed
+    moveTodo: (id, x, y) => {
+      set((state) => ({
+        todos: state.todos.map((t) =>
+          t.id === id ? { ...t, position: { x, y } } : t,
+        ),
+      }))
+      const updated = get().todos.find((t) => t.id === id)
+      if (updated) debouncedSave(`move-${id}`, () => getAdapter().saveTodo(updated).catch(console.error))
+    },
+
+    bringToFront: (id) => {
+      set((state) => {
+        const maxZ = state.todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
+        return {
+          todos: state.todos.map((t) =>
+            t.id === id ? { ...t, zIndex: maxZ + 1 } : t,
+          ),
+        }
+      })
+      const updated = get().todos.find((t) => t.id === id)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    addAttachment: (todoId, attachment) => {
+      set((state) => ({
+        todos: state.todos.map((t) =>
+          t.id === todoId
+            ? { ...t, attachments: [...t.attachments, attachment] }
+            : t,
+        ),
+      }))
+      const updated = get().todos.find((t) => t.id === todoId)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    removeAttachment: (todoId, attachmentId) => {
+      set((state) => ({
+        todos: state.todos.map((t) =>
+          t.id === todoId
+            ? {
+                ...t,
+                attachments: t.attachments.filter((a) => a.id !== attachmentId),
+              }
+            : t,
+        ),
+      }))
+      const updated = get().todos.find((t) => t.id === todoId)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    setPriority: (id, priority) => {
+      set((state) => ({
+        todos: state.todos.map((t) => (t.id === id ? { ...t, priority } : t)),
+      }))
+      const updated = get().todos.find((t) => t.id === id)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    addSubTask: (todoId, title) => {
+      set((state) => ({
+        todos: state.todos.map((t) =>
+          t.id === todoId
+            ? {
+                ...t,
+                completed: false,
+                subtasks: [
+                  ...t.subtasks,
+                  { id: crypto.randomUUID(), title, completed: false },
+                ],
+              }
+            : t,
+        ),
+      }))
+      const updated = get().todos.find((t) => t.id === todoId)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    toggleSubTask: (todoId, subtaskId) => {
+      set((state) => ({
+        todos: state.todos.map((t) => {
+          if (t.id !== todoId) return t
+          const updatedSubtasks = t.subtasks.map((s) =>
+            s.id === subtaskId ? { ...s, completed: !s.completed } : s,
+          )
+          const allDone =
+            updatedSubtasks.length > 0 &&
+            updatedSubtasks.every((s) => s.completed)
+          return { ...t, subtasks: updatedSubtasks, completed: allDone }
+        }),
+      }))
+      const updated = get().todos.find((t) => t.id === todoId)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    deleteSubTask: (todoId, subtaskId) => {
+      set((state) => ({
+        todos: state.todos.map((t) => {
+          if (t.id !== todoId) return t
+          const updatedSubtasks = t.subtasks.filter((s) => s.id !== subtaskId)
+          const allDone =
+            updatedSubtasks.length > 0 &&
+            updatedSubtasks.every((s) => s.completed)
+          return { ...t, subtasks: updatedSubtasks, completed: allDone }
+        }),
+      }))
+      const updated = get().todos.find((t) => t.id === todoId)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    updateSubTask: (todoId, subtaskId, title) => {
+      set((state) => ({
+        todos: state.todos.map((t) =>
+          t.id === todoId
+            ? {
+                ...t,
+                subtasks: t.subtasks.map((s) =>
+                  s.id === subtaskId ? { ...s, title } : s,
+                ),
+              }
+            : t,
+        ),
+      }))
+      const updated = get().todos.find((t) => t.id === todoId)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    setFolder: (id, folderId) => {
+      set((state) => ({
+        todos: state.todos.map((t) => (t.id === id ? { ...t, folderId } : t)),
+      }))
+      const updated = get().todos.find((t) => t.id === id)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    setReminder: (id, reminder) => {
+      set((state) => ({
+        todos: state.todos.map((t) => (t.id === id ? { ...t, reminder } : t)),
+      }))
+      const updated = get().todos.find((t) => t.id === id)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    archiveTodo: (id) => {
+      set((state) => ({
+        todos: state.todos.map((t) =>
+          t.id === id ? { ...t, archived: true, folderId: null } : t,
+        ),
+      }))
+      const updated = get().todos.find((t) => t.id === id)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    unarchiveTodo: (id) => {
+      set((state) => ({
+        todos: state.todos.map((t) =>
+          t.id === id ? { ...t, archived: false } : t,
+        ),
+      }))
+      const updated = get().todos.find((t) => t.id === id)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    // ── Stack actions ────────────────────────────────────────────────────
+    stackOnto: (rootId, childId) => {
+      const { todos } = get()
+      const root = todos.find((t) => t.id === rootId)
+      const child = todos.find((t) => t.id === childId)
+      if (!root || !child) return
+      const childOwnStack = child.stackedIds ?? []
+      const allChildIds = [childId, ...childOwnStack]
+      const currentCount = root.stackedIds?.length ?? 0
+      if (currentCount + allChildIds.length > 5) return
+
+      set((state) => ({
+        todos: state.todos.map((t) => {
+          if (t.id === rootId)
             return {
               ...t,
-              completed: completing,
-              // Unchecking a todo resets all subtasks to incomplete
-              subtasks: completing
-                ? t.subtasks
-                : t.subtasks.map((s) => ({ ...s, completed: false })),
+              stackedIds: [...(t.stackedIds ?? []), ...allChildIds],
+              stackName: t.stackName ?? randomStackName(),
             }
-          }),
-        })),
-
-      updateTitle: (id, title) =>
-        set((state) => ({
-          todos: state.todos.map((t) => (t.id === id ? { ...t, title } : t)),
-        })),
-
-      moveTodo: (id, x, y) =>
-        set((state) => ({
-          todos: state.todos.map((t) =>
-            t.id === id ? { ...t, position: { x, y } } : t,
-          ),
-        })),
-
-      bringToFront: (id) =>
-        set((state) => {
-          const maxZ = state.todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
-          return {
-            todos: state.todos.map((t) =>
-              t.id === id ? { ...t, zIndex: maxZ + 1 } : t,
-            ),
-          }
+          if (t.id === childId) return { ...t, stackedIds: [] }
+          return t
         }),
-
-      addAttachment: (todoId, attachment) =>
-        set((state) => ({
-          todos: state.todos.map((t) =>
-            t.id === todoId
-              ? { ...t, attachments: [...t.attachments, attachment] }
-              : t,
-          ),
-        })),
-
-      removeAttachment: (todoId, attachmentId) =>
-        set((state) => ({
-          todos: state.todos.map((t) =>
-            t.id === todoId
-              ? {
-                  ...t,
-                  attachments: t.attachments.filter(
-                    (a) => a.id !== attachmentId,
-                  ),
-                }
-              : t,
-          ),
-        })),
-
-      setPriority: (id, priority) =>
-        set((state) => ({
-          todos: state.todos.map((t) => (t.id === id ? { ...t, priority } : t)),
-        })),
-
-      addSubTask: (todoId, title) =>
-        set((state) => ({
-          todos: state.todos.map((t) =>
-            t.id === todoId
-              ? {
-                  ...t,
-                  // Adding a subtask always reverts the todo to incomplete
-                  completed: false,
-                  subtasks: [
-                    ...t.subtasks,
-                    { id: crypto.randomUUID(), title, completed: false },
-                  ],
-                }
-              : t,
-          ),
-        })),
-
-      toggleSubTask: (todoId, subtaskId) =>
-        set((state) => ({
-          todos: state.todos.map((t) => {
-            if (t.id !== todoId) return t
-            const updatedSubtasks = t.subtasks.map((s) =>
-              s.id === subtaskId ? { ...s, completed: !s.completed } : s,
-            )
-            const allDone =
-              updatedSubtasks.length > 0 &&
-              updatedSubtasks.every((s) => s.completed)
-            return { ...t, subtasks: updatedSubtasks, completed: allDone }
-          }),
-        })),
-
-      deleteSubTask: (todoId, subtaskId) =>
-        set((state) => ({
-          todos: state.todos.map((t) => {
-            if (t.id !== todoId) return t
-            const updatedSubtasks = t.subtasks.filter((s) => s.id !== subtaskId)
-            const allDone =
-              updatedSubtasks.length > 0 &&
-              updatedSubtasks.every((s) => s.completed)
-            return { ...t, subtasks: updatedSubtasks, completed: allDone }
-          }),
-        })),
-
-      updateSubTask: (todoId, subtaskId, title) =>
-        set((state) => ({
-          todos: state.todos.map((t) =>
-            t.id === todoId
-              ? {
-                  ...t,
-                  subtasks: t.subtasks.map((s) =>
-                    s.id === subtaskId ? { ...s, title } : s,
-                  ),
-                }
-              : t,
-          ),
-        })),
-
-      setFolder: (id, folderId) =>
-        set((state) => ({
-          todos: state.todos.map((t) => (t.id === id ? { ...t, folderId } : t)),
-        })),
-
-      setReminder: (id, reminder) =>
-        set((state) => ({
-          todos: state.todos.map((t) => (t.id === id ? { ...t, reminder } : t)),
-        })),
-
-      archiveTodo: (id) =>
-        set((state) => ({
-          todos: state.todos.map((t) =>
-            t.id === id ? { ...t, archived: true, folderId: null } : t,
-          ),
-        })),
-
-      unarchiveTodo: (id) =>
-        set((state) => ({
-          todos: state.todos.map((t) =>
-            t.id === id ? { ...t, archived: false } : t,
-          ),
-        })),
-
-      // ── Stack actions ────────────────────────────────────────────────────
-      stackOnto: (rootId, childId) =>
-        set((state) => {
-          const root = state.todos.find((t) => t.id === rootId)
-          const child = state.todos.find((t) => t.id === childId)
-          if (!root || !child) return state
-          // Absorb child's own stacked notes into root's stack
-          const childOwnStack = child.stackedIds ?? []
-          const allChildIds = [childId, ...childOwnStack]
-          // Enforce max 5 stacked (6 total including root)
-          const currentCount = root.stackedIds?.length ?? 0
-          if (currentCount + allChildIds.length > 5) return state
-          return {
-            todos: state.todos.map((t) => {
-              if (t.id === rootId)
-                return {
-                  ...t,
-                  stackedIds: [...(t.stackedIds ?? []), ...allChildIds],
-                  stackName: t.stackName ?? randomStackName(),
-                }
-              if (t.id === childId) return { ...t, stackedIds: [] } // no longer a root
-              return t
-            }),
-          }
-        }),
-
-      unstackTodo: (rootId, childId) =>
-        set((state) => {
-          const root = state.todos.find((t) => t.id === rootId)
-          if (!root) return state
-          // Scatter child near root position
-          const newPos = { x: root.position.x + 50, y: root.position.y - 20 }
-          return {
-            todos: state.todos.map((t) => {
-              if (t.id === rootId)
-                return {
-                  ...t,
-                  stackedIds: (t.stackedIds ?? []).filter(
-                    (id) => id !== childId,
-                  ),
-                }
-              if (t.id === childId) return { ...t, position: newPos }
-              return t
-            }),
-          }
-        }),
-
-      reorderStack: (rootId, fromIdx, toIdx) =>
-        set((state) => {
-          const root = state.todos.find((t) => t.id === rootId)
-          if (!root) return state
-          const ids = [...(root.stackedIds ?? [])]
-          if (
-            fromIdx < 0 ||
-            fromIdx >= ids.length ||
-            toIdx < 0 ||
-            toIdx >= ids.length
-          )
-            return state
-          const [moved] = ids.splice(fromIdx, 1)
-          ids.splice(toIdx, 0, moved)
-          return {
-            todos: state.todos.map((t) =>
-              t.id === rootId ? { ...t, stackedIds: ids } : t,
-            ),
-          }
-        }),
-
-      renameStack: (rootId, name) =>
-        set((state) => ({
-          todos: state.todos.map((t) =>
-            t.id === rootId ? { ...t, stackName: name.trim() || t.stackName } : t,
-          ),
-        })),
-
-      disbandStack: (rootId) =>
-        set((state) => {
-          const root = state.todos.find((t) => t.id === rootId)
-          if (!root) return state
-          const stackedIds = root.stackedIds ?? []
-          return {
-            todos: state.todos.map((t) => {
-              if (t.id === rootId) return { ...t, stackedIds: [] }
-              const idx = stackedIds.indexOf(t.id)
-              if (idx !== -1) {
-                return {
-                  ...t,
-                  position: {
-                    x: root.position.x + (idx + 1) * 30,
-                    y: root.position.y + (idx + 1) * 30,
-                  },
-                }
-              }
-              return t
-            }),
-          }
-        }),
-    }),
-    {
-      name: STORAGE_KEY,
-      version: 4,
-      migrate: (persistedState: any, version: number) => {
-        let state = persistedState
-        if (version < 2) {
-          state = {
-            todos: (state?.todos ?? []).map((t: any) => ({
-              ...t,
-              position: t.position ?? {
-                x: Math.floor(Math.random() * 600 + 80),
-                y: Math.floor(Math.random() * 300 + 100),
-              },
-              zIndex: t.zIndex ?? 10,
-              color:
-                t.color ??
-                NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)],
-              rotation:
-                t.rotation ??
-                parseFloat(((Math.random() - 0.5) * 10).toFixed(2)),
-              attachments: t.attachments ?? [],
-            })),
-          }
-        }
-        if (version < 3) {
-          state = {
-            todos: (state?.todos ?? []).map((t: any) => ({
-              ...t,
-              priority: t.priority ?? 'normal',
-              subtasks: t.subtasks ?? [],
-              folderId: t.folderId ?? null,
-              reminder: t.reminder ?? null,
-              archived: t.archived ?? false,
-            })),
-          }
-        }
-        if (version < 4) {
-          state = {
-            todos: (state?.todos ?? []).map((t: any) => ({
-              ...t,
-              stackedIds: t.stackedIds ?? [],
-            })),
-          }
-        }
-        return state
-      },
+      }))
+      ;[rootId, childId].forEach((id) => {
+        const updated = get().todos.find((t) => t.id === id)
+        if (updated) getAdapter().saveTodo(updated).catch(console.error)
+      })
     },
-  ),
+
+    unstackTodo: (rootId, childId) => {
+      const root = get().todos.find((t) => t.id === rootId)
+      if (!root) return
+      const newPos = { x: root.position.x + 50, y: root.position.y - 20 }
+
+      set((state) => ({
+        todos: state.todos.map((t) => {
+          if (t.id === rootId)
+            return {
+              ...t,
+              stackedIds: (t.stackedIds ?? []).filter((id) => id !== childId),
+            }
+          if (t.id === childId) return { ...t, position: newPos }
+          return t
+        }),
+      }))
+      ;[rootId, childId].forEach((id) => {
+        const updated = get().todos.find((t) => t.id === id)
+        if (updated) getAdapter().saveTodo(updated).catch(console.error)
+      })
+    },
+
+    reorderStack: (rootId, fromIdx, toIdx) => {
+      const root = get().todos.find((t) => t.id === rootId)
+      if (!root) return
+      const ids = [...(root.stackedIds ?? [])]
+      if (fromIdx < 0 || fromIdx >= ids.length || toIdx < 0 || toIdx >= ids.length) return
+      const [moved] = ids.splice(fromIdx, 1)
+      ids.splice(toIdx, 0, moved)
+
+      set((state) => ({
+        todos: state.todos.map((t) =>
+          t.id === rootId ? { ...t, stackedIds: ids } : t,
+        ),
+      }))
+      const updated = get().todos.find((t) => t.id === rootId)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    renameStack: (rootId, name) => {
+      set((state) => ({
+        todos: state.todos.map((t) =>
+          t.id === rootId ? { ...t, stackName: name.trim() || t.stackName } : t,
+        ),
+      }))
+      const updated = get().todos.find((t) => t.id === rootId)
+      if (updated) getAdapter().saveTodo(updated).catch(console.error)
+    },
+
+    disbandStack: (rootId) => {
+      const root = get().todos.find((t) => t.id === rootId)
+      if (!root) return
+      const stackedIds = root.stackedIds ?? []
+      const affectedIds = [rootId, ...stackedIds]
+
+      set((state) => ({
+        todos: state.todos.map((t) => {
+          if (t.id === rootId) return { ...t, stackedIds: [] }
+          const idx = stackedIds.indexOf(t.id)
+          if (idx !== -1) {
+            return {
+              ...t,
+              position: {
+                x: root.position.x + (idx + 1) * 30,
+                y: root.position.y + (idx + 1) * 30,
+              },
+            }
+          }
+          return t
+        }),
+      }))
+      get()
+        .todos.filter((t) => affectedIds.includes(t.id))
+        .forEach((t) => getAdapter().saveTodo(t).catch(console.error))
+    },
+  }),
 )

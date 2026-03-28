@@ -1,0 +1,160 @@
+/**
+ * API client — stub implementation.
+ *
+ * All methods here mirror the operations in todoStore / folderStore.
+ * Currently every method throws because VITE_USE_API=false.
+ *
+ * When you're ready to add a backend:
+ *   1. Set VITE_USE_API=true in .env.production
+ *   2. Replace each stub with a real fetch() call
+ *   3. Update the stores to call api.* instead of mutating state directly,
+ *      and remove the `persist` middleware from todoStore / folderStore
+ */
+
+import { API_BASE_URL, DATA_SOURCE } from './env'
+import type {
+  Todo,
+  Folder,
+  Attachment,
+  NoteColor,
+  Priority,
+  Reminder,
+} from '../features/todo/types'
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function notReady(method: string): Error {
+  return new Error(
+    `[api] ${method} called but VITE_DATA_SOURCE is "${DATA_SOURCE}"`,
+  )
+}
+
+async function request<T>(
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  if (DATA_SOURCE !== 'api') throw notReady(`${method} ${path}`)
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+  if (!res.ok) throw new Error(`[api] ${method} ${path} → ${res.status}`)
+  return res.json() as Promise<T>
+}
+
+// ─── Todos ───────────────────────────────────────────────────────────────────
+
+export const todoApi = {
+  /** Load all todos for the current user. Called once on app init. */
+  getAll: () => request<Todo[]>('GET', '/todos'),
+
+  create: (title: string, attachments?: Attachment[], color?: NoteColor) =>
+    request<Todo>('POST', '/todos', { title, attachments, color }),
+
+  createWithDetails: (
+    title: string,
+    subtasks: { title: string; completed: boolean }[],
+    priority: Priority,
+    attachments?: Attachment[],
+    color?: NoteColor,
+  ) =>
+    request<Todo>('POST', '/todos', {
+      title,
+      subtasks,
+      priority,
+      attachments,
+      color,
+    }),
+
+  delete: (id: string) => request<void>('DELETE', `/todos/${id}`),
+
+  toggle: (id: string) => request<Todo>('PATCH', `/todos/${id}/toggle`),
+
+  updateTitle: (id: string, title: string) =>
+    request<Todo>('PATCH', `/todos/${id}`, { title }),
+
+  move: (id: string, x: number, y: number) =>
+    request<void>('PATCH', `/todos/${id}`, { position: { x, y } }),
+
+  bringToFront: (id: string) => request<void>('PATCH', `/todos/${id}/front`),
+
+  setPriority: (id: string, priority: Priority) =>
+    request<Todo>('PATCH', `/todos/${id}`, { priority }),
+
+  setFolder: (id: string, folderId: string | null) =>
+    request<void>('PATCH', `/todos/${id}`, { folderId }),
+
+  setReminder: (id: string, reminder: Reminder | null) =>
+    request<void>('PATCH', `/todos/${id}`, { reminder }),
+
+  archive: (id: string) => request<void>('PATCH', `/todos/${id}/archive`),
+
+  unarchive: (id: string) => request<void>('PATCH', `/todos/${id}/unarchive`),
+
+  // ── Attachments ──────────────────────────────────────────────────────────
+  addAttachment: (todoId: string, attachment: Attachment) =>
+    request<void>('POST', `/todos/${todoId}/attachments`, attachment),
+
+  removeAttachment: (todoId: string, attachmentId: string) =>
+    request<void>('DELETE', `/todos/${todoId}/attachments/${attachmentId}`),
+
+  // ── Sub-tasks ────────────────────────────────────────────────────────────
+  addSubTask: (todoId: string, title: string) =>
+    request<void>('POST', `/todos/${todoId}/subtasks`, { title }),
+
+  toggleSubTask: (todoId: string, subtaskId: string) =>
+    request<void>('PATCH', `/todos/${todoId}/subtasks/${subtaskId}/toggle`),
+
+  deleteSubTask: (todoId: string, subtaskId: string) =>
+    request<void>('DELETE', `/todos/${todoId}/subtasks/${subtaskId}`),
+
+  updateSubTask: (todoId: string, subtaskId: string, title: string) =>
+    request<void>('PATCH', `/todos/${todoId}/subtasks/${subtaskId}`, { title }),
+
+  // ── Stack ────────────────────────────────────────────────────────────────
+  stackOnto: (rootId: string, childId: string) =>
+    request<void>('POST', `/todos/${rootId}/stack`, { childId }),
+
+  unstackTodo: (rootId: string, childId: string) =>
+    request<void>('DELETE', `/todos/${rootId}/stack/${childId}`),
+
+  disbandStack: (rootId: string) =>
+    request<void>('DELETE', `/todos/${rootId}/stack`),
+
+  reorderStack: (rootId: string, fromIdx: number, toIdx: number) =>
+    request<void>('PATCH', `/todos/${rootId}/stack/order`, { fromIdx, toIdx }),
+
+  renameStack: (rootId: string, name: string) =>
+    request<void>('PATCH', `/todos/${rootId}`, { stackName: name }),
+}
+
+// ─── Folders ─────────────────────────────────────────────────────────────────
+
+export const folderApi = {
+  /** Load all folders for the current user. Called once on app init. */
+  getAll: () => request<Folder[]>('GET', '/folders'),
+
+  create: (name: string) => request<Folder>('POST', '/folders', { name }),
+
+  delete: (id: string) => request<void>('DELETE', `/folders/${id}`),
+
+  rename: (id: string, name: string) =>
+    request<void>('PATCH', `/folders/${id}`, { name }),
+
+  updateMarkerY: (id: string, markerY: number) =>
+    request<void>('PATCH', `/folders/${id}`, { markerY }),
+
+  appendTodo: (folderId: string, todoId: string) =>
+    request<void>('POST', `/folders/${folderId}/todos`, { todoId }),
+
+  removeTodo: (folderId: string, todoId: string) =>
+    request<void>('DELETE', `/folders/${folderId}/todos/${todoId}`),
+
+  reorderTodo: (folderId: string, fromIndex: number, toIndex: number) =>
+    request<void>('PATCH', `/folders/${folderId}/todos/order`, {
+      fromIndex,
+      toIndex,
+    }),
+}

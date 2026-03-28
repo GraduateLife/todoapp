@@ -34,7 +34,16 @@
       "Bash(npx --yes eslint src/features/todo/containers/StickyNoteContainer.tsx)",
       "Bash(pnpm lint:*)",
       "Bash(pnpm exec:*)",
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(ls /Users/zhangyuntao/Desktop/code/todoapp/.env*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm tsc:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm approve-builds:*)",
+      "Bash(pnpm rebuild:*)",
+      "Bash(curl -s http://localhost:8000/todos)",
+      "Bash(python3 -m json.tool)"
     ]
   }
 }

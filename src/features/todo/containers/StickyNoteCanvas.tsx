@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTodoStore } from '../store'
 import { useFolderStore } from '../store'
+import { initAdapter } from '../../../lib/adapters'
 import { useUiStore } from '../store/uiStore'
 import { StickyNoteContainer as StickyNote } from './StickyNoteContainer'
 import { ReminderModal } from '../components/reminder/ReminderModal'
@@ -40,6 +41,19 @@ export function StickyNoteCanvas() {
 
   const expandedStackId = useUiStore((s) => s.expandedStackId)
   const setExpandedStack = useUiStore((s) => s.setExpandedStack)
+
+  // Load data from IndexedDB on first mount
+  const initializeTodos = useTodoStore((s) => s.initialize)
+  const initializeFolders = useFolderStore((s) => s.initialize)
+  useEffect(() => {
+    initAdapter()
+      .then(({ todos, folders }) => {
+        initializeTodos(todos)
+        initializeFolders(folders)
+      })
+      .catch(console.error)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Boot reminder scheduler (idempotent)
   const { activeToast, clearToast } = useReminderScheduler()
