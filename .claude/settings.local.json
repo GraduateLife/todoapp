@@ -43,7 +43,8 @@
       "Bash(pnpm approve-builds:*)",
       "Bash(pnpm rebuild:*)",
       "Bash(curl -s http://localhost:8000/todos)",
-      "Bash(python3 -m json.tool)"
+      "Bash(python3 -m json.tool)",
+      "Bash(find /Users/zhangyuntao/Desktop/code/todoapp/src -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js \\\\\\))"
     ]
   }
 }

@@ -288,11 +288,13 @@ export function StackFan({
   const allCards = [root, ...stackedNotes.slice(0, 5)]
   const totalSlots = allCards.length
 
-  // Always center the grid on screen regardless of root note position
+  // Always center the grid on screen based on actual rows/cols used
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1280
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-  const gridTotalW = COL_STEP * COLS + SHEAR_X * (ROWS - 1)
-  const gridTotalH = ROW_STEP * ROWS - 10
+  const usedCols = Math.min(COLS, Math.ceil(totalSlots / ROWS))
+  const usedRows = Math.min(ROWS, totalSlots)
+  const gridTotalW = COL_STEP * usedCols + SHEAR_X * (usedRows - 1)
+  const gridTotalH = ROW_STEP * usedRows - 10
   const gridX = Math.round((vw - gridTotalW) / 2)
   const gridY = Math.round((vh - gridTotalH) / 2)
 

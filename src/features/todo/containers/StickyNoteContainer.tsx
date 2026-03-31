@@ -2,7 +2,7 @@ import { useMotionValue } from 'framer-motion'
 import { useState, useCallback } from 'react'
 import { useDragZones } from '../hooks/useDragZones'
 import { NOTE_STYLES } from '../constants/noteColors'
-import { TITLE_MAX_LEN } from '../components/TodoInput'
+import { TITLE_MAX_LEN } from '../components/input-bar'
 import { StickyNote } from '../components/StickyNote'
 import type { Todo, NoteColor, Priority } from '../types'
 

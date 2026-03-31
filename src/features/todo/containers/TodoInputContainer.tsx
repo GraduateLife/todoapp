@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { useTodoStore } from '../store'
 import { useUiStore } from '../store/uiStore'
 import { useFolderStore } from '../store'
-import { TodoInput } from '../components/TodoInput'
+import { TodoInput } from '../components/input-bar'
 import {
   ImageAttachment,
   fileToDataUrl,

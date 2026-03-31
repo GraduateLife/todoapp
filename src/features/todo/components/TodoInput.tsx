@@ -366,7 +366,7 @@ export function TodoInput({
       {isExpanded && (
         <div
           style={{
-            padding: '0 0 0.5rem',
+            // padding: '0 0 0.5rem',
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -508,14 +508,14 @@ export function TodoInput({
             <div
               style={{
                 flex: 1,
-                padding: '0.2rem 0 0 0.25rem',
+                // padding: '0.2rem 0 0 0.25rem',
                 display: 'flex',
                 flexDirection: 'column',
               }}
             >
               {/* Prompt + textarea wrapper */}
-              <div className="flex gap-3 items-start" style={{ flex: 1 }}>
-                <span className="rf-input-prompt mt-[2px]" aria-hidden="true">
+              <div className="flex gap-0 items-start" style={{ flex: 1 }}>
+                <span className="rf-input-prompt" aria-hidden="true">
                   &gt;_
                 </span>
 

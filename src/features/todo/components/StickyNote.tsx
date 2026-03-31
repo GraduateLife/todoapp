@@ -1,9 +1,17 @@
-import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { motion, animate } from 'framer-motion'
+import { useState, useMemo, useEffect } from 'react'
 import type { MotionValue } from 'framer-motion'
 import { TodoContextMenu } from './TodoContextMenu'
 import { SubTaskList } from './note/SubTaskList'
 import { NOTE_STYLES } from '../constants/noteColors'
+import {
+  isFreshTodo,
+  getThrowYOffset,
+  NOTE_THROW_TRANSITION,
+  NOTE_DEFAULT_INITIAL,
+  NOTE_DEFAULT_TRANSITION,
+  NOTE_EXIT,
+} from '../animations/noteEntrance'
 import type { Todo, NoteColor, Priority } from '../types'
 
 type NoteStyles = (typeof NOTE_STYLES)[NoteColor]
@@ -188,6 +196,17 @@ export function StickyNote({
   onDisbandStack,
   onCloseContextMenu,
 }: StickyNoteProps) {
+  // Decide entrance style once on mount: fresh → throw, existing → scale-in
+  const isFresh = useMemo(() => isFreshTodo(todo.createdAt), [todo.id])
+
+  // For fresh cards: offset the y MotionValue, then spring it back
+  useEffect(() => {
+    if (!isFresh) return
+    const offset = getThrowYOffset(todo.position.y)
+    y.set(todo.position.y + offset)
+    animate(y, todo.position.y, NOTE_THROW_TRANSITION)
+  }, [todo.id])
+
   return (
     <>
       <motion.div
@@ -204,17 +223,13 @@ export function StickyNote({
           width: 256,
           touchAction: 'none',
         }}
-        initial={{ scale: 0.5, opacity: 0 }}
+        initial={isFresh ? { scale: 0.75, opacity: 0 } : NOTE_DEFAULT_INITIAL}
         animate={{
           scale: isInEdgeZone ? 0.82 : 1,
           opacity: isInEdgeZone ? 0.65 : priority === 'low' ? 0.8 : 1,
         }}
-        exit={{
-          scale: 0.3,
-          opacity: 0,
-          transition: { duration: 0.15, ease: 'easeIn' },
-        }}
-        transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+        exit={NOTE_EXIT}
+        transition={isFresh ? NOTE_THROW_TRANSITION : NOTE_DEFAULT_TRANSITION}
         onDragStart={onDragStart}
         onDrag={onDrag}
         onDragEnd={onDragEnd}
