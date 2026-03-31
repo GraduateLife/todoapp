@@ -1,8 +1,9 @@
 import { useMotionValue } from 'framer-motion'
 import { useState, useCallback } from 'react'
 import { useDragZones } from '../hooks/useDragZones'
-import { NOTE_STYLES } from '../constants/noteColors'
+import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
 import { TITLE_MAX_LEN } from '../components/input-bar'
+import { useTheme } from '../hooks/useTheme'
 import { StickyNote } from '../components/StickyNote'
 import type { Todo, NoteColor, Priority } from '../types'
 
@@ -68,6 +69,7 @@ export function StickyNoteContainer({
   const color: NoteColor = todo.color ?? 'cyan'
   const rotation = todo.rotation ?? 0
   const priority: Priority = todo.priority ?? 'normal'
+  const theme = useTheme()
 
   // ─── Motion values ────────────────────────────────────────────────────────
   const x = useMotionValue(todo.position?.x ?? 120)
@@ -140,7 +142,7 @@ export function StickyNoteContainer({
   )
 
   // ─── Style computation ────────────────────────────────────────────────────
-  const ns = NOTE_STYLES[color]
+  const ns = (theme === 'light' ? LIGHT_NOTE_STYLES : NOTE_STYLES)[color]
   const glowSize = PRIORITY_GLOW[priority]
   const borderOpacity = PRIORITY_BORDER_OPACITY[priority]
 

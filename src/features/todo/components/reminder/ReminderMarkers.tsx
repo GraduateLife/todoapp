@@ -119,8 +119,6 @@ export function ReminderMarkers({ onEditReminder }: ReminderMarkersProps) {
             : 'rgba(0,245,255,0.25)'
           const bg = isOverdue ? 'rgba(255,48,48,0.12)' : 'rgba(0,245,255,0.05)'
 
-          const ringColor = isOverdue ? '#ff6060' : '#00f5ff'
-
           return (
             <div
               key={todo.id}
@@ -137,99 +135,54 @@ export function ReminderMarkers({ onEditReminder }: ReminderMarkersProps) {
                 })
               }}
             >
-              {/* Flowing ring wrapper */}
-              <div style={{ position: 'relative' }}>
-                {/* Ring: container clips the spinning gradient */}
+              {/* Pill */}
+              <div
+                className="flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-l-[3px] cursor-context-menu"
+                style={{
+                  background: bg,
+                  borderTop: `1px solid ${borderC}`,
+                  borderBottom: `1px solid ${borderC}`,
+                  borderLeft: `1px solid ${borderC}`,
+                  borderRight: 'none',
+                }}
+              >
+                {/* Two-line label */}
                 <div
+                  className="font-mono tracking-[0.18em] uppercase"
                   style={{
-                    position: 'absolute',
-                    top: -8,
-                    left: -8,
-                    right: -8,
-                    bottom: -8,
-                    borderRadius: 8,
-                    overflow: 'hidden',
-                    zIndex: 0,
-                    pointerEvents: 'none',
+                    color,
+                    textShadow: `0 0 10px ${color}`,
+                    maxWidth: 140,
+                    lineHeight: 1.6,
                   }}
                 >
+                  {/* Line 1: title (larger) */}
                   <div
-                    style={{
-                      position: 'absolute',
-                      width: '200%',
-                      height: '200%',
-                      top: '-50%',
-                      left: '-50%',
-                      background: `conic-gradient(from 0deg, transparent 0%, transparent 55%, ${ringColor}44 65%, ${ringColor}cc 73%, ${ringColor} 78%, ${ringColor}cc 83%, ${ringColor}44 91%, transparent 100%)`,
-                      animation: 'rf-reminder-spin 3s linear infinite',
-                    }}
-                  />
-                  {/* Inner mask — punch out pill area, leave 3px ring */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 3,
-                      left: 3,
-                      right: 3,
-                      bottom: 3,
-                      borderRadius: 5,
-                      background: '#04060c',
-                    }}
-                  />
-                </div>
-
-                {/* Pill */}
-                <div
-                  className="flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-l-[3px] cursor-context-menu"
-                  style={{
-                    position: 'relative',
-                    zIndex: 1,
-                    background: bg,
-                    borderTop: `1px solid ${borderC}`,
-                    borderBottom: `1px solid ${borderC}`,
-                    borderLeft: `1px solid ${borderC}`,
-                    borderRight: 'none',
-                  }}
-                >
-                  {/* Two-line label */}
-                  <div
-                    className="font-mono tracking-[0.18em] uppercase"
-                    style={{
-                      color,
-                      textShadow: `0 0 10px ${color}`,
-                      maxWidth: 140,
-                      lineHeight: 1.6,
-                    }}
+                    className="font-bold whitespace-nowrap overflow-hidden text-ellipsis"
+                    style={{ fontSize: 11, fontWeight: 700 }}
                   >
-                    {/* Line 1: title (larger) */}
-                    <div
-                      className="font-bold whitespace-nowrap overflow-hidden text-ellipsis"
-                      style={{ fontSize: 11, fontWeight: 700 }}
-                    >
-                      {truncateTitle(todo.title, 18)}
-                      {reminder.interval && (
-                        <span className="opacity-40 ml-1 font-normal">↻</span>
-                      )}
-                    </div>
-                    {/* Line 2: countdown (smaller) */}
-                    <div
-                      className="text-[8px]"
-                      style={{ opacity: isOverdue ? 1 : 0.65 }}
-                    >
-                      {isOverdue
-                        ? 'overdue!'
-                        : `in: ${formatCountdown(remaining)}`}
-                    </div>
+                    {truncateTitle(todo.title, 18)}
+                    {reminder.interval && (
+                      <span className="opacity-40 ml-1 font-normal">↻</span>
+                    )}
                   </div>
-
-                  {/* Dot — right side */}
-                  <span
-                    className={`w-[6px] h-[6px] rounded-full block flex-shrink-0 ${isOverdue ? 'animate-pulse' : ''}`}
-                    style={{ background: color, boxShadow: `0 0 5px ${color}` }}
-                  />
+                  {/* Line 2: countdown (smaller) */}
+                  <div
+                    className="text-[8px]"
+                    style={{ opacity: isOverdue ? 1 : 0.65 }}
+                  >
+                    {isOverdue
+                      ? 'overdue!'
+                      : `in: ${formatCountdown(remaining)}`}
+                  </div>
                 </div>
+
+                {/* Dot — right side */}
+                <span
+                  className={`w-[6px] h-[6px] rounded-full block flex-shrink-0 ${isOverdue ? 'animate-pulse' : ''}`}
+                  style={{ background: color, boxShadow: `0 0 5px ${color}` }}
+                />
               </div>
-              {/* end flowing ring wrapper */}
             </div>
           )
         })}

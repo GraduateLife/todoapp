@@ -3,7 +3,8 @@ import { useState, useMemo, useEffect } from 'react'
 import type { MotionValue } from 'framer-motion'
 import { TodoContextMenu } from './TodoContextMenu'
 import { SubTaskList } from './note/SubTaskList'
-import { NOTE_STYLES } from '../constants/noteColors'
+import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
+import { useTheme } from '../hooks/useTheme'
 import {
   isFreshTodo,
   getThrowYOffset,
@@ -196,6 +197,9 @@ export function StickyNote({
   onDisbandStack,
   onCloseContextMenu,
 }: StickyNoteProps) {
+  const theme = useTheme()
+  const palette = theme === 'light' ? LIGHT_NOTE_STYLES : NOTE_STYLES
+
   // Decide entrance style once on mount: fresh → throw, existing → scale-in
   const isFresh = useMemo(() => isFreshTodo(todo.createdAt), [todo.id])
 
@@ -243,7 +247,7 @@ export function StickyNote({
           Array.from({ length: stackCount }, (_, i) => {
             const depth = stackCount - i
             const ghostNote = stackedNotes[i]
-            const ghostNs = NOTE_STYLES[ghostNote?.color ?? 'cyan']
+            const ghostNs = palette[ghostNote?.color ?? 'cyan']
             const offset = depth * 3
             return (
               <div
@@ -264,46 +268,6 @@ export function StickyNote({
               />
             )
           })}
-
-        {/* ── Reminder flowing ring ─────────────────────────────────────────── */}
-        {todo.reminder && !isInZone && (
-          <div
-            style={{
-              position: 'absolute',
-              top: -8,
-              left: -8,
-              right: -8,
-              bottom: -8,
-              borderRadius: 10,
-              overflow: 'hidden',
-              zIndex: 0,
-              pointerEvents: 'none',
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                width: '200%',
-                height: '200%',
-                top: '-50%',
-                left: '-50%',
-                background: `conic-gradient(from 0deg, transparent 0%, transparent 55%, ${ns.border}44 65%, ${ns.border}cc 73%, ${ns.border} 78%, ${ns.border}cc 83%, ${ns.border}44 91%, transparent 100%)`,
-                animation: 'rf-reminder-spin 3s linear infinite',
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                top: 3,
-                left: 3,
-                right: 3,
-                bottom: 3,
-                borderRadius: 7,
-                background: ns.bg,
-              }}
-            />
-          </div>
-        )}
 
         {/* ── Main note card ────────────────────────────────────────────────── */}
         <div

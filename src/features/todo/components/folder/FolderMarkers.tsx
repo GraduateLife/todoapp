@@ -1,4 +1,3 @@
-import type React from 'react'
 import { useFolderStore } from '../../store'
 import { useTodoStore } from '../../store'
 
@@ -10,29 +9,13 @@ const COLOR_VAR: Record<string, string> = {
   purple: 'var(--rf-purple)',
 }
 
-// Solid opaque bg colors (dark tint matching each color)
-const COLOR_BG_OPEN: Record<string, string> = {
-  cyan: '#021a1e',
-  pink: '#1c040e',
-  amber: '#1a1000',
-  green: '#041a04',
-  purple: '#0e0418',
-}
-
-const COLOR_BG_CLOSED: Record<string, string> = {
-  cyan: '#010d10',
-  pink: '#0e0208',
-  amber: '#0d0800',
-  green: '#020d02',
-  purple: '#07020d',
-}
-
-const COLOR_BORDER_CLOSED: Record<string, string> = {
-  cyan: '#003d42',
-  pink: '#4a0d22',
-  amber: '#3d2c00',
-  green: '#0d3d0d',
-  purple: '#2e0d4a',
+// RGB values for computing semi-transparent tints
+const COLOR_RGB: Record<string, string> = {
+  cyan: '0,245,255',
+  pink: '255,45,120',
+  amber: '255,184,0',
+  green: '57,255,20',
+  purple: '191,95,255',
 }
 
 export function FolderMarkers() {
@@ -53,12 +36,13 @@ export function FolderMarkers() {
           (t) => t.folderId === folder.id && !t.archived,
         ).length
         const color = COLOR_VAR[folder.color] ?? 'var(--rf-purple)'
+        const rgb = COLOR_RGB[folder.color] ?? '191,95,255'
         const bg = folder.isOpen
-          ? (COLOR_BG_OPEN[folder.color] ?? '#0e0418')
-          : (COLOR_BG_CLOSED[folder.color] ?? '#07020d')
+          ? `rgba(${rgb},0.10)`
+          : `rgba(${rgb},0.05)`
         const borderColor = folder.isOpen
-          ? color
-          : (COLOR_BORDER_CLOSED[folder.color] ?? '#2e0d4a')
+          ? `rgba(${rgb},0.55)`
+          : `rgba(${rgb},0.25)`
 
         return (
           <div

@@ -1,7 +1,8 @@
 import { motion, useMotionValue, animate } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import type { Todo } from '../../types'
-import { NOTE_STYLES } from '../../constants/noteColors'
+import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../../constants/noteColors'
+import { useTheme } from '../../hooks/useTheme'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const ROWS = 3
@@ -33,6 +34,7 @@ interface StackCardProps {
   gridX: number
   gridY: number
   isRoot: boolean // root card: display only, not draggable, no unstack
+  palette: typeof NOTE_STYLES
   onUnstack?: () => void
   onSwap: (fromSlot: number, toSlot: number) => void
 }
@@ -44,6 +46,7 @@ function StackCard({
   gridX,
   gridY,
   isRoot,
+  palette,
   onUnstack,
   onSwap,
 }: StackCardProps) {
@@ -61,7 +64,7 @@ function StackCard({
   const [col] = slotToColRow(slot)
   const cardRotate = col === 0 ? -1.2 : 1.2
 
-  const sNs = NOTE_STYLES[todo.color ?? 'cyan']
+  const sNs = palette[todo.color ?? 'cyan']
   const doneSubs = todo.subtasks.filter((s) => s.completed).length
   const totalSubs = todo.subtasks.length
   // Root card → "root";  stacked children → "01", "02" … "05"
@@ -270,6 +273,9 @@ export function StackFan({
   onReorder,
   onRename,
 }: StackFanProps) {
+  const theme = useTheme()
+  const palette = theme === 'light' ? LIGHT_NOTE_STYLES : NOTE_STYLES
+
   const [isEditingName, setIsEditingName] = useState(false)
   const [nameValue, setNameValue] = useState(root.stackName ?? '')
 
@@ -298,7 +304,7 @@ export function StackFan({
   const gridX = Math.round((vw - gridTotalW) / 2)
   const gridY = Math.round((vh - gridTotalH) / 2)
 
-  const rootNs = NOTE_STYLES[root.color ?? 'cyan']
+  const rootNs = palette[root.color ?? 'cyan']
 
   return (
     <>
@@ -369,6 +375,7 @@ export function StackFan({
             gridX={gridX}
             gridY={gridY}
             isRoot={isRoot}
+            palette={palette}
             onUnstack={!isRoot ? () => onUnstack(card.id) : undefined}
             // slot indices: root=0 (not in stackedIds), stacked=1..5 → stackedIds[0..4]
             onSwap={(fromSlot, toSlot) => onReorder(fromSlot - 1, toSlot - 1)}

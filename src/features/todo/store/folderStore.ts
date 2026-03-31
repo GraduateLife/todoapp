@@ -15,7 +15,7 @@ function debouncedSave(key: string, fn: () => void, ms = 300) {
 interface FolderState {
   folders: Folder[]
   initialize: (folders: Folder[]) => void
-  createFolder: (name: string) => Folder
+  createFolder: (name: string, color?: NoteColor) => Folder
   deleteFolder: (id: string) => void
   renameFolder: (id: string, name: string) => void
   openFolder: (id: string) => void
@@ -38,11 +38,11 @@ export const useFolderStore = create<FolderState>()(
 
     initialize: (folders) => set({ folders }),
 
-    createFolder: (name) => {
+    createFolder: (name, color) => {
       const folder: Folder = {
         id: crypto.randomUUID(),
         name,
-        color: randomFolderColor(),
+        color: color ?? randomFolderColor(),
         createdAt: Date.now(),
         isOpen: false,
         markerY: 120 + get().folders.length * 64,

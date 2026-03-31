@@ -64,12 +64,15 @@ interface TodoState {
   renameStack: (rootId: string, name: string) => void
 }
 
+const CARD_WIDTH = 256
+const CARD_HEIGHT = 160
+
 function randomPosition(): { x: number; y: number } {
   if (typeof window === 'undefined') return { x: 10, y: 10 }
   // Place cards near the center of the board with some scatter
-  const cx = window.innerWidth / 2 - 400 // center minus half card width
-  const cy = 800 // center minus half card height
-  const spread = 0 // scatter radius
+  const cx = window.innerWidth / 2 - CARD_WIDTH / 2 // center minus half card width
+  const cy = window.innerHeight / 2 - CARD_HEIGHT / 2 // center minus half card height
+  const spread = 25 // scatter radius
   return {
     x: Math.floor(cx + (Math.random() - 0.5) * spread * 2),
     y: Math.floor(cy + (Math.random() - 0.5) * spread * 2),

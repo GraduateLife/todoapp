@@ -21,9 +21,9 @@ export function getThrowYOffset(cardY: number): number {
 
 export const NOTE_THROW_TRANSITION: Transition = {
   type: 'spring',
-  stiffness: 260,
-  damping: 22,
-  mass: 0.9,
+  stiffness: 120,
+  damping: 18,
+  mass: 0.6,
 }
 
 // ── Default entrance (page load / existing cards) ───────────────────────────

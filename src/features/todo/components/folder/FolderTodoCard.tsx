@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { Todo, NoteColor } from '../../types'
-import { NOTE_STYLES } from '../../constants/noteColors'
+import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../../constants/noteColors'
+import { useTheme } from '../../hooks/useTheme'
 
 interface FolderTodoCardProps {
   todo: Todo
@@ -19,7 +20,9 @@ export function FolderTodoCard({
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const sNs = NOTE_STYLES[todo.color as NoteColor] ?? NOTE_STYLES.cyan
+  const theme = useTheme()
+  const palette = theme === 'light' ? LIGHT_NOTE_STYLES : NOTE_STYLES
+  const sNs = palette[todo.color as NoteColor] ?? palette.cyan
 
   // Close context menu on outside click
   useEffect(() => {
