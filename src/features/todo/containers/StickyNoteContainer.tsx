@@ -5,7 +5,9 @@ import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
 import { TITLE_MAX_LEN } from '../components/input-bar'
 import { useTheme } from '../hooks/useTheme'
 import { StickyNote } from '../components/StickyNote'
-import type { Todo, NoteColor, Priority } from '../types'
+import { NoteDetailPanel } from '../components/note/NoteDetailPanel'
+import { useTodoStore } from '../store/todoStore'
+import type { Todo, NoteColor, Priority, Attachment } from '../types'
 
 // ─── Priority modifiers ───────────────────────────────────────────────────────
 const PRIORITY_GLOW: Record<Priority, number> = { low: 6, normal: 18, high: 32 }
@@ -110,6 +112,12 @@ export function StickyNoteContainer({
     open: boolean
     pos: { x: number; y: number }
   }>({ open: false, pos: { x: 0, y: 0 } })
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [inspectRect, setInspectRect] = useState<DOMRect | null>(null)
+
+  const updateDescription = useTodoStore((s) => s.updateDescription)
+  const addAttachment = useTodoStore((s) => s.addAttachment)
+  const removeAttachment = useTodoStore((s) => s.removeAttachment)
 
   const saveEdit = useCallback(() => {
     const trimmed = editValue.trim()
@@ -211,7 +219,13 @@ export function StickyNoteContainer({
 
   const stackCount = stackedNotes.length
 
+  const handleInspect = useCallback((rect: DOMRect) => {
+    setInspectRect(rect)
+    setIsDetailOpen(true)
+  }, [])
+
   return (
+    <>
     <StickyNote
       todo={todo}
       x={x}
@@ -268,6 +282,18 @@ export function StickyNoteContainer({
       onRequestFolder={() => onRequestFolder(todo.id)}
       onDisbandStack={stackCount > 0 ? onDisbandStack : undefined}
       onCloseContextMenu={() => setContextMenu((p) => ({ ...p, open: false }))}
+      onInspect={handleInspect}
     />
+    <NoteDetailPanel
+      todo={todo}
+      ns={ns}
+      isOpen={isDetailOpen}
+      cardRect={inspectRect}
+      onClose={() => setIsDetailOpen(false)}
+      onUpdateDescription={(desc) => updateDescription(todo.id, desc)}
+      onAddAttachment={(att: Attachment) => addAttachment(todo.id, att)}
+      onRemoveAttachment={(attId) => removeAttachment(todo.id, attId)}
+    />
+    </>
   )
 }

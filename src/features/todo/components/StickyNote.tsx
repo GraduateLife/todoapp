@@ -1,5 +1,5 @@
 import { motion, animate } from 'framer-motion'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import type { MotionValue } from 'framer-motion'
 import { TodoContextMenu } from './TodoContextMenu'
 import { SubTaskList } from './note/SubTaskList'
@@ -80,6 +80,7 @@ export interface StickyNoteProps {
   onRequestFolder: () => void
   onDisbandStack?: () => void
   onCloseContextMenu: () => void
+  onInspect: (rect: DOMRect) => void
 }
 
 // ─── Stack count badge (expands on hover to show stack name) ──────────────────
@@ -196,9 +197,11 @@ export function StickyNote({
   onRequestFolder,
   onDisbandStack,
   onCloseContextMenu,
+  onInspect,
 }: StickyNoteProps) {
   const theme = useTheme()
   const palette = theme === 'light' ? LIGHT_NOTE_STYLES : NOTE_STYLES
+  const cardRef = useRef<HTMLDivElement>(null)
 
   // Decide entrance style once on mount: fresh → throw, existing → scale-in
   const isFresh = useMemo(() => isFreshTodo(todo.createdAt), [todo.id])
@@ -271,6 +274,7 @@ export function StickyNote({
 
         {/* ── Main note card ────────────────────────────────────────────────── */}
         <div
+          ref={cardRef}
           style={{
             background: bgColor,
             border: `1px solid ${borderColor}`,
@@ -444,19 +448,59 @@ export function StickyNote({
             style={{ borderTop: `1px solid ${ns.dim}`, color: ns.dim }}
             className="mt-3 pt-2 flex items-center justify-between"
           >
-            <span className="font-mono text-[10px] opacity-75">
-              {new Date(todo.createdAt).toLocaleDateString('en-US', {
-                month: '2-digit',
-                day: '2-digit',
-                year: '2-digit',
-              })}
-            </span>
-            {todo.attachments.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] opacity-75">
+                {new Date(todo.createdAt).toLocaleDateString('en-US', {
+                  month: '2-digit',
+                  day: '2-digit',
+                  year: '2-digit',
+                })}
+              </span>
+              {/* Inspect button */}
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const rect = cardRef.current?.getBoundingClientRect()
+                  if (rect) onInspect(rect)
+                }}
+                style={{
+                  background: 'transparent',
+                  border: `1px solid ${ns.dim}`,
+                  color: ns.dim,
+                  fontFamily: "'Space Mono', monospace",
+                  fontSize: 8,
+                  letterSpacing: '0.1em',
+                  padding: '1px 5px',
+                  cursor: 'pointer',
+                  borderRadius: 1,
+                  opacity: 0.6,
+                  transition: 'opacity 0.15s, color 0.15s, border-color 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  const btn = e.currentTarget as HTMLButtonElement
+                  btn.style.opacity = '1'
+                  btn.style.color = ns.border
+                  btn.style.borderColor = ns.border
+                }}
+                onMouseLeave={(e) => {
+                  const btn = e.currentTarget as HTMLButtonElement
+                  btn.style.opacity = '0.6'
+                  btn.style.color = ns.dim
+                  btn.style.borderColor = ns.dim
+                }}
+              >
+                [//]
+              </button>
+            </div>
+            {(todo.attachments.length > 0 || todo.description) && (
               <span
                 className="font-mono text-[8px] opacity-60"
                 style={{ color: ns.dim }}
               >
-                [{todo.attachments.length}]
+                {todo.attachments.length > 0 ? `[${todo.attachments.length}]` : ''}
+                {todo.description ? ' [d]' : ''}
               </span>
             )}
           </div>

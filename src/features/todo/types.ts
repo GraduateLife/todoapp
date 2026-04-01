@@ -1,7 +1,7 @@
 export interface Attachment {
   id: string
-  type: 'image' | 'voice'
-  url: string // base64 data URL
+  type: 'image' | 'voice' | 'video' | 'file'
+  url: string // base64 data URL or object URL
   name: string
 }
 
@@ -30,6 +30,7 @@ export interface Reminder {
 export interface Todo {
   id: string
   title: string
+  description?: string
   completed: boolean
   createdAt: number // Date.now()
   attachments: Attachment[]

@@ -38,6 +38,7 @@ interface TodoState {
   deleteTodo: (id: string) => void
   toggleTodo: (id: string) => void
   updateTitle: (id: string, title: string) => void
+  updateDescription: (id: string, description: string) => void
   moveTodo: (id: string, x: number, y: number) => void
   bringToFront: (id: string) => void
   addAttachment: (todoId: string, attachment: Attachment) => void
@@ -199,6 +200,14 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
   updateTitle: (id, title) => {
     set((state) => ({
       todos: state.todos.map((t) => (t.id === id ? { ...t, title } : t)),
+    }))
+    const updated = get().todos.find((t) => t.id === id)
+    if (updated) getAdapter().saveTodo(updated).catch(console.error)
+  },
+
+  updateDescription: (id, description) => {
+    set((state) => ({
+      todos: state.todos.map((t) => (t.id === id ? { ...t, description } : t)),
     }))
     const updated = get().todos.find((t) => t.id === id)
     if (updated) getAdapter().saveTodo(updated).catch(console.error)
