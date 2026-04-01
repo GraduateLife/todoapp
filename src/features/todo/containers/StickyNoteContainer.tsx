@@ -1,5 +1,6 @@
 import { useMotionValue } from 'framer-motion'
 import { useState, useCallback } from 'react'
+import { imeGuard } from '@/lib/utils'
 import { useDragZones } from '../hooks/useDragZones'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
 import { TITLE_MAX_LEN } from '../components/input-bar'
@@ -130,13 +131,13 @@ export function StickyNoteContainer({
   }, [editValue, todo.title, todo.id, onUpdateTitle])
 
   const handleEditKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
+    imeGuard((e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') saveEdit()
       if (e.key === 'Escape') {
         setEditValue(todo.title)
         setIsEditing(false)
       }
-    },
+    }),
     [saveEdit, todo.title],
   )
 
@@ -290,6 +291,7 @@ export function StickyNoteContainer({
       isOpen={isDetailOpen}
       cardRect={inspectRect}
       onClose={() => setIsDetailOpen(false)}
+      onUpdateTitle={(title) => onUpdateTitle(todo.id, title)}
       onUpdateDescription={(desc) => updateDescription(todo.id, desc)}
       onAddAttachment={(att: Attachment) => addAttachment(todo.id, att)}
       onRemoveAttachment={(attId) => removeAttachment(todo.id, attId)}

@@ -1,5 +1,6 @@
 import { motion, useMotionValue, animate } from 'framer-motion'
 import { useEffect, useState } from 'react'
+import { imeGuard } from '@/lib/utils'
 import type { Todo } from '../../types'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../../constants/noteColors'
 import { useTheme } from '../../hooks/useTheme'
@@ -326,10 +327,10 @@ export function StackFan({
             value={nameValue}
             onChange={(e) => setNameValue(e.target.value.slice(0, 24))}
             onBlur={saveNameEdit}
-            onKeyDown={(e) => {
+            onKeyDown={imeGuard((e) => {
               if (e.key === 'Enter') saveNameEdit()
               if (e.key === 'Escape') { setIsEditingName(false); setNameValue(root.stackName ?? '') }
-            }}
+            })}
             style={{
               background: 'transparent',
               border: 'none',

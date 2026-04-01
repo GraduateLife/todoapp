@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom'
 import { useState, useEffect } from 'react'
+import { imeGuard } from '@/lib/utils'
 import { useFolderStore } from '../../store'
 import { COLOR_OPTIONS } from '../../constants/noteColors'
 import type { Folder, NoteColor } from '../../types'
@@ -168,10 +169,10 @@ export function FolderPickerModal({
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => {
+                onKeyDown={imeGuard((e) => {
                   if (e.key === 'Enter') handleCreateConfirm()
                   if (e.key === 'Escape') setIsCreating(false)
-                }}
+                })}
                 placeholder="folder name..."
                 className="flex-1 font-mono text-[0.88rem] bg-transparent outline-none"
                 style={{

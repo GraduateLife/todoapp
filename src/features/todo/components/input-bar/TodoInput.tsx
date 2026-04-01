@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRef, useEffect, type ReactNode } from 'react'
+import { imeGuard } from '@/lib/utils'
 import {
   parseMarkdownInput,
   type ParsedTodo,
@@ -61,7 +62,7 @@ export function TodoInput({
   const parseResult = isExpanded ? parseMarkdownInput(value) : null
   const canExecExpanded = parseResult?.ok === true
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = imeGuard((e: React.KeyboardEvent) => {
     if (!isExpanded && e.key === 'Enter') {
       e.preventDefault()
       onSubmit()
@@ -73,7 +74,7 @@ export function TodoInput({
       e.preventDefault()
       if (canExecExpanded && parseResult?.ok) onSubmitExpanded(parseResult.data)
     }
-  }
+  })
 
   const handleExec = () => {
     if (isExpanded) {

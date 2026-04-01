@@ -85,11 +85,22 @@ export interface StickyNoteProps {
 
 // ─── Stack count badge (expands on hover to show stack name) ──────────────────
 function StackBadge({
-  ghostOffset, stackCount, stackName, isExpanded,
-  borderColor, bgColor, glow, onToggleExpand,
+  ghostOffset,
+  stackCount,
+  stackName,
+  isExpanded,
+  borderColor,
+  bgColor,
+  glow,
+  onToggleExpand,
 }: {
-  ghostOffset: number; stackCount: number; stackName?: string
-  isExpanded: boolean; borderColor: string; bgColor: string; glow: string
+  ghostOffset: number
+  stackCount: number
+  stackName?: string
+  isExpanded: boolean
+  borderColor: string
+  bgColor: string
+  glow: string
   onToggleExpand: () => void
 }) {
   const [hovered, setHovered] = useState(false)
@@ -100,7 +111,10 @@ function StackBadge({
       onPointerDown={(e) => e.stopPropagation()}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={(e) => { e.stopPropagation(); onToggleExpand() }}
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggleExpand()
+      }}
       style={{
         position: 'absolute',
         top: `${ghostOffset - 8}px`,
@@ -124,19 +138,31 @@ function StackBadge({
       }}
       title={isExpanded ? 'collapse stack' : 'expand stack'}
     >
-      <span style={{
-        width: 22, height: 22, flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 10, fontFamily: "'Space Mono', monospace", fontWeight: 700,
-      }}>
+      <span
+        style={{
+          width: 22,
+          height: 22,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 10,
+          fontFamily: "'Space Mono', monospace",
+          fontWeight: 700,
+        }}
+      >
         {stackCount + 1}
       </span>
-      <span style={{
-        fontSize: 9, fontFamily: "'Space Mono', monospace", fontWeight: 400,
-        letterSpacing: '0.07em',
-        opacity: showName ? 0.9 : 0,
-        transition: 'opacity 140ms ease 60ms',
-      }}>
+      <span
+        style={{
+          fontSize: 9,
+          fontFamily: "'Space Mono', monospace",
+          fontWeight: 400,
+          letterSpacing: '0.07em',
+          opacity: showName ? 0.9 : 0,
+          transition: 'opacity 140ms ease 60ms',
+        }}
+      >
         · {stackName}
       </span>
     </button>
@@ -448,61 +474,13 @@ export function StickyNote({
             style={{ borderTop: `1px solid ${ns.dim}`, color: ns.dim }}
             className="mt-3 pt-2 flex items-center justify-between"
           >
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[10px] opacity-75">
-                {new Date(todo.createdAt).toLocaleDateString('en-US', {
-                  month: '2-digit',
-                  day: '2-digit',
-                  year: '2-digit',
-                })}
-              </span>
-              {/* Inspect button */}
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const rect = cardRef.current?.getBoundingClientRect()
-                  if (rect) onInspect(rect)
-                }}
-                style={{
-                  background: 'transparent',
-                  border: `1px solid ${ns.dim}`,
-                  color: ns.dim,
-                  fontFamily: "'Space Mono', monospace",
-                  fontSize: 8,
-                  letterSpacing: '0.1em',
-                  padding: '1px 5px',
-                  cursor: 'pointer',
-                  borderRadius: 1,
-                  opacity: 0.6,
-                  transition: 'opacity 0.15s, color 0.15s, border-color 0.15s',
-                }}
-                onMouseEnter={(e) => {
-                  const btn = e.currentTarget as HTMLButtonElement
-                  btn.style.opacity = '1'
-                  btn.style.color = ns.border
-                  btn.style.borderColor = ns.border
-                }}
-                onMouseLeave={(e) => {
-                  const btn = e.currentTarget as HTMLButtonElement
-                  btn.style.opacity = '0.6'
-                  btn.style.color = ns.dim
-                  btn.style.borderColor = ns.dim
-                }}
-              >
-                [//]
-              </button>
-            </div>
-            {(todo.attachments.length > 0 || todo.description) && (
-              <span
-                className="font-mono text-[8px] opacity-60"
-                style={{ color: ns.dim }}
-              >
-                {todo.attachments.length > 0 ? `[${todo.attachments.length}]` : ''}
-                {todo.description ? ' [d]' : ''}
-              </span>
-            )}
+            <span className="font-mono text-[10px] opacity-75">
+              {new Date(todo.createdAt).toLocaleDateString('en-US', {
+                month: '2-digit',
+                day: '2-digit',
+                year: '2-digit',
+              })}
+            </span>
           </div>
 
           {/* Scanline overlay */}
@@ -558,6 +536,47 @@ export function StickyNote({
               />
             )
           })()}
+
+        {/* ── Flip button (outside card, bottom-right) ─────────────────────── */}
+        <button
+          type="button"
+          className="uppercase"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            const rect = cardRef.current?.getBoundingClientRect()
+            if (rect) onInspect(rect)
+          }}
+          style={{
+            position: 'absolute',
+            bottom: -20,
+            right: 0,
+            background: 'transparent',
+            border: `${ns.dim}`,
+            color: ns.text,
+            fontFamily: "'Space Mono', monospace",
+            fontSize: 9,
+            letterSpacing: '0.12em',
+            padding: '2px 6px',
+            cursor: 'pointer',
+            opacity: 0.85,
+            transition: 'opacity 0.15s, color 0.15s',
+          }}
+          onMouseEnter={(e) => {
+            const btn = e.currentTarget as HTMLButtonElement
+            btn.style.opacity = '1'
+            btn.style.color = ns.border
+          }}
+          onMouseLeave={(e) => {
+            const btn = e.currentTarget as HTMLButtonElement
+            btn.style.opacity = '0.85'
+            btn.style.color = ns.text
+            btn.style.borderColor = ns.dim
+            btn.style.boxShadow = 'none'
+          }}
+        >
+          [ flip ]
+        </button>
       </motion.div>
 
       <TodoContextMenu
@@ -577,5 +596,3 @@ export function StickyNote({
     </>
   )
 }
-
-

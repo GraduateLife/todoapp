@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import type { SubTask } from '../../types'
+import { imeGuard } from '@/lib/utils'
 
 const MAX_VISIBLE = 6
 
@@ -58,10 +59,10 @@ export function SubTaskList({
     const trimmed = newTitle.trim()
     if (trimmed) { onAdd(trimmed); setNewTitle('') }
   }
-  const handleAddKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleAddKeyDown = imeGuard((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') handleAddSubmit()
     if (e.key === 'Escape') { setIsAdding(false); setNewTitle(''); onAddingClose?.() }
-  }
+  })
   const startEditing = (s: SubTask) => { setEditingId(s.id); setEditingValue(s.title) }
   const saveEdit = () => {
     if (!editingId) return
@@ -69,10 +70,10 @@ export function SubTaskList({
     if (trimmed) onUpdate(editingId, trimmed)
     setEditingId(null); setEditingValue('')
   }
-  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleEditKeyDown = imeGuard((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') saveEdit()
     if (e.key === 'Escape') { setEditingId(null); setEditingValue('') }
-  }
+  })
 
   // ── Shared container — same margins for all states ────────────────────────
   return (
