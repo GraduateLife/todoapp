@@ -8,6 +8,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 import { HeroUIProvider } from '@heroui/react'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
+import { STORAGE_STRATEGY } from '../lib/env'
 
 import TanStackQueryProvider from '../integrations/tanstack-query/root-provider'
 
@@ -68,6 +69,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <TanStackQueryProvider>
           <HeroUIProvider>
             <Header />
+            {import.meta.env.DEV && (
+              <div style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 9,
+                letterSpacing: '0.12em',
+                padding: '2px 8px',
+                opacity: 0.45,
+                color: 'var(--rf-text)',
+                userSelect: 'none',
+              }}>
+                storage: {STORAGE_STRATEGY}
+              </div>
+            )}
             {children}
             <Footer />
             {/* <TanStackDevtools

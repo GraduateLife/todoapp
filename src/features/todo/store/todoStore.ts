@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Todo, Attachment, NoteColor, Priority, Reminder } from '../types'
 import { NOTE_COLORS } from '../types'
-import { getAdapter } from '../../../lib/adapters'
+import { getStrategy as getAdapter } from '../../../lib/strategies'
 
 const TITLE_MAX_LEN = 100 // sync with TodoInput.TITLE_MAX_LEN
 
