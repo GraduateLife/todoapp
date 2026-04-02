@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useRef, useEffect, type ReactNode } from 'react'
+import { useRef, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { imeGuard } from '@/lib/utils'
+import { useVoiceRecorder } from '../../services/voice'
 import {
   parseMarkdownInput,
   type ParsedTodo,
@@ -46,6 +47,25 @@ export function TodoInput({
 }: TodoInputProps) {
   const { isExpanded, setIsExpanded, handlePointerDown } = useInputMode()
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // ── Voice recorder ───────────────────────────────────────────────────────
+  const [interimText, setInterimText] = useState('')
+  const [voiceError, setVoiceError] = useState('')
+  const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+    setVoiceError('')
+    if (isFinal) {
+      onChange(text)
+      setInterimText('')
+      inputRef.current?.focus()
+    } else {
+      setInterimText(text)
+    }
+  }, [onChange])
+  const { state: voiceState, start: startVoice, stop: stopVoice, isAvailable: voiceAvailable } =
+    useVoiceRecorder({
+      onTranscript: handleTranscript,
+      onError: (err) => setVoiceError(err),
+    })
 
   // Auto-grow (entry mode only)
   const textareaGrowRef = useRef<HTMLTextAreaElement | null>(null)
@@ -179,12 +199,48 @@ export function TodoInput({
                       </span>
                     </div>
                   ) : (
-                    <span
-                      className="font-mono text-[9px] tracking-[0.18em] flex-shrink-0 select-none"
-                      style={{ color: 'var(--rf-text-dim)', opacity: 0.5 }}
-                    >
-                      READY_
-                    </span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {voiceAvailable && (
+                        <button
+                          type="button"
+                          title={voiceState === 'listening' ? 'stop recording' : 'voice input'}
+                          onClick={() => voiceState === 'listening' ? stopVoice() : startVoice()}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px 4px',
+                            color: voiceState === 'listening'
+                              ? 'var(--rf-accent)'
+                              : 'var(--rf-text-dim)',
+                            opacity: voiceState === 'listening' ? 1 : 0.5,
+                            fontSize: 14,
+                            lineHeight: 1,
+                            transition: 'color 0.15s, opacity 0.15s',
+                          }}
+                        >
+                          {voiceState === 'listening' ? '⏹' : '🎤'}
+                        </button>
+                      )}
+                      <span
+                        className="font-mono text-[9px] tracking-[0.18em] flex-shrink-0 select-none"
+                        style={{
+                          color: voiceError ? 'var(--rf-accent, #f87171)' : 'var(--rf-text-dim)',
+                          opacity: voiceError ? 0.85 : 0.5,
+                          maxWidth: 200,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title={voiceError || undefined}
+                      >
+                        {voiceError
+                          ? voiceError
+                          : voiceState === 'listening'
+                            ? (interimText || 'listening_')
+                            : 'READY_'}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>

@@ -10,3 +10,14 @@ export const STORAGE_STRATEGY: StorageStrategyName =
 
 export const API_BASE_URL: string =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+
+export type AIProviderName = 'openai' | 'anthropic' | 'ollama'
+
+export const AI_PROVIDER: AIProviderName =
+  (import.meta.env.VITE_AI_PROVIDER as AIProviderName) ?? 'openai'
+
+export const AI_API_KEY: string =
+  import.meta.env.VITE_AI_API_KEY ?? ''
+
+export const AI_BASE_URL: string =
+  import.meta.env.VITE_AI_BASE_URL ?? ''
