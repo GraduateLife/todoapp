@@ -12,11 +12,11 @@ export const TodoService = {
    */
   createFromText(
     title: string,
-    options: { color?: NoteColor; attachments?: Attachment[] } = {},
+    options: { color?: NoteColor; attachments?: Attachment[]; position?: { x: number; y: number } } = {},
   ): void {
     const trimmed = title.trim()
     if (!trimmed) return
-    useTodoStore.getState().addTodo(trimmed, options.attachments, options.color)
+    useTodoStore.getState().addTodo(trimmed, options.attachments, options.color, options.position)
   },
 
   /**

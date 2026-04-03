@@ -27,6 +27,7 @@ interface TodoState {
     title: string,
     attachments?: Attachment[],
     color?: NoteColor,
+    position?: { x: number; y: number },
   ) => void
   addTodoWithDetails: (
     title: string,
@@ -151,9 +152,13 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
 
   initialize: (todos) => set({ todos }),
 
-  addTodo: (title, attachments = [], color) => {
+  addTodo: (title, attachments = [], color, position) => {
     const maxZ = get().todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
-    const todo = { ...createTodo(title, attachments, color), zIndex: maxZ + 1 }
+    const todo = {
+      ...createTodo(title, attachments, color),
+      zIndex: maxZ + 1,
+      ...(position ? { position } : {}),
+    }
     set((state) => ({ todos: [...state.todos, todo] }))
     getAdapter().saveTodo(todo).catch(console.error)
   },

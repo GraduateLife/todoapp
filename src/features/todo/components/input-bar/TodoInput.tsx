@@ -1,24 +1,19 @@
-import { motion, AnimatePresence } from 'framer-motion'
-import { useRef, useEffect, useState, type ReactNode } from 'react'
+import { motion } from 'framer-motion'
+import { type ReactNode, useState, useEffect, useRef, useCallback } from 'react'
 import { imeGuard } from '@/lib/utils'
-import { VoiceInputOverlay } from '../voice/VoiceInputOverlay'
-import { VOICE_MOCK } from '../../../../lib/env'
 import {
   parseMarkdownInput,
   type ParsedTodo,
 } from '../../utils/parseMarkdownInput'
+import { aiFixSyntax, isAIAvailable } from '../../services/aiParse'
 import type { NoteColor } from '../../types'
-import { TITLE_MAX_LEN, MAX_HEIGHT } from './constants'
 import {
   EXPAND_TRANSITION,
   COLLAPSE_TRANSITION,
-  FADE_TRANSITION,
-  ENTRY_HEIGHT,
   BUFFER_HEIGHT,
 } from './transitions'
 import { useInputMode } from './useInputMode'
 import { DragHandle } from './DragHandle'
-import { ColorPicker } from './ColorPicker'
 import { BufferGuide } from './BufferGuide'
 import { BufferEditor } from './BufferEditor'
 import { ParseSummary } from './ParseSummary'
@@ -26,257 +21,333 @@ import { ParseSummary } from './ParseSummary'
 interface TodoInputProps {
   value: string
   onChange: (value: string) => void
-  onSubmit: () => void
   onSubmitExpanded: (parsed: ParsedTodo) => void
-  placeholder?: string
   attachments?: ReactNode
   isDragging?: boolean
   selectedColor: NoteColor | 'random'
   onColorChange: (color: NoteColor | 'random') => void
 }
 
+const AI_DEBOUNCE_SEC = 3
+
+/**
+ * Hook: 3-second debounced AI syntax fix.
+ * Replaces the buffer text with corrected syntax when AI returns.
+ *
+ * Revert detection (per-line):
+ * After AI fixes text, we record which lines were changed. If the user
+ * edits any of those lines (partial or full revert), we suppress AI
+ * until the line count or content changes substantially.
+ */
+function useAiSyntaxFix(
+  value: string,
+  onChange: (v: string) => void,
+  isExpanded: boolean,
+  enabled: boolean,
+) {
+  const [aiStatus, setAiStatus] = useState<'idle' | 'countdown' | 'parsing'>('idle')
+  const [countdown, setCountdown] = useState(0)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Per-line revert tracking
+  const lastFixedValue = useRef<string>('')    // full text AI produced
+  const preFixValue = useRef<string>('')       // full text before AI fixed it
+  const changedLineIdxs = useRef<Set<number>>(new Set()) // which line indices AI changed
+  const suppressUntilNewContent = useRef(false)
+
+  const clearTimers = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (countdownRef.current) clearInterval(countdownRef.current)
+    debounceRef.current = null
+    countdownRef.current = null
+  }, [])
+
+  useEffect(() => {
+    if (!isExpanded || !enabled) {
+      clearTimers()
+      setAiStatus('idle')
+      setCountdown(0)
+      return
+    }
+
+    const trimmed = value.trim()
+    if (!trimmed || !isAIAvailable()) {
+      clearTimers()
+      setAiStatus('idle')
+      setCountdown(0)
+      return
+    }
+
+    // Don't re-trigger if AI just fixed this exact text
+    if (value === lastFixedValue.current) {
+      return
+    }
+
+    // ── Revert detection ──────────────────────────────────────────────
+    if (lastFixedValue.current && preFixValue.current && changedLineIdxs.current.size > 0) {
+      const currentLines = value.split('\n')
+      const fixedLines = lastFixedValue.current.split('\n')
+
+      // Check if user touched any of the lines AI changed
+      const userEditedAiLines = [...changedLineIdxs.current].some((idx) => {
+        const cur = currentLines[idx]?.trim()
+        const fixed = fixedLines[idx]?.trim()
+        // If current differs from AI's fix on a line AI changed, user reverted it
+        return cur !== undefined && fixed !== undefined && cur !== fixed
+      })
+
+      if (userEditedAiLines) {
+        suppressUntilNewContent.current = true
+        clearTimers()
+        setAiStatus('idle')
+        setCountdown(0)
+        return
+      }
+    }
+
+    // If suppressed, check if user wrote genuinely new content
+    if (suppressUntilNewContent.current) {
+      const currentLines = value.split('\n')
+      const preFixLines = preFixValue.current.split('\n')
+      const fixedLines = lastFixedValue.current.split('\n')
+
+      // Reset suppression if: line count changed, or content on non-AI lines changed
+      const lineCountChanged = currentLines.length !== preFixLines.length
+        && currentLines.length !== fixedLines.length
+      const hasNewContent = currentLines.some((line, i) => {
+        // Skip lines that AI changed — those are "disputed"
+        if (changedLineIdxs.current.has(i)) return false
+        const pre = preFixLines[i]?.trim()
+        const fixed = fixedLines[i]?.trim()
+        const cur = line.trim()
+        // New content = differs from both pre-fix and fixed versions
+        return cur !== pre && cur !== fixed
+      })
+
+      if (lineCountChanged || hasNewContent) {
+        suppressUntilNewContent.current = false
+        changedLineIdxs.current.clear()
+        lastFixedValue.current = ''
+        preFixValue.current = ''
+      } else {
+        clearTimers()
+        setAiStatus('idle')
+        setCountdown(0)
+        return
+      }
+    }
+
+    // Clear previous timers
+    clearTimers()
+
+    // Start countdown
+    setCountdown(AI_DEBOUNCE_SEC)
+    setAiStatus('countdown')
+
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current)
+          countdownRef.current = null
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    // After debounce, trigger AI
+    debounceRef.current = setTimeout(() => {
+      setAiStatus('parsing')
+      const currentValue = value.trim()
+      preFixValue.current = currentValue
+      aiFixSyntax(currentValue)
+        .then((corrected) => {
+          if (corrected && corrected !== currentValue) {
+            // Record which lines AI changed
+            const preLines = currentValue.split('\n')
+            const fixedLines = corrected.split('\n')
+            const changed = new Set<number>()
+            for (let i = 0; i < Math.max(preLines.length, fixedLines.length); i++) {
+              if (preLines[i]?.trim() !== fixedLines[i]?.trim()) {
+                changed.add(i)
+              }
+            }
+            changedLineIdxs.current = changed
+            lastFixedValue.current = corrected
+            onChange(corrected)
+          }
+        })
+        .catch(() => {})
+        .finally(() => setAiStatus('idle'))
+    }, AI_DEBOUNCE_SEC * 1000)
+
+    return () => clearTimers()
+  }, [value, isExpanded, enabled, onChange, clearTimers])
+
+  // Reset on collapse
+  useEffect(() => {
+    if (!isExpanded) {
+      clearTimers()
+      setAiStatus('idle')
+      setCountdown(0)
+      lastFixedValue.current = ''
+      preFixValue.current = ''
+      changedLineIdxs.current = new Set()
+      suppressUntilNewContent.current = false
+    }
+  }, [isExpanded, clearTimers])
+
+  return { aiStatus, countdown }
+}
+
 export function TodoInput({
   value,
   onChange,
-  onSubmit,
   onSubmitExpanded,
-  placeholder = 'type a task and press enter_',
   attachments,
   isDragging = false,
-  selectedColor,
-  onColorChange,
 }: TodoInputProps) {
   const { isExpanded, setIsExpanded, handlePointerDown } = useInputMode()
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [voiceOverlayOpen, setVoiceOverlayOpen] = useState(false)
+  const [aiAutoFix, setAiAutoFix] = useState(true)
 
-  // Auto-grow (entry mode only)
-  const textareaGrowRef = useRef<HTMLTextAreaElement | null>(null)
-  useEffect(() => {
-    const el = textareaGrowRef.current
-    if (!el || isExpanded) return
-    el.style.height = 'auto'
-    const sh = el.scrollHeight
-    el.style.height = `${Math.min(sh, MAX_HEIGHT)}px`
-    el.style.overflowY = sh > MAX_HEIGHT ? 'auto' : 'hidden'
-  }, [value, isExpanded])
+  // ── Local parse (always, instant) ────────────────────────────────────────
+  const localResult = isExpanded ? parseMarkdownInput(value) : null
+  const canExec = localResult?.ok === true
 
-  // ── Parse (expanded only) ────────────────────────────────────────────────
-  const parseResult = isExpanded ? parseMarkdownInput(value) : null
-  const canExecExpanded = parseResult?.ok === true
+  // ── AI syntax fix (3s debounce, optional) ────────────────────────────────
+  const { aiStatus, countdown } = useAiSyntaxFix(value, onChange, isExpanded, aiAutoFix)
 
   const handleKeyDown = imeGuard((e: React.KeyboardEvent) => {
-    if (!isExpanded && e.key === 'Enter') {
-      e.preventDefault()
-      onSubmit()
-    }
-    if (isExpanded && e.key === 'Escape') {
+    if (e.key === 'Escape') {
       setIsExpanded(false)
     }
-    if (isExpanded && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
-      if (canExecExpanded && parseResult?.ok) onSubmitExpanded(parseResult.data)
+      if (canExec && localResult?.ok) onSubmitExpanded(localResult.data)
     }
   })
 
-  const handleExec = () => {
-    if (isExpanded) {
-      if (canExecExpanded && parseResult?.ok) {
-        onSubmitExpanded(parseResult.data)
-        onChange('')
-        setIsExpanded(false)
-      }
-    } else {
-      onSubmit()
+  const handleExec = useCallback(() => {
+    if (canExec && localResult?.ok) {
+      onSubmitExpanded(localResult.data)
+      onChange('')
+      setIsExpanded(false)
     }
-  }
+  }, [canExec, localResult, onSubmitExpanded, onChange, setIsExpanded])
 
   return (
     <motion.div
-      className="rf-input-bar"
+      className={isExpanded ? 'rf-input-bar' : 'rf-input-bar rf-input-bar--collapsed'}
       animate={{ y: isDragging ? '100%' : 0 }}
       transition={{ type: 'spring', stiffness: 380, damping: 34, mass: 0.8 }}
     >
-      {/* ── Mode / drag handle strip ─────────────────────────────────────── */}
-      <DragHandle isExpanded={isExpanded} onPointerDown={handlePointerDown} />
+      {/* ── Drag handle strip ─────────────────────────────────────────────── */}
+      <DragHandle
+        isExpanded={isExpanded}
+        onPointerDown={handlePointerDown}
+        onToggle={() => setIsExpanded(!isExpanded)}
+        aiAutoFix={aiAutoFix}
+        onToggleAi={() => setAiAutoFix((v) => !v)}
+      />
 
-      {/* ── Animated height container ────────────────────────────────────── */}
+      {/* ── Animated height container ──────────────────────────────────────── */}
       <motion.div
-        animate={{ height: isExpanded ? BUFFER_HEIGHT : ENTRY_HEIGHT }}
+        animate={{ height: isExpanded ? BUFFER_HEIGHT : 0 }}
         transition={isExpanded ? EXPAND_TRANSITION : COLLAPSE_TRANSITION}
         style={{ overflow: 'hidden', width: '100%' }}
       >
-        <AnimatePresence mode="wait" initial={false}>
-          {/* ── ENTRY MODE (collapsed) ───────────────────────────────────── */}
-          {!isExpanded && (
-            <motion.div
-              key="entry"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={FADE_TRANSITION}
-              style={{ width: '100%' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'stretch', width: '100%' }}>
-                <ColorPicker selectedColor={selectedColor} onColorChange={onColorChange} />
+        <div
+          style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0,
+            opacity: isExpanded ? 1 : 0,
+            transition: 'opacity 0.12s ease-out',
+          }}
+        >
+          {/* ── Top row: left guide + right textarea ───────────────────────── */}
+          <div style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
+            <BufferGuide />
+            <BufferEditor
+              value={value}
+              onChange={onChange}
+              onKeyDown={handleKeyDown}
+              tokens={localResult?.tokens}
+            />
+          </div>
 
-                <div
-                  className="rf-input-inner"
-                  style={{ flex: 1, border: 'none', padding: '0 1rem', maxWidth: 'none', margin: 0 }}
+          {/* ── Bottom row: parse summary + AI status + exec group ─────────── */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingTop: '0.45rem',
+              paddingLeft: 'calc(220px + 0.5rem + 2.75rem)',
+              paddingRight: '0',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <ParseSummary parseResult={localResult} />
+
+              {/* AI countdown / status */}
+              {aiAutoFix && aiStatus === 'countdown' && countdown > 0 && (
+                <span
+                  className="font-mono text-[8px] tracking-[0.12em]"
+                  style={{ color: 'var(--rf-text-dim)', opacity: 0.35 }}
                 >
-                  <span className="rf-input-prompt" aria-hidden="true">&gt;_</span>
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={value}
-                    onChange={(e) => onChange(e.target.value.slice(0, TITLE_MAX_LEN))}
-                    onKeyDown={handleKeyDown}
-                    placeholder={placeholder}
-                    className="rf-input-field"
-                    maxLength={TITLE_MAX_LEN}
-                    aria-label="New todo"
-                    autoComplete="off"
-                    spellCheck={false}
-                  />
-                  {attachments && (
-                    <div className="flex items-center gap-1 flex-shrink-0">{attachments}</div>
-                  )}
-                  {value.trim() ? (
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span
-                        className="font-mono text-[9px] select-none flex-shrink-0"
-                        style={{ color: 'var(--rf-text-dim)', opacity: 0.4 }}
-                      >
-                        {value.length}/{TITLE_MAX_LEN}
-                      </span>
-                      <button type="button" onClick={handleExec} className="rf-btn flex-shrink-0">
-                        [ exec ]
-                      </button>
-                      <span
-                        className="font-mono text-[10px] select-none flex flex-col items-center justify-center flex-shrink-0"
-                        style={{ color: 'var(--rf-text-dim)', opacity: 0.75, lineHeight: 1.35 }}
-                      >
-                        <span>press</span>
-                        <span>enter</span>
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        type="button"
-                        title={VOICE_MOCK ? 'voice input (mock)' : 'voice input'}
-                        onClick={() => setVoiceOverlayOpen(true)}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          padding: '2px 4px',
-                          color: 'var(--rf-text-dim)',
-                          opacity: 0.5,
-                          fontSize: 13,
-                          lineHeight: 1,
-                        }}
-                      >
-                        🎤{VOICE_MOCK && <sup style={{ fontSize: 7, opacity: 0.6 }}>mock</sup>}
-                      </button>
-                      <span
-                        className="font-mono text-[9px] tracking-[0.18em] flex-shrink-0 select-none"
-                        style={{ color: 'var(--rf-text-dim)', opacity: 0.5 }}
-                      >
-                        READY_
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <VoiceInputOverlay
-                isOpen={voiceOverlayOpen}
-                onClose={() => setVoiceOverlayOpen(false)}
-                selectedColor={selectedColor}
-                onColorChange={onColorChange}
-              />
-            </motion.div>
-          )}
-
-          {/* ── BUFFER MODE (expanded) ───────────────────────────────────── */}
-          {isExpanded && (
-            <motion.div
-              key="buffer"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={FADE_TRANSITION}
-              style={{ width: '100%' }}
-            >
-              <div
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 0,
-                }}
-              >
-                {/* ── Top row: left guide + right textarea ───────────────── */}
-                <div style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
-                  <BufferGuide />
-                  <BufferEditor
-                    value={value}
-                    onChange={onChange}
-                    onKeyDown={handleKeyDown}
-                    tokens={parseResult?.tokens}
-                  />
-                </div>
-
-                {/* ── Bottom row: parse summary + exec group ─────────────── */}
-                <div
+                  AI {countdown}s
+                </span>
+              )}
+              {aiAutoFix && aiStatus === 'parsing' && (
+                <span
+                  className="font-mono text-[8px] tracking-[0.12em]"
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingTop: '0.45rem',
-                    paddingLeft: 'calc(220px + 0.5rem + 2.75rem)',
-                    paddingRight: '0',
+                    color: 'var(--rf-cyan)',
+                    opacity: 0.5,
+                    animation: 'pulse 1.2s ease-in-out infinite',
                   }}
                 >
-                  <ParseSummary parseResult={parseResult} />
+                  AI fixing...
+                </span>
+              )}
+            </div>
 
-                  <div
-                    className="flex items-center gap-2 flex-shrink-0"
-                    style={{ paddingRight: '0.5rem' }}
-                  >
-                    {attachments && (
-                      <div className="flex items-center gap-1">{attachments}</div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleExec}
-                      disabled={!canExecExpanded}
-                      className="rf-btn flex-shrink-0"
-                      style={{
-                        opacity: canExecExpanded ? 1 : 0.3,
-                        cursor: canExecExpanded ? 'pointer' : 'not-allowed',
-                      }}
-                    >
-                      [ exec ]
-                    </button>
-                    <span
-                      className="font-mono text-[10px] select-none flex flex-col items-center justify-center flex-shrink-0"
-                      style={{
-                        color: 'var(--rf-text-dim)',
-                        opacity: 0.75,
-                        lineHeight: 1.35,
-                      }}
-                    >
-                      <span>press</span>
-                      <span>ctrl+enter</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            <div
+              className="flex items-center gap-2 flex-shrink-0"
+              style={{ paddingRight: '0.5rem' }}
+            >
+              {attachments && (
+                <div className="flex items-center gap-1">{attachments}</div>
+              )}
+              <button
+                type="button"
+                onClick={handleExec}
+                disabled={!canExec}
+                className="rf-btn flex-shrink-0"
+                style={{
+                  opacity: canExec ? 1 : 0.3,
+                  cursor: canExec ? 'pointer' : 'not-allowed',
+                }}
+              >
+                [ exec ]
+              </button>
+              <span
+                className="font-mono text-[10px] select-none flex flex-col items-center justify-center flex-shrink-0"
+                style={{
+                  color: 'var(--rf-text-dim)',
+                  opacity: 0.75,
+                  lineHeight: 1.35,
+                }}
+              >
+                <span>press</span>
+                <span>ctrl+enter</span>
+              </span>
+            </div>
+          </div>
+        </div>
       </motion.div>
     </motion.div>
   )

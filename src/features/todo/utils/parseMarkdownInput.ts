@@ -11,41 +11,62 @@ export type ParsedTodo = {
 
 /** Classification of a single raw line */
 export type LineToken =
-  | { kind: 'title'; text: string }
+  | { kind: 'title'; text: string; priority: Priority }
   | { kind: 'subtask'; text: string; completed: boolean }
-  | { kind: 'priority'; text: string; value: Priority }
   | { kind: 'color'; text: string; value: NoteColor }
   | { kind: 'warn'; text: string } // e.g. "-milk" — looks like a subtask missing a space
-  | { kind: 'extra'; text: string } // extra plain line = CONFLICT
+  | { kind: 'extra'; text: string } // extra plain line (will be treated as subtask)
   | { kind: 'empty' }
 
 export type ParseResult =
   | { ok: true; data: ParsedTodo; tokens: LineToken[]; hasWarnings: boolean }
   | { ok: false; error: string; tokens: LineToken[] }
 
-/** Tokenise every raw line */
+// ── Color markers ───────────────────────────────────────────────────────────
+const COLOR_MAP: Record<string, NoteColor> = {
+  '[cyan]': 'cyan',
+  '[pink]': 'pink',
+  '[amber]': 'amber',
+  '[green]': 'green',
+  '[purple]': 'purple',
+}
+
+/**
+ * Extract priority suffix from title text:
+ *   "Buy groceries!" → { text: "Buy groceries", priority: "high" }
+ *   "Maybe later?"   → { text: "Maybe later",   priority: "low" }
+ *   "Normal task"    → { text: "Normal task",    priority: "normal" }
+ */
+function parseTitlePriority(text: string): { text: string; priority: Priority } {
+  if (text.endsWith('!')) {
+    return { text: text.slice(0, -1).trimEnd(), priority: 'high' }
+  }
+  if (text.endsWith('?')) {
+    return { text: text.slice(0, -1).trimEnd(), priority: 'low' }
+  }
+  return { text, priority: 'normal' }
+}
+
+/**
+ * Relaxed tokeniser:
+ * - First non-empty line → title (with priority suffix: ! = high, ? = low)
+ * - Lines starting with "- " → subtask (supports [x]/[] checkbox prefix)
+ * - Lines starting with "-" but no space → warn (typo hint)
+ * - Color markers still recognised
+ * - Any other non-empty line → extra (treated as subtask at exec time)
+ */
 function tokenise(lines: string[]): LineToken[] {
   let titleSeen = false
   return lines.map((raw): LineToken => {
     const line = raw.trim()
     if (!line) return { kind: 'empty' }
 
-    // ── Priority markers ────────────────────────────────────────────────────
-    // [!+] = high · [!-] = low · [!] = normal (explicit)
-    if (line === '[!+]') return { kind: 'priority', text: line, value: 'high' }
-    if (line === '[!-]') return { kind: 'priority', text: line, value: 'low' }
-    if (line === '[!]') return { kind: 'priority', text: line, value: 'normal' }
+    // Color markers
+    if (COLOR_MAP[line]) {
+      return { kind: 'color', text: line, value: COLOR_MAP[line] }
+    }
 
-    // ── Color markers ────────────────────────────────────────────────────────
-    // [cyan] [pink] [amber] [green] [purple]
-    if (line === '[cyan]') return { kind: 'color', text: line, value: 'cyan' }
-    if (line === '[pink]') return { kind: 'color', text: line, value: 'pink' }
-    if (line === '[amber]') return { kind: 'color', text: line, value: 'amber' }
-    if (line === '[green]') return { kind: 'color', text: line, value: 'green' }
-    if (line === '[purple]')
-      return { kind: 'color', text: line, value: 'purple' }
-
-    // ── Subtask — full form: "- [x] text" or "- [] text" or "- [ ] text" ──
+    // Subtask — full form: "- [x] text" or "- [] text" or "- [ ] text"
     const subFull = line.match(/^-\s+\[(x|\s*)\]\s+(.+)/)
     if (subFull) {
       return {
@@ -55,27 +76,30 @@ function tokenise(lines: string[]): LineToken[] {
       }
     }
 
-    // ── Subtask — short form: "- text" ─────────────────────────────────────
+    // Subtask — short form: "- text"
     const subShort = line.match(/^-\s+(.+)/)
     if (subShort) {
       return { kind: 'subtask', text: subShort[1].trim(), completed: false }
     }
 
-    // ── Malformed subtask: "-text" with no space ────────────────────────────
+    // Malformed subtask: "-text" with no space
     if (/^-\S/.test(line)) return { kind: 'warn', text: line }
 
-    // ── Plain lines ─────────────────────────────────────────────────────────
+    // First plain line → title (with priority suffix)
     if (!titleSeen) {
       titleSeen = true
-      return { kind: 'title', text: line }
+      const { priority } = parseTitlePriority(line)
+      return { kind: 'title', text: line, priority }
     }
+
+    // Additional plain lines → extra
     return { kind: 'extra', text: line }
   })
 }
 
 /**
  * Parse a raw multiline string into a structured todo.
- * Returns null when the input is completely empty.
+ * Relaxed mode: always succeeds if there's any non-empty content.
  */
 export function parseMarkdownInput(raw: string): ParseResult | null {
   const lines = raw.split('\n')
@@ -84,21 +108,22 @@ export function parseMarkdownInput(raw: string): ParseResult | null {
   const nonEmpty = tokens.filter((t) => t.kind !== 'empty')
   if (nonEmpty.length === 0) return null
 
-  const titleTokens = tokens.filter((t) => t.kind === 'title')
-  const extraTokens = tokens.filter((t) => t.kind === 'extra')
+  const titleToken = tokens.find(
+    (t): t is Extract<LineToken, { kind: 'title' }> => t.kind === 'title',
+  )
   const warnTokens = tokens.filter((t) => t.kind === 'warn')
+
+  // Collect subtasks from subtask tokens and extra lines
   const subtasks = tokens
     .filter(
-      (t): t is Extract<LineToken, { kind: 'subtask' }> => t.kind === 'subtask',
+      (t): t is Extract<LineToken, { kind: 'subtask' }> | Extract<LineToken, { kind: 'extra' }> =>
+        t.kind === 'subtask' || t.kind === 'extra',
     )
-    .map((t) => ({ title: t.text, completed: t.completed }))
-  const priorityTok = tokens
-    .filter(
-      (t): t is Extract<LineToken, { kind: 'priority' }> =>
-        t.kind === 'priority',
-    )
-    .at(-1)
-  const priority: Priority = priorityTok?.value ?? 'normal'
+    .map((t) => ({
+      title: t.text,
+      completed: t.kind === 'subtask' ? t.completed : false,
+    }))
+
   const colorTok = tokens
     .filter(
       (t): t is Extract<LineToken, { kind: 'color' }> => t.kind === 'color',
@@ -106,26 +131,26 @@ export function parseMarkdownInput(raw: string): ParseResult | null {
     .at(-1)
   const color: NoteColor | undefined = colorTok?.value
 
-  if (titleTokens.length === 0) {
-    return {
-      ok: false,
-      error: 'no title line — add one line without any prefix',
-      tokens,
-    }
-  }
+  // Extract title and priority
+  const { text: titleText, priority } = titleToken
+    ? parseTitlePriority(titleToken.text)
+    : { text: '', priority: 'normal' as Priority }
 
-  if (extraTokens.length > 0) {
-    const total = titleTokens.length + extraTokens.length
+  // Fallback: use first non-empty token text if no title
+  const title = titleText
+    || (nonEmpty[0] && 'text' in nonEmpty[0] ? nonEmpty[0].text : '')
+
+  if (!title) {
     return {
       ok: false,
-      error: `${total} title lines detected — only 1 allowed per todo`,
+      error: 'empty input',
       tokens,
     }
   }
 
   return {
     ok: true,
-    data: { title: titleTokens[0].text, subtasks, priority, color },
+    data: { title, subtasks, priority, color },
     tokens,
     hasWarnings: warnTokens.length > 0,
   }

@@ -7,7 +7,6 @@ export const TOKEN_STYLE: Record<
 > = {
   title: { color: 'var(--rf-text)', label: 'TITLE' },
   subtask: { color: 'var(--rf-cyan)', label: 'SUB' },
-  priority: { color: 'var(--rf-purple, #bf5fff)', label: 'PRI' },
   color: { color: 'var(--rf-amber, #ffb800)', label: 'CLR' },
   warn: {
     color: 'var(--rf-amber, #ffb800)',
@@ -16,10 +15,9 @@ export const TOKEN_STYLE: Record<
     wavy: 'rf-row-wavy-warn',
   },
   extra: {
-    color: 'var(--rf-danger, #ff3030)',
-    label: 'CONFLICT',
-    bg: 'rgba(255,48,48,0.07)',
-    wavy: 'rf-row-wavy-danger',
+    color: 'var(--rf-text)',
+    label: 'SUB',
+    bg: 'rgba(0,245,255,0.02)',
   },
   empty: { color: 'transparent', label: '' },
 }

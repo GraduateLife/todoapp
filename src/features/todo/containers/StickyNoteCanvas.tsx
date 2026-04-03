@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTodoStore } from '../store'
 import { useFolderStore } from '../store'
 import { initStrategy as initAdapter } from '../../../lib/strategies'
@@ -14,6 +14,7 @@ import { FolderMarkers } from '../components/folder/FolderMarkers'
 import { FolderDrawer } from '../components/folder/FolderDrawer'
 import { useReminderScheduler } from '../hooks/useReminderScheduler'
 import { StackFan } from '../components/stack/StackFan'
+import { ContextInput } from '../components/context-input/ContextInput'
 
 export function StickyNoteCanvas() {
   const todos = useTodoStore((s) => s.todos)
@@ -91,6 +92,17 @@ export function StickyNoteCanvas() {
     setFolder(todoId, null)
   }
 
+  // ── Context input (right-click to create) ─────────────────────────────────
+  const [contextInputPos, setContextInputPos] = useState<{ x: number; y: number } | null>(null)
+
+  const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
+    // Only trigger on the canvas itself, not on sticky notes
+    if (e.target === e.currentTarget) {
+      e.preventDefault()
+      setContextInputPos({ x: e.clientX, y: e.clientY })
+    }
+  }, [])
+
   // ── Stack tracking ─────────────────────────────────────────────────────────
   // Which note ID is currently being hovered as a stack target during drag
   const [stackTargetId, setStackTargetId] = useState<string | null>(null)
@@ -142,6 +154,7 @@ export function StickyNoteCanvas() {
     <div
       className="fixed inset-0 overflow-hidden"
       aria-label="Sticky notes canvas"
+      onContextMenu={handleCanvasContextMenu}
     >
       {/* Drag-zone edge hints */}
       {(
@@ -326,6 +339,17 @@ export function StickyNoteCanvas() {
 
       {/* In-app reminder toast (fallback when browser notifications are denied) */}
       <ReminderToast toast={activeToast} onDismiss={clearToast} />
+
+      {/* Right-click context input */}
+      <AnimatePresence>
+        {contextInputPos && (
+          <ContextInput
+            key={`${contextInputPos.x}-${contextInputPos.y}`}
+            position={contextInputPos}
+            onClose={() => setContextInputPos(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

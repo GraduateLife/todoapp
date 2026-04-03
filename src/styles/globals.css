@@ -443,11 +443,19 @@ pre code {
   right: 0;
   z-index: 50;
   background: var(--rf-header);
-  border-top: 1px solid var(--rf-border);
+  border-top-width: 1px;
+  border-top-style: solid;
+  border-top-color: var(--rf-border);
   box-shadow:
     0 0 30px rgba(0, 245, 255, 0.08),
     0 -1px 0 rgba(0, 245, 255, 0.06);
   backdrop-filter: blur(16px);
+}
+.rf-input-bar--collapsed {
+  background: transparent;
+  border-top-width: 0;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .rf-input-inner {

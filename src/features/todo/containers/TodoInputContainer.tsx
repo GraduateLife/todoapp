@@ -21,7 +21,6 @@ export function TodoInputContainer() {
   const [selectedColor, setSelectedColor] = useState<NoteColor | 'random'>(
     'random',
   )
-  const addTodo = useTodoStore((s) => s.addTodo)
   const addTodoWithDetails = useTodoStore((s) => s.addTodoWithDetails)
   const hasOpenFolder = useFolderStore((s) => s.folders.some((f) => f.isOpen))
   const isDragging =
@@ -33,19 +32,6 @@ export function TodoInputContainer() {
   }, [])
 
   const resolvedColor = selectedColor === 'random' ? undefined : selectedColor
-
-  const handleSubmit = useCallback(() => {
-    const trimmed = valueRef.current.trim()
-    if (!trimmed) return
-    addTodo(
-      trimmed,
-      pendingAttachments.length > 0 ? pendingAttachments : undefined,
-      resolvedColor,
-    )
-    valueRef.current = ''
-    setValue('')
-    setPendingAttachments([])
-  }, [pendingAttachments, addTodo, resolvedColor])
 
   const handleSubmitExpanded = useCallback(
     (parsed: ParsedTodo) => {
@@ -98,7 +84,6 @@ export function TodoInputContainer() {
     <TodoInput
       value={value}
       onChange={onChange}
-      onSubmit={handleSubmit}
       onSubmitExpanded={handleSubmitExpanded}
       attachments={attachments}
       isDragging={isDragging}

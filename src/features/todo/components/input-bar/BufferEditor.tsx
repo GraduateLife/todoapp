@@ -105,6 +105,15 @@ export function BufferEditor({ value, onChange, onKeyDown, tokens }: BufferEdito
                   )
                 }
                 const s = TOKEN_STYLE[tok.kind]
+                // For title tokens, show priority suffix in the label
+                let label = s.label
+                let labelColor = s.color
+                if (tok.kind === 'title' && tok.priority !== 'normal') {
+                  label = tok.priority === 'high' ? 'TITLE !' : 'TITLE ?'
+                  labelColor = tok.priority === 'high'
+                    ? 'var(--rf-danger, #ff3030)'
+                    : 'var(--rf-amber, #ffb800)'
+                }
                 return (
                   <div
                     key={idx}
@@ -123,11 +132,11 @@ export function BufferEditor({ value, onChange, onKeyDown, tokens }: BufferEdito
                         fontFamily: 'var(--font-mono, monospace)',
                         fontSize: 7,
                         letterSpacing: '0.1em',
-                        color: s.color,
+                        color: labelColor,
                         opacity: 0.8,
                       }}
                     >
-                      {s.label}
+                      {label}
                     </span>
                   </div>
                 )
@@ -146,7 +155,7 @@ export function BufferEditor({ value, onChange, onKeyDown, tokens }: BufferEdito
             }}
             onKeyDown={onKeyDown}
             onScroll={handleScroll}
-            placeholder={`Buy groceries\n- [] apple\n- [x] milk\n- undone item\n[!+]\n[cyan]`}
+            placeholder={`Buy groceries!\n- apple\n- milk\n- bread`}
             className="rf-input-field rf-scrollbar w-full resize-none"
             style={{
               position: 'relative',

@@ -1,5 +1,3 @@
-import { COLOR_OPTIONS } from '../../constants/noteColors'
-
 export function BufferGuide() {
   return (
     <div
@@ -10,123 +8,57 @@ export function BufferGuide() {
         padding: '0.2rem 12px',
         fontFamily: '"Space Mono", ui-monospace, monospace',
         display: 'flex',
-        gap: 8,
+        flexDirection: 'column',
+        gap: 6,
       }}
     >
-      {/* Left col: SYNTAX */}
-      <div style={{ flex: 1 }}>
-        <div
-          style={{
-            fontSize: 8,
-            letterSpacing: '0.18em',
-            color: 'var(--rf-cyan)',
-            opacity: 0.6,
-            marginBottom: 3,
-          }}
-        >
-          SYNTAX
-        </div>
-        {[
-          { text: 'title', color: 'var(--rf-text)', op: 0.45 },
-          { text: '- undone', color: 'var(--rf-cyan)', op: 0.45 },
-          { text: '- [] undone', color: 'var(--rf-cyan)', op: 0.35 },
-          { text: '- [x] done', color: 'var(--rf-cyan)', op: 0.45 },
-        ].map((l) => (
-          <div
-            key={l.text}
-            style={{
-              fontSize: 9,
-              letterSpacing: '0.04em',
-              lineHeight: 1.75,
-              color: l.color,
-              opacity: l.op,
-              whiteSpace: 'pre',
-            }}
-          >
-            {l.text}
-          </div>
-        ))}
+      {/* Hint */}
+      <div
+        style={{
+          fontSize: 8,
+          letterSpacing: '0.18em',
+          color: 'var(--rf-cyan)',
+          opacity: 0.6,
+          marginBottom: 2,
+        }}
+      >
+        GUIDE
       </div>
 
-      {/* Right col: PRIORITY + COLOR */}
-      <div style={{ flex: 1 }}>
+      {[
+        { text: 'title', color: 'var(--rf-text)', op: 0.4 },
+        { text: 'title!  → high priority', color: 'var(--rf-danger, #ff3030)', op: 0.35 },
+        { text: 'title?  → low priority', color: 'var(--rf-amber, #ffb800)', op: 0.35 },
+        { text: '- item → subtask', color: 'var(--rf-cyan)', op: 0.4 },
+        { text: '- [x] done subtask', color: 'var(--rf-cyan)', op: 0.35 },
+      ].map((l) => (
         <div
+          key={l.text}
           style={{
-            fontSize: 8,
-            letterSpacing: '0.18em',
-            color: 'var(--rf-purple)',
-            opacity: 0.6,
-            marginBottom: 3,
+            fontSize: 9,
+            letterSpacing: '0.04em',
+            lineHeight: 1.6,
+            color: l.color,
+            opacity: l.op,
+            whiteSpace: 'pre',
           }}
         >
-          PRIORITY
+          {l.text}
         </div>
-        {[
-          { text: '[!+] high', color: 'var(--rf-purple)', op: 0.75 },
-          { text: '[!]  normal', color: 'var(--rf-purple)', op: 0.5 },
-          { text: '[!-] low', color: 'var(--rf-purple)', op: 0.35 },
-        ].map((l) => (
-          <div
-            key={l.text}
-            style={{
-              fontSize: 9,
-              letterSpacing: '0.04em',
-              lineHeight: 1.75,
-              color: l.color,
-              opacity: l.op,
-              whiteSpace: 'pre',
-            }}
-          >
-            {l.text}
-          </div>
-        ))}
+      ))}
 
-        <div
-          style={{
-            fontSize: 8,
-            letterSpacing: '0.18em',
-            color: 'var(--rf-amber)',
-            opacity: 0.6,
-            marginTop: 6,
-            marginBottom: 3,
-          }}
-        >
-          COLOR
-        </div>
-        {COLOR_OPTIONS.filter((o) => o.key !== 'random').map((opt) => (
-          <div
-            key={opt.key}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              lineHeight: 1.75,
-            }}
-          >
-            <span
-              style={{
-                width: 5,
-                height: 5,
-                borderRadius: 1,
-                background: opt.hex,
-                display: 'block',
-                flexShrink: 0,
-                opacity: 0.85,
-              }}
-            />
-            <span
-              style={{
-                fontSize: 9,
-                letterSpacing: '0.04em',
-                color: opt.hex,
-                opacity: 0.65,
-                fontFamily: 'inherit',
-              }}
-            >
-              [{opt.key}]
-            </span>
-          </div>
-        ))}
+      {/* AI hint */}
+      <div
+        style={{
+          fontSize: 8,
+          letterSpacing: '0.1em',
+          color: 'var(--rf-text-dim)',
+          opacity: 0.2,
+          marginTop: 'auto',
+          lineHeight: 1.5,
+        }}
+      >
+        AI auto-fixes after 3s
       </div>
     </div>
   )

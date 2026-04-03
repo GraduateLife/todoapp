@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 export function useInputMode() {
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true) // Buffer is default
   const dragStartY = useRef<number | null>(null)
 
-  // ── Keyboard: Ctrl+W → buffer, Ctrl+S → entry ─────────────────────────────
+  // ── Keyboard: Ctrl+W → open, Ctrl+S → kill ────────────────────────────────
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) return

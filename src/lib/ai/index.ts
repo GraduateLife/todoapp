@@ -11,6 +11,10 @@ export function getAIProvider(): AIProvider {
   return _provider
 }
 
+export function isAIAvailable(): boolean {
+  return _provider !== null
+}
+
 export async function initAIProvider(): Promise<void> {
   if (_provider) return
 
