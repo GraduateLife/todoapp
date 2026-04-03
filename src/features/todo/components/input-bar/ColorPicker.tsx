@@ -4,9 +4,11 @@ import { COLOR_OPTIONS } from '../../constants/noteColors'
 interface ColorPickerProps {
   selectedColor: NoteColor | 'random'
   onColorChange: (color: NoteColor | 'random') => void
+  hideRandom?: boolean
 }
 
-export function ColorPicker({ selectedColor, onColorChange }: ColorPickerProps) {
+export function ColorPicker({ selectedColor, onColorChange, hideRandom }: ColorPickerProps) {
+  const options = hideRandom ? COLOR_OPTIONS.filter((o) => o.key !== 'random') : COLOR_OPTIONS
   return (
     <div
       style={{
@@ -17,7 +19,7 @@ export function ColorPicker({ selectedColor, onColorChange }: ColorPickerProps) 
         gap: 2,
       }}
     >
-      {COLOR_OPTIONS.map((opt) => {
+      {options.map((opt) => {
         const isSelected = selectedColor === opt.key
         return (
           <button

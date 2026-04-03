@@ -21,3 +21,7 @@ export const AI_API_KEY: string =
 
 export const AI_BASE_URL: string =
   import.meta.env.VITE_AI_BASE_URL ?? ''
+
+/** Dev-only: simulate voice input without a real microphone. */
+export const VOICE_MOCK: boolean =
+  import.meta.env.VITE_VOICE_MOCK === 'true'

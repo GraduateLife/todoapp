@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useRef, useEffect, useState, useCallback, type ReactNode } from 'react'
+import { useRef, useEffect, useState, type ReactNode } from 'react'
 import { imeGuard } from '@/lib/utils'
-import { useVoiceRecorder } from '../../services/voice'
+import { VoiceInputOverlay } from '../voice/VoiceInputOverlay'
+import { VOICE_MOCK } from '../../../../lib/env'
 import {
   parseMarkdownInput,
   type ParsedTodo,
@@ -47,25 +48,7 @@ export function TodoInput({
 }: TodoInputProps) {
   const { isExpanded, setIsExpanded, handlePointerDown } = useInputMode()
   const inputRef = useRef<HTMLInputElement>(null)
-
-  // ── Voice recorder ───────────────────────────────────────────────────────
-  const [interimText, setInterimText] = useState('')
-  const [voiceError, setVoiceError] = useState('')
-  const handleTranscript = useCallback((text: string, isFinal: boolean) => {
-    setVoiceError('')
-    if (isFinal) {
-      onChange(text)
-      setInterimText('')
-      inputRef.current?.focus()
-    } else {
-      setInterimText(text)
-    }
-  }, [onChange])
-  const { state: voiceState, start: startVoice, stop: stopVoice, isAvailable: voiceAvailable } =
-    useVoiceRecorder({
-      onTranscript: handleTranscript,
-      onError: (err) => setVoiceError(err),
-    })
+  const [voiceOverlayOpen, setVoiceOverlayOpen] = useState(false)
 
   // Auto-grow (entry mode only)
   const textareaGrowRef = useRef<HTMLTextAreaElement | null>(null)
@@ -135,24 +118,13 @@ export function TodoInput({
               style={{ width: '100%' }}
             >
               <div style={{ display: 'flex', alignItems: 'stretch', width: '100%' }}>
-                <ColorPicker
-                  selectedColor={selectedColor}
-                  onColorChange={onColorChange}
-                />
+                <ColorPicker selectedColor={selectedColor} onColorChange={onColorChange} />
 
                 <div
                   className="rf-input-inner"
-                  style={{
-                    flex: 1,
-                    border: 'none',
-                    padding: '0 1rem',
-                    maxWidth: 'none',
-                    margin: 0,
-                  }}
+                  style={{ flex: 1, border: 'none', padding: '0 1rem', maxWidth: 'none', margin: 0 }}
                 >
-                  <span className="rf-input-prompt" aria-hidden="true">
-                    &gt;_
-                  </span>
+                  <span className="rf-input-prompt" aria-hidden="true">&gt;_</span>
                   <input
                     ref={inputRef}
                     type="text"
@@ -167,9 +139,7 @@ export function TodoInput({
                     spellCheck={false}
                   />
                   {attachments && (
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {attachments}
-                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">{attachments}</div>
                   )}
                   {value.trim() ? (
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -179,20 +149,12 @@ export function TodoInput({
                       >
                         {value.length}/{TITLE_MAX_LEN}
                       </span>
-                      <button
-                        type="button"
-                        onClick={handleExec}
-                        className="rf-btn flex-shrink-0"
-                      >
+                      <button type="button" onClick={handleExec} className="rf-btn flex-shrink-0">
                         [ exec ]
                       </button>
                       <span
                         className="font-mono text-[10px] select-none flex flex-col items-center justify-center flex-shrink-0"
-                        style={{
-                          color: 'var(--rf-text-dim)',
-                          opacity: 0.75,
-                          lineHeight: 1.35,
-                        }}
+                        style={{ color: 'var(--rf-text-dim)', opacity: 0.75, lineHeight: 1.35 }}
                       >
                         <span>press</span>
                         <span>enter</span>
@@ -200,50 +162,40 @@ export function TodoInput({
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {voiceAvailable && (
-                        <button
-                          type="button"
-                          title={voiceState === 'listening' ? 'stop recording' : 'voice input'}
-                          onClick={() => voiceState === 'listening' ? stopVoice() : startVoice()}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '2px 4px',
-                            color: voiceState === 'listening'
-                              ? 'var(--rf-accent)'
-                              : 'var(--rf-text-dim)',
-                            opacity: voiceState === 'listening' ? 1 : 0.5,
-                            fontSize: 14,
-                            lineHeight: 1,
-                            transition: 'color 0.15s, opacity 0.15s',
-                          }}
-                        >
-                          {voiceState === 'listening' ? '⏹' : '🎤'}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        title={VOICE_MOCK ? 'voice input (mock)' : 'voice input'}
+                        onClick={() => setVoiceOverlayOpen(true)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          color: 'var(--rf-text-dim)',
+                          opacity: 0.5,
+                          fontSize: 13,
+                          lineHeight: 1,
+                        }}
+                      >
+                        🎤{VOICE_MOCK && <sup style={{ fontSize: 7, opacity: 0.6 }}>mock</sup>}
+                      </button>
                       <span
                         className="font-mono text-[9px] tracking-[0.18em] flex-shrink-0 select-none"
-                        style={{
-                          color: voiceError ? 'var(--rf-accent, #f87171)' : 'var(--rf-text-dim)',
-                          opacity: voiceError ? 0.85 : 0.5,
-                          maxWidth: 200,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                        title={voiceError || undefined}
+                        style={{ color: 'var(--rf-text-dim)', opacity: 0.5 }}
                       >
-                        {voiceError
-                          ? voiceError
-                          : voiceState === 'listening'
-                            ? (interimText || 'listening_')
-                            : 'READY_'}
+                        READY_
                       </span>
                     </div>
                   )}
                 </div>
               </div>
+
+              <VoiceInputOverlay
+                isOpen={voiceOverlayOpen}
+                onClose={() => setVoiceOverlayOpen(false)}
+                selectedColor={selectedColor}
+                onColorChange={onColorChange}
+              />
             </motion.div>
           )}
 

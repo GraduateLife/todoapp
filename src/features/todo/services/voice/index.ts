@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { WebSpeechProvider } from './webSpeech'
+import { MockSpeechProvider } from './mock'
+import { VOICE_MOCK } from '../../../../lib/env'
 import type { VoiceProviderName } from './types'
 
 export type { VoiceProviderName }
@@ -15,16 +17,12 @@ export interface UseVoiceRecorderOptions {
 
 export interface UseVoiceRecorderReturn {
   state: VoiceRecorderState
+  isMock: boolean
   start: () => void
   stop: () => void
   isAvailable: boolean
 }
 
-/**
- * Unified voice recorder hook.
- * Currently supports 'webSpeech' provider with live streaming.
- * Switch to 'ai' provider for blob-based transcription (higher accuracy).
- */
 export function useVoiceRecorder({
   provider = 'webSpeech',
   lang = 'zh-CN',
@@ -34,28 +32,27 @@ export function useVoiceRecorder({
   const [state, setState] = useState<VoiceRecorderState>('idle')
   const stopRef = useRef<(() => void) | null>(null)
 
+  const mock = useRef(new MockSpeechProvider())
   const webSpeech = useRef(new WebSpeechProvider(lang))
-  const isAvailable = provider === 'webSpeech' ? webSpeech.current.isAvailable() : true
+
+  const isMock = VOICE_MOCK
+  const isAvailable = isMock || (provider === 'webSpeech' ? webSpeech.current.isAvailable() : true)
 
   const start = useCallback(() => {
     if (state === 'listening') return
+    setState('listening')
 
-    if (provider === 'webSpeech') {
-      setState('listening')
-      stopRef.current = webSpeech.current.startLiveRecognition({
-        onResult: (text, isFinal) => onTranscript(text, isFinal),
-        onEnd: () => setState('idle'),
-        onError: (err) => {
-          setState('error')
-          onError?.(err)
-        },
-      })
-    } else {
-      // AI provider: blob-based — MediaRecorder + upload on stop
-      // Placeholder: wire up when AITranscriptionProvider is needed
-      onError?.('[voice] AI provider not yet wired to useVoiceRecorder')
-    }
-  }, [state, provider, onTranscript, onError])
+    const activeProvider = isMock ? mock.current : webSpeech.current
+
+    stopRef.current = activeProvider.startLiveRecognition({
+      onResult: (text, isFinal) => onTranscript(text, isFinal),
+      onEnd: () => setState('idle'),
+      onError: (err) => {
+        setState('error')
+        onError?.(err)
+      },
+    })
+  }, [state, isMock, onTranscript, onError])
 
   const stop = useCallback(() => {
     stopRef.current?.()
@@ -63,8 +60,7 @@ export function useVoiceRecorder({
     setState('idle')
   }, [])
 
-  // Clean up on unmount
   useEffect(() => () => { stopRef.current?.() }, [])
 
-  return { state, start, stop, isAvailable }
+  return { state, isMock, start, stop, isAvailable }
 }
