@@ -45,7 +45,10 @@
       "Bash(curl -s http://localhost:8000/todos)",
       "Bash(python3 -m json.tool)",
       "Bash(find /Users/zhangyuntao/Desktop/code/todoapp/src -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js \\\\\\))",
-      "Bash(ollama list:*)"
+      "Bash(ollama list:*)",
+      "Bash(curl -s http://localhost:11434/api/tags)",
+      "Bash(curl -s http://localhost:11434/api/generate -d '{\"\"\"\"model\"\"\"\":\"\"\"\"gemma3:4b\"\"\"\",\"\"\"\"prompt\"\"\"\":\"\"\"\"Shorten this todo to under 100 characters:\\\\n\\\\nReview the pull request for the new authentication module and leave detailed comments before end of day\"\"\"\",\"\"\"\"system\"\"\"\":\"\"\"\"You are a concise task summarizer. Output ONLY the shortened text, nothing else. Keep the same language as the input.\"\"\"\",\"\"\"\"stream\"\"\"\":false,\"\"\"\"options\"\"\"\":{\"\"\"\"temperature\"\"\"\":0.3,\"\"\"\"num_predict\"\"\"\":128}}')",
+      "Bash(python3 -c \"import sys,json;print\\(json.load\\(sys.stdin\\)[''''response'''']\\)\")"
     ]
   }
 }

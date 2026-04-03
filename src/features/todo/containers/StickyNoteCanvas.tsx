@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useTodoStore } from '../store'
 import { useFolderStore } from '../store'
 import { initStrategy as initAdapter } from '../../../lib/strategies'
+import { initAIProvider } from '../../../lib/ai'
 import { useUiStore } from '../store/uiStore'
 import { StickyNoteContainer as StickyNote } from './StickyNoteContainer'
 import { ReminderModal } from '../components/reminder/ReminderModal'
@@ -52,6 +53,7 @@ export function StickyNoteCanvas() {
         initializeFolders(folders)
       })
       .catch(console.error)
+    initAIProvider().catch(console.error)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -70,16 +70,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <HeroUIProvider>
             <Header />
             {import.meta.env.DEV && (
-              <div style={{
-                fontFamily: "'Space Mono', monospace",
-                fontSize: 9,
-                letterSpacing: '0.12em',
-                padding: '2px 8px',
-                opacity: 0.45,
-                color: 'var(--rf-text)',
-                userSelect: 'none',
-              }}>
-                storage: {STORAGE_STRATEGY}
+              <div
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  fontSize: 9,
+                  letterSpacing: '0.12em',
+                  padding: '2px 8px',
+                  opacity: 0.45,
+                  color: 'var(--rf-text)',
+                  userSelect: 'none',
+                }}
+              >
+                data storage mode: {STORAGE_STRATEGY}
               </div>
             )}
             {children}

@@ -33,6 +33,19 @@ export const TodoService = {
   },
 
   /**
+   * Create a todo with subtasks from a voice transcript (after AI split).
+   */
+  createFromVoiceWithSubtasks(
+    title: string,
+    subtasks: { title: string; completed: boolean }[],
+    options: { color?: NoteColor } = {},
+  ): void {
+    const trimmed = title.trim()
+    if (!trimmed) return
+    useTodoStore.getState().addTodoWithDetails(trimmed, subtasks, 'none', [], options.color)
+  },
+
+  /**
    * Create a todo from an AI-generated suggestion.
    * Placeholder for future AI expansion/suggestion features.
    */
