@@ -1,11 +1,11 @@
 import { motion } from 'framer-motion'
-import { type ReactNode, useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { imeGuard } from '@/lib/utils'
 import {
   parseMarkdownInput,
   type ParsedTodo,
 } from '../../utils/parseMarkdownInput'
-import { aiFixSyntax, isAIAvailable } from '../../services/aiParse'
+import { localFixSyntax } from '../../services/aiParse'
 import type { NoteColor } from '../../types'
 import {
   EXPAND_TRANSITION,
@@ -17,210 +17,110 @@ import { DragHandle } from './DragHandle'
 import { BufferGuide } from './BufferGuide'
 import { BufferEditor } from './BufferEditor'
 import { ParseSummary } from './ParseSummary'
+import { useAiSuggestion } from './useAiSuggestion'
+
+import type { Attachment } from '../../types'
 
 interface TodoInputProps {
   value: string
   onChange: (value: string) => void
   onSubmitExpanded: (parsed: ParsedTodo) => void
-  attachments?: ReactNode
   isDragging?: boolean
   selectedColor: NoteColor | 'random'
   onColorChange: (color: NoteColor | 'random') => void
+  pendingFiles: Attachment[]
+  onAddFile: (file: File) => void
+  onRemoveFile: (id: string) => void
 }
 
-const AI_DEBOUNCE_SEC = 3
+const LOCAL_FIX_DEBOUNCE_MS = 600
 
 /**
- * Hook: 3-second debounced AI syntax fix.
- * Replaces the buffer text with corrected syntax when AI returns.
- *
- * Revert detection (per-line):
- * After AI fixes text, we record which lines were changed. If the user
- * edits any of those lines (partial or full revert), we suppress AI
- * until the line count or content changes substantially.
+ * Hook: debounced local syntax fix (no AI).
+ * Adds "- " prefix to non-title lines after user stops typing for 600ms.
+ * Skips if user just undid a fix (revert detection).
  */
-function useAiSyntaxFix(
+function useLocalSyntaxFix(
   value: string,
   onChange: (v: string) => void,
   isExpanded: boolean,
   enabled: boolean,
 ) {
-  const [aiStatus, setAiStatus] = useState<'idle' | 'countdown' | 'parsing'>('idle')
-  const [countdown, setCountdown] = useState(0)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  // Per-line revert tracking
-  const lastFixedValue = useRef<string>('')    // full text AI produced
-  const preFixValue = useRef<string>('')       // full text before AI fixed it
-  const changedLineIdxs = useRef<Set<number>>(new Set()) // which line indices AI changed
-  const suppressUntilNewContent = useRef(false)
-
-  const clearTimers = useCallback(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (countdownRef.current) clearInterval(countdownRef.current)
-    debounceRef.current = null
-    countdownRef.current = null
-  }, [])
+  const lastFixedValue = useRef<string>('')
 
   useEffect(() => {
     if (!isExpanded || !enabled) {
-      clearTimers()
-      setAiStatus('idle')
-      setCountdown(0)
+      if (debounceRef.current) clearTimeout(debounceRef.current)
       return
     }
 
-    const trimmed = value.trim()
-    if (!trimmed || !isAIAvailable()) {
-      clearTimers()
-      setAiStatus('idle')
-      setCountdown(0)
+    if (!value.trim() || value.split('\n').length < 2) {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
       return
     }
 
-    // Don't re-trigger if AI just fixed this exact text
-    if (value === lastFixedValue.current) {
-      return
-    }
+    // Don't re-trigger if we just fixed this
+    if (value === lastFixedValue.current) return
 
-    // ── Revert detection ──────────────────────────────────────────────
-    if (lastFixedValue.current && preFixValue.current && changedLineIdxs.current.size > 0) {
-      const currentLines = value.split('\n')
-      const fixedLines = lastFixedValue.current.split('\n')
+    if (debounceRef.current) clearTimeout(debounceRef.current)
 
-      // Check if user touched any of the lines AI changed
-      const userEditedAiLines = [...changedLineIdxs.current].some((idx) => {
-        const cur = currentLines[idx]?.trim()
-        const fixed = fixedLines[idx]?.trim()
-        // If current differs from AI's fix on a line AI changed, user reverted it
-        return cur !== undefined && fixed !== undefined && cur !== fixed
-      })
-
-      if (userEditedAiLines) {
-        suppressUntilNewContent.current = true
-        clearTimers()
-        setAiStatus('idle')
-        setCountdown(0)
-        return
-      }
-    }
-
-    // If suppressed, check if user wrote genuinely new content
-    if (suppressUntilNewContent.current) {
-      const currentLines = value.split('\n')
-      const preFixLines = preFixValue.current.split('\n')
-      const fixedLines = lastFixedValue.current.split('\n')
-
-      // Reset suppression if: line count changed, or content on non-AI lines changed
-      const lineCountChanged = currentLines.length !== preFixLines.length
-        && currentLines.length !== fixedLines.length
-      const hasNewContent = currentLines.some((line, i) => {
-        // Skip lines that AI changed — those are "disputed"
-        if (changedLineIdxs.current.has(i)) return false
-        const pre = preFixLines[i]?.trim()
-        const fixed = fixedLines[i]?.trim()
-        const cur = line.trim()
-        // New content = differs from both pre-fix and fixed versions
-        return cur !== pre && cur !== fixed
-      })
-
-      if (lineCountChanged || hasNewContent) {
-        suppressUntilNewContent.current = false
-        changedLineIdxs.current.clear()
-        lastFixedValue.current = ''
-        preFixValue.current = ''
-      } else {
-        clearTimers()
-        setAiStatus('idle')
-        setCountdown(0)
-        return
-      }
-    }
-
-    // Clear previous timers
-    clearTimers()
-
-    // Start countdown
-    setCountdown(AI_DEBOUNCE_SEC)
-    setAiStatus('countdown')
-
-    countdownRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          if (countdownRef.current) clearInterval(countdownRef.current)
-          countdownRef.current = null
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    // After debounce, trigger AI
     debounceRef.current = setTimeout(() => {
-      setAiStatus('parsing')
-      const currentValue = value.trim()
-      preFixValue.current = currentValue
-      aiFixSyntax(currentValue)
-        .then((corrected) => {
-          if (corrected && corrected !== currentValue) {
-            // Record which lines AI changed
-            const preLines = currentValue.split('\n')
-            const fixedLines = corrected.split('\n')
-            const changed = new Set<number>()
-            for (let i = 0; i < Math.max(preLines.length, fixedLines.length); i++) {
-              if (preLines[i]?.trim() !== fixedLines[i]?.trim()) {
-                changed.add(i)
-              }
-            }
-            changedLineIdxs.current = changed
-            lastFixedValue.current = corrected
-            onChange(corrected)
-          }
-        })
-        .catch(() => {})
-        .finally(() => setAiStatus('idle'))
-    }, AI_DEBOUNCE_SEC * 1000)
+      const fixed = localFixSyntax(value)
+      if (fixed) {
+        lastFixedValue.current = fixed
+        onChange(fixed)
+      }
+    }, LOCAL_FIX_DEBOUNCE_MS)
 
-    return () => clearTimers()
-  }, [value, isExpanded, enabled, onChange, clearTimers])
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [value, isExpanded, enabled, onChange])
 
   // Reset on collapse
   useEffect(() => {
     if (!isExpanded) {
-      clearTimers()
-      setAiStatus('idle')
-      setCountdown(0)
+      if (debounceRef.current) clearTimeout(debounceRef.current)
       lastFixedValue.current = ''
-      preFixValue.current = ''
-      changedLineIdxs.current = new Set()
-      suppressUntilNewContent.current = false
     }
-  }, [isExpanded, clearTimers])
-
-  return { aiStatus, countdown }
+  }, [isExpanded])
 }
 
 export function TodoInput({
   value,
   onChange,
   onSubmitExpanded,
-  attachments,
   isDragging = false,
+  pendingFiles,
+  onAddFile,
+  onRemoveFile,
 }: TodoInputProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const { isExpanded, setIsExpanded, handlePointerDown } = useInputMode()
-  const [aiAutoFix, setAiAutoFix] = useState(true)
+  const [autoFix, setAutoFix] = useState(true)
+  const [aiSuggest, setAiSuggest] = useState(true)
 
   // ── Local parse (always, instant) ────────────────────────────────────────
   const localResult = isExpanded ? parseMarkdownInput(value) : null
   const canExec = localResult?.ok === true
 
-  // ── AI syntax fix (3s debounce, optional) ────────────────────────────────
-  const { aiStatus, countdown } = useAiSyntaxFix(value, onChange, isExpanded, aiAutoFix)
+  // ── Local syntax fix (600ms debounce, no AI) ─────────────────────────────
+  useLocalSyntaxFix(value, onChange, isExpanded, autoFix)
+
+  // ── AI subtask suggestion (ghost text) ──────────────────────────────────
+  const { suggestion, suggestLineIdx, accept: acceptSuggestion } =
+    useAiSuggestion(value, onChange, isExpanded && aiSuggest)
 
   const handleKeyDown = imeGuard((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setIsExpanded(false)
+    }
+    // Tab to accept AI suggestion
+    if (e.key === 'Tab' && suggestion) {
+      e.preventDefault()
+      acceptSuggestion()
+      return
     }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
@@ -242,13 +142,69 @@ export function TodoInput({
       animate={{ y: isDragging ? '100%' : 0 }}
       transition={{ type: 'spring', stiffness: 380, damping: 34, mass: 0.8 }}
     >
+      {/* ── File preview strip (above terminal) ──────────────────────────── */}
+      {isExpanded && pendingFiles.length > 0 && (
+        <div
+          className="flex items-center gap-2 rf-scrollbar"
+          style={{
+            padding: '4px 12px',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            borderBottom: '1px solid var(--rf-border)',
+          }}
+        >
+          {pendingFiles.map((f) => (
+            <div
+              key={f.id}
+              className="flex items-center gap-1 flex-shrink-0 font-mono"
+              style={{
+                fontSize: 9,
+                letterSpacing: '0.04em',
+                color: 'var(--rf-text-dim)',
+                background: 'rgba(0,245,255,0.04)',
+                border: '1px solid var(--rf-border)',
+                borderRadius: 3,
+                padding: '2px 6px',
+              }}
+            >
+              <span style={{ opacity: 0.5 }}>
+                {f.type === 'image' ? '🖼' : f.type === 'voice' ? '🔊' : '📄'}
+              </span>
+              <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {f.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => onRemoveFile(f.id)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--rf-text-dim)',
+                  opacity: 0.4,
+                  cursor: 'pointer',
+                  fontSize: 9,
+                  padding: '0 2px',
+                  lineHeight: 1,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.4' }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ── Drag handle strip ─────────────────────────────────────────────── */}
       <DragHandle
         isExpanded={isExpanded}
         onPointerDown={handlePointerDown}
         onToggle={() => setIsExpanded(!isExpanded)}
-        aiAutoFix={aiAutoFix}
-        onToggleAi={() => setAiAutoFix((v) => !v)}
+        autoFix={autoFix}
+        onToggleAutoFix={() => setAutoFix((v) => !v)}
+        aiSuggest={aiSuggest}
+        onToggleAiSuggest={() => setAiSuggest((v) => !v)}
       />
 
       {/* ── Animated height container ──────────────────────────────────────── */}
@@ -275,53 +231,50 @@ export function TodoInput({
               onChange={onChange}
               onKeyDown={handleKeyDown}
               tokens={localResult?.tokens}
+              suggestion={suggestion}
+              suggestLineIdx={suggestLineIdx}
+              onDropFiles={(files) => files.forEach(onAddFile)}
             />
           </div>
 
-          {/* ── Bottom row: parse summary + AI status + exec group ─────────── */}
+          {/* ── Bottom row: parse summary + file btn + exec ────────────────── */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              paddingTop: '0.45rem',
+              paddingTop: '0.35rem',
               paddingLeft: 'calc(220px + 0.5rem + 2.75rem)',
               paddingRight: '0',
             }}
           >
-            <div className="flex items-center gap-2">
-              <ParseSummary parseResult={localResult} />
-
-              {/* AI countdown / status */}
-              {aiAutoFix && aiStatus === 'countdown' && countdown > 0 && (
-                <span
-                  className="font-mono text-[8px] tracking-[0.12em]"
-                  style={{ color: 'var(--rf-text-dim)', opacity: 0.35 }}
-                >
-                  AI {countdown}s
-                </span>
-              )}
-              {aiAutoFix && aiStatus === 'parsing' && (
-                <span
-                  className="font-mono text-[8px] tracking-[0.12em]"
-                  style={{
-                    color: 'var(--rf-cyan)',
-                    opacity: 0.5,
-                    animation: 'pulse 1.2s ease-in-out infinite',
-                  }}
-                >
-                  AI fixing...
-                </span>
-              )}
-            </div>
+            <ParseSummary parseResult={localResult} />
 
             <div
               className="flex items-center gap-2 flex-shrink-0"
               style={{ paddingRight: '0.5rem' }}
             >
-              {attachments && (
-                <div className="flex items-center gap-1">{attachments}</div>
-              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                multiple
+                onChange={(e) => {
+                  const files = e.target.files
+                  if (files) Array.from(files).forEach(onAddFile)
+                  e.target.value = ''
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="rf-btn flex-shrink-0"
+                style={{ opacity: 0.5 }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85' }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.5' }}
+              >
+                [ + file ]
+              </button>
               <button
                 type="button"
                 onClick={handleExec}
@@ -332,19 +285,8 @@ export function TodoInput({
                   cursor: canExec ? 'pointer' : 'not-allowed',
                 }}
               >
-                [ exec ]
+                [ ^⏎ exec ]
               </button>
-              <span
-                className="font-mono text-[10px] select-none flex flex-col items-center justify-center flex-shrink-0"
-                style={{
-                  color: 'var(--rf-text-dim)',
-                  opacity: 0.75,
-                  lineHeight: 1.35,
-                }}
-              >
-                <span>press</span>
-                <span>ctrl+enter</span>
-              </span>
             </div>
           </div>
         </div>

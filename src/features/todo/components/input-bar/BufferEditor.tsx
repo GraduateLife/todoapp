@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import type { LineToken } from '../../utils/parseMarkdownInput'
 import { TOKEN_STYLE, TA_LINE_H, TA_PAD_TOP, LABEL_W, TITLE_MAX_LEN } from './constants'
 
@@ -7,12 +7,17 @@ interface BufferEditorProps {
   onChange: (value: string) => void
   onKeyDown: (e: React.KeyboardEvent) => void
   tokens: LineToken[] | undefined
+  suggestion?: string | null
+  suggestLineIdx?: number
+  onDropFiles?: (files: File[]) => void
 }
 
-export function BufferEditor({ value, onChange, onKeyDown, tokens }: BufferEditorProps) {
+export function BufferEditor({ value, onChange, onKeyDown, tokens, suggestion, suggestLineIdx, onDropFiles }: BufferEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const mirrorRef = useRef<HTMLDivElement>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const dragCounterRef = useRef(0)
 
   const handleScroll = () => {
     const top = textareaRef.current?.scrollTop ?? 0
@@ -20,17 +25,75 @@ export function BufferEditor({ value, onChange, onKeyDown, tokens }: BufferEdito
     if (mirrorRef.current) mirrorRef.current.scrollTop = top
   }
 
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current++
+    if (e.dataTransfer.types.includes('Files')) setIsDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current--
+    if (dragCounterRef.current === 0) setIsDragOver(false)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current = 0
+    setIsDragOver(false)
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0 && onDropFiles) onDropFiles(files)
+  }, [onDropFiles])
+
   const lines = value.split('\n')
 
   return (
     <div
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
       style={{
         flex: 1,
         padding: '0.2rem 0 0 0.25rem',
         display: 'flex',
         flexDirection: 'column',
+        position: 'relative',
       }}
     >
+      {/* Drop overlay */}
+      {isDragOver && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            background: 'rgba(0,245,255,0.06)',
+            border: '2px dashed var(--rf-cyan)',
+            borderRadius: 4,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <span
+            className="font-mono"
+            style={{
+              fontSize: 11,
+              letterSpacing: '0.15em',
+              color: 'var(--rf-cyan)',
+              opacity: 0.7,
+            }}
+          >
+            drop files here
+          </span>
+        </div>
+      )}
       <div className="flex gap-0 items-start" style={{ flex: 1 }}>
         <span className="rf-input-prompt" aria-hidden="true" style={{ paddingTop: TA_PAD_TOP }}>
           &gt;_
@@ -66,9 +129,21 @@ export function BufferEditor({ value, onChange, onKeyDown, tokens }: BufferEdito
               const color = tok
                 ? TOKEN_STYLE[tok.kind].color
                 : 'var(--rf-text)'
+              const showGhost = suggestion && idx === suggestLineIdx
               return (
                 <span key={idx} style={{ color }}>
                   {line || ''}
+                  {showGhost && (
+                    <span
+                      style={{
+                        color: 'var(--rf-text-dim)',
+                        opacity: 0.5,
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      {line.trim() ? ' ' : '- '}{suggestion}
+                    </span>
+                  )}
                   {idx < lines.length - 1 ? '\n' : ''}
                 </span>
               )

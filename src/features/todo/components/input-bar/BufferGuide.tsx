@@ -26,11 +26,11 @@ export function BufferGuide() {
       </div>
 
       {[
-        { text: 'title', color: 'var(--rf-text)', op: 0.4 },
-        { text: 'title!  → high priority', color: 'var(--rf-danger, #ff3030)', op: 0.35 },
-        { text: 'title?  → low priority', color: 'var(--rf-amber, #ffb800)', op: 0.35 },
-        { text: '- item → subtask', color: 'var(--rf-cyan)', op: 0.4 },
-        { text: '- [x] done subtask', color: 'var(--rf-cyan)', op: 0.35 },
+        { text: 'title', color: 'var(--rf-text)', op: 0.6 },
+        { text: 'title!  → high priority', color: 'var(--rf-danger, #ff3030)', op: 0.6 },
+        { text: 'title?  → low priority', color: 'var(--rf-amber, #ffb800)', op: 0.6 },
+        { text: '- item → subtask', color: 'var(--rf-cyan)', op: 0.6 },
+        { text: '- [x] done subtask', color: 'var(--rf-cyan)', op: 0.5 },
       ].map((l) => (
         <div
           key={l.text}
@@ -47,18 +47,21 @@ export function BufferGuide() {
         </div>
       ))}
 
-      {/* AI hint */}
+      {/* hints */}
       <div
         style={{
           fontSize: 8,
           letterSpacing: '0.1em',
           color: 'var(--rf-text-dim)',
-          opacity: 0.2,
+          opacity: 0.45,
           marginTop: 'auto',
-          lineHeight: 1.5,
+          lineHeight: 1.9,
         }}
       >
-        AI auto-fixes after 3s
+        <div>drag file to attach</div>
+        <div>[ + file ] to browse</div>
+        <div>tab → accept suggestion</div>
+        <div>auto-fix subtask syntax</div>
       </div>
     </div>
   )

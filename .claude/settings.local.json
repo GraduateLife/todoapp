@@ -48,7 +48,13 @@
       "Bash(ollama list:*)",
       "Bash(curl -s http://localhost:11434/api/tags)",
       "Bash(curl -s http://localhost:11434/api/generate -d '{\"\"\"\"model\"\"\"\":\"\"\"\"gemma3:4b\"\"\"\",\"\"\"\"prompt\"\"\"\":\"\"\"\"Shorten this todo to under 100 characters:\\\\n\\\\nReview the pull request for the new authentication module and leave detailed comments before end of day\"\"\"\",\"\"\"\"system\"\"\"\":\"\"\"\"You are a concise task summarizer. Output ONLY the shortened text, nothing else. Keep the same language as the input.\"\"\"\",\"\"\"\"stream\"\"\"\":false,\"\"\"\"options\"\"\"\":{\"\"\"\"temperature\"\"\"\":0.3,\"\"\"\"num_predict\"\"\"\":128}}')",
-      "Bash(python3 -c \"import sys,json;print\\(json.load\\(sys.stdin\\)[''''response'''']\\)\")"
+      "Bash(python3 -c \"import sys,json;print\\(json.load\\(sys.stdin\\)[''''response'''']\\)\")",
+      "Bash(ls ~/.nvm/versions/node/*/bin/pnpm)",
+      "Read(//usr/local/lib/node_modules/corepack/dist/**)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//opt/homebrew/Cellar/node/23.11.0/bin/**)",
+      "Read(//usr/local/**)"
     ]
   }
 }

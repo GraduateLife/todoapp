@@ -2,16 +2,20 @@ interface DragHandleProps {
   isExpanded: boolean
   onPointerDown: (e: React.PointerEvent) => void
   onToggle: () => void
-  aiAutoFix?: boolean
-  onToggleAi?: () => void
+  autoFix?: boolean
+  onToggleAutoFix?: () => void
+  aiSuggest?: boolean
+  onToggleAiSuggest?: () => void
 }
 
 export function DragHandle({
   isExpanded,
   onPointerDown,
   onToggle,
-  aiAutoFix,
-  onToggleAi,
+  autoFix,
+  onToggleAutoFix,
+  aiSuggest,
+  onToggleAiSuggest,
 }: DragHandleProps) {
   if (!isExpanded) {
     // Collapsed: just a small clickable button at the bottom of the screen
@@ -80,17 +84,17 @@ export function DragHandle({
         TERMINAL
       </span>
 
-      {/* AI toggle */}
-      {onToggleAi && (
+      {/* Auto-fix toggle */}
+      {onToggleAutoFix && (
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation()
-            onToggleAi()
+            onToggleAutoFix()
           }}
           onPointerDown={(e) => e.stopPropagation()}
           className="font-mono"
-          title={aiAutoFix ? 'Disable AI auto-fix' : 'Enable AI auto-fix'}
+          title={autoFix ? 'Disable auto-fix' : 'Enable auto-fix'}
           style={{
             background: 'transparent',
             border: 'none',
@@ -100,13 +104,43 @@ export function DragHandle({
             padding: '0 8px',
             lineHeight: '20px',
             transition: 'opacity 0.15s, color 0.15s',
-            color: aiAutoFix ? 'var(--rf-cyan)' : 'var(--rf-text-dim)',
-            opacity: aiAutoFix ? 0.7 : 0.25,
+            color: autoFix ? 'var(--rf-cyan)' : 'var(--rf-text-dim)',
+            opacity: autoFix ? 0.7 : 0.25,
           }}
           onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = aiAutoFix ? '0.7' : '0.25' }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = autoFix ? '0.7' : '0.25' }}
         >
-          {aiAutoFix ? 'AI ✓' : 'AI ✗'}
+          {autoFix ? 'FIX ✓' : 'FIX ✗'}
+        </button>
+      )}
+
+      {/* AI suggest toggle */}
+      {onToggleAiSuggest && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleAiSuggest()
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="font-mono"
+          title={aiSuggest ? 'Disable AI suggestions' : 'Enable AI suggestions'}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            fontSize: 8,
+            letterSpacing: '0.12em',
+            cursor: 'pointer',
+            padding: '0 8px',
+            lineHeight: '20px',
+            transition: 'opacity 0.15s, color 0.15s',
+            color: aiSuggest ? 'var(--rf-cyan)' : 'var(--rf-text-dim)',
+            opacity: aiSuggest ? 0.7 : 0.25,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = aiSuggest ? '0.7' : '0.25' }}
+        >
+          {aiSuggest ? 'SUG ✓' : 'SUG ✗'}
         </button>
       )}
 

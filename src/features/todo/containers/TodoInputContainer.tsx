@@ -3,16 +3,16 @@ import { useTodoStore } from '../store'
 import { useUiStore } from '../store/uiStore'
 import { useFolderStore } from '../store'
 import { TodoInput } from '../components/input-bar'
-import {
-  ImageAttachment,
-  fileToDataUrl,
-} from '#/components/Attachment/ImageAttachment'
-import {
-  VoiceAttachment,
-  blobToDataUrl,
-} from '#/components/Attachment/VoiceAttachment'
+import { fileToDataUrl } from '#/components/Attachment/ImageAttachment'
 import type { Attachment, NoteColor } from '../types'
 import type { ParsedTodo } from '../utils/parseMarkdownInput'
+
+function getFileType(file: File): Attachment['type'] {
+  if (file.type.startsWith('image/')) return 'image'
+  if (file.type.startsWith('audio/')) return 'voice'
+  if (file.type.startsWith('video/')) return 'video'
+  return 'file'
+}
 
 export function TodoInputContainer() {
   const [value, setValue] = useState('')
@@ -49,46 +49,29 @@ export function TodoInputContainer() {
     [pendingAttachments, addTodoWithDetails, resolvedColor],
   )
 
-  const handleImageSelect = useCallback(async (file: File) => {
+  const handleAddFile = useCallback(async (file: File) => {
     const url = await fileToDataUrl(file)
     setPendingAttachments((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), type: 'image', url, name: file.name },
+      { id: crypto.randomUUID(), type: getFileType(file), url, name: file.name },
     ])
   }, [])
 
-  const handleVoiceRecorded = useCallback(async (blob: Blob, name: string) => {
-    const url = await blobToDataUrl(blob)
-    setPendingAttachments((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), type: 'voice', url, name },
-    ])
+  const handleRemoveFile = useCallback((id: string) => {
+    setPendingAttachments((prev) => prev.filter((a) => a.id !== id))
   }, [])
-
-  const attachments = (
-    <div className="flex items-center gap-0.5">
-      <ImageAttachment onSelect={handleImageSelect} />
-      <VoiceAttachment onRecorded={handleVoiceRecorded} />
-      {pendingAttachments.length > 0 && (
-        <span
-          className="ml-1 font-mono text-[10px]"
-          style={{ color: 'var(--rf-cyan)' }}
-        >
-          +{pendingAttachments.length}
-        </span>
-      )}
-    </div>
-  )
 
   return (
     <TodoInput
       value={value}
       onChange={onChange}
       onSubmitExpanded={handleSubmitExpanded}
-      attachments={attachments}
       isDragging={isDragging}
       selectedColor={selectedColor}
       onColorChange={setSelectedColor}
+      pendingFiles={pendingAttachments}
+      onAddFile={handleAddFile}
+      onRemoveFile={handleRemoveFile}
     />
   )
 }
