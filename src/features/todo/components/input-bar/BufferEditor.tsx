@@ -10,9 +10,11 @@ interface BufferEditorProps {
   suggestion?: string | null
   suggestLineIdx?: number
   onDropFiles?: (files: File[]) => void
+  onCompositionStart?: () => void
+  onCompositionEnd?: () => void
 }
 
-export function BufferEditor({ value, onChange, onKeyDown, tokens, suggestion, suggestLineIdx, onDropFiles }: BufferEditorProps) {
+export function BufferEditor({ value, onChange, onKeyDown, tokens, suggestion, suggestLineIdx, onDropFiles, onCompositionStart, onCompositionEnd }: BufferEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const mirrorRef = useRef<HTMLDivElement>(null)
@@ -247,6 +249,8 @@ export function BufferEditor({ value, onChange, onKeyDown, tokens, suggestion, s
             aria-label="New todo (buffer mode)"
             autoComplete="off"
             spellCheck={false}
+            onCompositionStart={onCompositionStart}
+            onCompositionEnd={onCompositionEnd}
           />
         </div>
       </div>

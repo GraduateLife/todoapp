@@ -18,6 +18,7 @@ import { BufferGuide } from './BufferGuide'
 import { BufferEditor } from './BufferEditor'
 import { ParseSummary } from './ParseSummary'
 import { useAiSuggestion } from './useAiSuggestion'
+import { FileChip } from './FileChip'
 
 import type { Attachment } from '../../types'
 
@@ -45,6 +46,7 @@ function useLocalSyntaxFix(
   onChange: (v: string) => void,
   isExpanded: boolean,
   enabled: boolean,
+  composingRef: React.RefObject<boolean>,
 ) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastFixedValue = useRef<string>('')
@@ -66,6 +68,8 @@ function useLocalSyntaxFix(
     if (debounceRef.current) clearTimeout(debounceRef.current)
 
     debounceRef.current = setTimeout(() => {
+      // Skip if IME is composing
+      if (composingRef.current) return
       const fixed = localFixSyntax(value)
       if (fixed) {
         lastFixedValue.current = fixed
@@ -100,17 +104,18 @@ export function TodoInput({
   const { isExpanded, setIsExpanded, handlePointerDown } = useInputMode()
   const [autoFix, setAutoFix] = useState(true)
   const [aiSuggest, setAiSuggest] = useState(true)
+  const composingRef = useRef(false)
 
   // ── Local parse (always, instant) ────────────────────────────────────────
   const localResult = isExpanded ? parseMarkdownInput(value) : null
   const canExec = localResult?.ok === true
 
   // ── Local syntax fix (600ms debounce, no AI) ─────────────────────────────
-  useLocalSyntaxFix(value, onChange, isExpanded, autoFix)
+  useLocalSyntaxFix(value, onChange, isExpanded, autoFix, composingRef)
 
   // ── AI subtask suggestion (ghost text) ──────────────────────────────────
   const { suggestion, suggestLineIdx, accept: acceptSuggestion } =
-    useAiSuggestion(value, onChange, isExpanded && aiSuggest)
+    useAiSuggestion(value, onChange, isExpanded && aiSuggest, composingRef)
 
   const handleKeyDown = imeGuard((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -124,7 +129,7 @@ export function TodoInput({
     }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
-      if (canExec && localResult?.ok) onSubmitExpanded(localResult.data)
+      handleExec()
     }
   })
 
@@ -145,53 +150,14 @@ export function TodoInput({
       {/* ── File preview strip (above terminal) ──────────────────────────── */}
       {isExpanded && pendingFiles.length > 0 && (
         <div
-          className="flex items-center gap-2 rf-scrollbar"
+          className="flex flex-wrap items-center gap-2"
           style={{
             padding: '4px 12px',
-            overflowX: 'auto',
-            overflowY: 'hidden',
             borderBottom: '1px solid var(--rf-border)',
           }}
         >
           {pendingFiles.map((f) => (
-            <div
-              key={f.id}
-              className="flex items-center gap-1 flex-shrink-0 font-mono"
-              style={{
-                fontSize: 9,
-                letterSpacing: '0.04em',
-                color: 'var(--rf-text-dim)',
-                background: 'rgba(0,245,255,0.04)',
-                border: '1px solid var(--rf-border)',
-                borderRadius: 3,
-                padding: '2px 6px',
-              }}
-            >
-              <span style={{ opacity: 0.5 }}>
-                {f.type === 'image' ? '🖼' : f.type === 'voice' ? '🔊' : '📄'}
-              </span>
-              <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {f.name}
-              </span>
-              <button
-                type="button"
-                onClick={() => onRemoveFile(f.id)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--rf-text-dim)',
-                  opacity: 0.4,
-                  cursor: 'pointer',
-                  fontSize: 9,
-                  padding: '0 2px',
-                  lineHeight: 1,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.4' }}
-              >
-                ✕
-              </button>
-            </div>
+            <FileChip key={f.id} file={f} onRemove={onRemoveFile} />
           ))}
         </div>
       )}
@@ -234,6 +200,8 @@ export function TodoInput({
               suggestion={suggestion}
               suggestLineIdx={suggestLineIdx}
               onDropFiles={(files) => files.forEach(onAddFile)}
+              onCompositionStart={() => { composingRef.current = true }}
+              onCompositionEnd={() => { composingRef.current = false }}
             />
           </div>
 

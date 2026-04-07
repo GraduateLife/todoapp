@@ -54,7 +54,13 @@
       "Read(//opt/homebrew/bin/**)",
       "Read(//usr/local/bin/**)",
       "Read(//opt/homebrew/Cellar/node/23.11.0/bin/**)",
-      "Read(//usr/local/**)"
+      "Read(//usr/local/**)",
+      "Bash(grep -E \"[0-9]{3,}\")",
+      "Bash(cat /Users/zhangyuntao/Desktop/code/todoapp/.env*)",
+      "Bash(ls -la /Users/zhangyuntao/Desktop/code/todoapp/.env*)",
+      "Bash(grep -B1 \"\\\\.env$\")",
+      "Bash(/usr/local/bin/node node_modules/.bin/tsc --noEmit)",
+      "Bash(PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\" pnpm tsc --noEmit)"
     ]
   }
 }

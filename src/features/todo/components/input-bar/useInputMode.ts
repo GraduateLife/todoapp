@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 export function useInputMode() {
-  const [isExpanded, setIsExpanded] = useState(true) // Buffer is default
+  const [isExpanded, setIsExpanded] = useState(false)
   const dragStartY = useRef<number | null>(null)
 
   // ── Keyboard: Ctrl+W → open, Ctrl+S → kill ────────────────────────────────

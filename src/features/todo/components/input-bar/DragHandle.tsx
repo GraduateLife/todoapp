@@ -107,8 +107,12 @@ export function DragHandle({
             color: autoFix ? 'var(--rf-cyan)' : 'var(--rf-text-dim)',
             opacity: autoFix ? 0.7 : 0.25,
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = autoFix ? '0.7' : '0.25' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.9'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = autoFix ? '0.7' : '0.25'
+          }}
         >
           {autoFix ? 'FIX ✓' : 'FIX ✗'}
         </button>
@@ -137,8 +141,12 @@ export function DragHandle({
             color: aiSuggest ? 'var(--rf-cyan)' : 'var(--rf-text-dim)',
             opacity: aiSuggest ? 0.7 : 0.25,
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = aiSuggest ? '0.7' : '0.25' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.9'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = aiSuggest ? '0.7' : '0.25'
+          }}
         >
           {aiSuggest ? 'SUG ✓' : 'SUG ✗'}
         </button>
@@ -158,19 +166,23 @@ export function DragHandle({
         style={{
           background: 'transparent',
           border: 'none',
-          color: 'var(--rf-text-dim)',
-          opacity: 0.35,
+          color: 'var(--rf-cyan)',
+          opacity: 0.85,
           fontSize: 10,
           cursor: 'pointer',
           padding: '0 12px',
           lineHeight: '20px',
-          transition: 'opacity 0.15s',
+          transition: 'opacity 0.15s, color 0.15s',
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85' }}
-        onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.35' }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = '0.9'
+        }}
+        // onMouseLeave={(e) => {
+        //   e.currentTarget.style.opacity = '0.35'
+        // }}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        ✕
+        -
       </button>
     </div>
   )

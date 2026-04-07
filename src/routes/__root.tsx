@@ -8,7 +8,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 import { HeroUIProvider } from '@heroui/react'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
-import { STORAGE_STRATEGY } from '../lib/env'
+import { STORAGE_STRATEGY, AI_PROVIDER, AI_MODEL } from '../lib/env'
 
 import TanStackQueryProvider from '../integrations/tanstack-query/root-provider'
 
@@ -82,6 +82,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 }}
               >
                 data storage mode: {STORAGE_STRATEGY}
+                {' · '}
+                ai model: {AI_PROVIDER}/{AI_MODEL || 'default'}
               </div>
             )}
             {children}

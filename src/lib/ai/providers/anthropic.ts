@@ -2,9 +2,11 @@ import type { AIProvider, CompletionOptions } from '../types'
 
 export class AnthropicProvider implements AIProvider {
   private apiKey: string
+  private model: string
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, model = 'claude-haiku-4-5-20251001') {
     this.apiKey = apiKey
+    this.model = model
   }
 
   async transcribe(_audio: Blob, _language?: string): Promise<string> {
@@ -22,7 +24,7 @@ export class AnthropicProvider implements AIProvider {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: this.model,
         max_tokens: options.maxTokens ?? 512,
         system: options.systemPrompt,
         messages: [{ role: 'user', content: prompt }],

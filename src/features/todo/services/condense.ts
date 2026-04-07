@@ -1,6 +1,7 @@
 import { getAIProvider } from '../../../lib/ai'
+import { TITLE_MAX_LEN } from '../../../lib/limits'
 
-const CONDENSE_SYSTEM_PROMPT = `You are a concise task summarizer. Your job is to shorten a voice-transcribed todo item to under 100 characters while preserving the core meaning. Rules:
+const CONDENSE_SYSTEM_PROMPT = `You are a concise task summarizer. Your job is to shorten a voice-transcribed todo item to under ${TITLE_MAX_LEN} characters while preserving the core meaning. Rules:
 - Output ONLY the shortened text, nothing else
 - Keep the same language as the input
 - Preserve key details: who, what, when
@@ -13,7 +14,7 @@ const SPLIT_SYSTEM_PROMPT = `You are a task planner. Break a voice-transcribed t
 - 2-5 subtasks, each under 80 characters
 - Output ONLY the title and subtasks, nothing else`
 
-const CHAR_LIMIT = 100
+const CHAR_LIMIT = TITLE_MAX_LEN
 
 export interface SplitResult {
   title: string

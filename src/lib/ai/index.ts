@@ -1,4 +1,4 @@
-import { AI_PROVIDER, AI_API_KEY, AI_BASE_URL } from '../env'
+import { AI_PROVIDER, AI_MODEL, AI_API_KEY, AI_BASE_URL } from '../env'
 import type { AIProvider } from './types'
 
 export type { AIProvider }
@@ -20,12 +20,12 @@ export async function initAIProvider(): Promise<void> {
 
   if (AI_PROVIDER === 'anthropic') {
     const { AnthropicProvider } = await import('./providers/anthropic')
-    _provider = new AnthropicProvider(AI_API_KEY)
+    _provider = new AnthropicProvider(AI_API_KEY, AI_MODEL || undefined)
   } else if (AI_PROVIDER === 'ollama') {
     const { OllamaProvider } = await import('./providers/ollama')
-    _provider = new OllamaProvider(AI_BASE_URL || undefined)
+    _provider = new OllamaProvider(AI_BASE_URL || undefined, AI_MODEL || undefined)
   } else {
     const { OpenAIProvider } = await import('./providers/openai')
-    _provider = new OpenAIProvider(AI_API_KEY, AI_BASE_URL || undefined)
+    _provider = new OpenAIProvider(AI_API_KEY, AI_BASE_URL || undefined, AI_MODEL || undefined)
   }
 }

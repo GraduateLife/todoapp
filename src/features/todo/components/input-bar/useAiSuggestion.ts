@@ -1,3 +1,4 @@
+import type React from 'react'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { isAIAvailable } from '../../../../lib/ai'
 import { suggestNextSubtask } from '../../services/aiSuggest'
@@ -15,6 +16,7 @@ export function useAiSuggestion(
   value: string,
   onChange: (v: string) => void,
   isExpanded: boolean,
+  composingRef?: React.RefObject<boolean>,
 ) {
   const [suggestion, setSuggestion] = useState<string | null>(null)
   const [suggestLineIdx, setSuggestLineIdx] = useState(-1)
@@ -85,6 +87,8 @@ export function useAiSuggestion(
 
     abortRef.current = false
     debounceRef.current = setTimeout(() => {
+      // Skip if IME is composing
+      if (composingRef?.current) return
       lastContextKey.current = contextKey
       suggestNextSubtask(titleLine, subtasks)
         .then((result) => {

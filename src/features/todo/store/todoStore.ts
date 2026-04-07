@@ -3,7 +3,7 @@ import type { Todo, Attachment, NoteColor, Priority, Reminder } from '../types'
 import { NOTE_COLORS } from '../types'
 import { getStrategy as getAdapter } from '../../../lib/strategies'
 
-const TITLE_MAX_LEN = 100 // sync with TodoInput.TITLE_MAX_LEN
+import { TITLE_MAX_LEN, MAX_STACK_SIZE } from '../../../lib/limits'
 
 // ── Debounce helper for high-frequency saves (drag) ──────────────────────────
 
@@ -392,7 +392,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
     const childOwnStack = child.stackedIds ?? []
     const allChildIds = [childId, ...childOwnStack]
     const currentCount = root.stackedIds?.length ?? 0
-    if (currentCount + allChildIds.length > 5) return
+    if (currentCount + allChildIds.length > MAX_STACK_SIZE) return
 
     set((state) => ({
       todos: state.todos.map((t) => {

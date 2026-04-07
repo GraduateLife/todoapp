@@ -3,10 +3,12 @@ import type { AIProvider, CompletionOptions } from '../types'
 export class OpenAIProvider implements AIProvider {
   private apiKey: string
   private baseUrl: string
+  private model: string
 
-  constructor(apiKey: string, baseUrl = 'https://api.openai.com/v1') {
+  constructor(apiKey: string, baseUrl = 'https://api.openai.com/v1', model = 'gpt-4o-mini') {
     this.apiKey = apiKey
     this.baseUrl = baseUrl
+    this.model = model
   }
 
   async transcribe(audio: Blob, language = 'zh'): Promise<string> {
@@ -37,7 +39,7 @@ export class OpenAIProvider implements AIProvider {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: this.model,
         messages,
         max_tokens: options.maxTokens ?? 512,
         temperature: options.temperature ?? 0.7,
