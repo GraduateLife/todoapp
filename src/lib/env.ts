@@ -14,9 +14,7 @@ export const API_BASE_URL: string =
 export type AIProviderName = 'openai' | 'anthropic' | 'ollama'
 
 export const AI_PROVIDER: AIProviderName =
-  (import.meta.env.VITE_AI_PROVIDER as AIProviderName) ?? 'openai'
-
-export const AI_MODEL: string = import.meta.env.VITE_AI_MODEL ?? ''
+  (import.meta.env.VITE_AI_PROVIDER as AIProviderName) ?? 'ollama'
 
 export const AI_API_KEY: string = import.meta.env.VITE_AI_API_KEY ?? ''
 
