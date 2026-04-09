@@ -575,7 +575,7 @@ export function StickyNote({
             btn.style.boxShadow = 'none'
           }}
         >
-          [ flip ]
+          [ inspect ]
         </button>
       </motion.div>
 
