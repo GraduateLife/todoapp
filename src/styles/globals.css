@@ -289,6 +289,10 @@ html.light .rf-input-bar {
     0 0 20px rgba(0, 110, 138, 0.06),
     0 -1px 0 rgba(0, 110, 138, 0.08);
 }
+html.light .rf-input-bar--collapsed {
+  box-shadow: none;
+  border-top-width: 0;
+}
 html.light .nav-link:hover,
 html.light .nav-link.is-active {
   text-shadow: none;
