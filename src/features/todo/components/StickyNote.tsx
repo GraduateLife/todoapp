@@ -1,5 +1,5 @@
 import { motion, animate } from 'framer-motion'
-import { useMemo, useEffect, useRef } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import type { MotionValue } from 'framer-motion'
 import { SubTaskList } from './note/SubTaskList'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
@@ -333,7 +333,17 @@ export function StickyNote({
                 style={{ color: ns.dim }}
                 className="font-mono text-[10px] tracking-[0.18em] uppercase"
               >
-                {todo.completed ? 'done' : 'todo'}
+                {todo.completed
+                  ? 'done'
+                  : (
+                      {
+                        high: 'urgent',
+                        normal: 'todo',
+                        low: 'minor',
+                        idea: 'idea',
+                        system: 'system',
+                      } as const
+                    )[todo.priority ?? 'normal']}
               </span>
             </div>
             <span

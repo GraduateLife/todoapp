@@ -123,6 +123,7 @@ export function StickyNoteContainer({
   const [inspectRect, setInspectRect] = useState<DOMRect | null>(null)
 
   const updateDescription = useTodoStore((s) => s.updateDescription)
+  const setPriority = useTodoStore((s) => s.setPriority)
   const addAttachment = useTodoStore((s) => s.addAttachment)
   const removeAttachment = useTodoStore((s) => s.removeAttachment)
 
@@ -284,6 +285,11 @@ export function StickyNoteContainer({
       onClose={() => setIsDetailOpen(false)}
       onUpdateTitle={(title) => onUpdateTitle(todo.id, title)}
       onUpdateDescription={(desc) => updateDescription(todo.id, desc)}
+      onSetPriority={(p) => setPriority(todo.id, p)}
+      onToggleSubTask={(subtaskId) => onToggleSubTask(todo.id, subtaskId)}
+      onDeleteSubTask={(subtaskId) => onDeleteSubTask(todo.id, subtaskId)}
+      onAddSubTask={(title) => onAddSubTask(todo.id, title)}
+      onUpdateSubTask={(subtaskId, title) => onUpdateSubTask(todo.id, subtaskId, title)}
       onAddAttachment={(att: Attachment) => addAttachment(todo.id, att)}
       onRemoveAttachment={(attId) => removeAttachment(todo.id, attId)}
     />

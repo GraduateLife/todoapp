@@ -2,8 +2,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { imeGuard } from '@/lib/utils'
-import type { Todo, Attachment } from '../../types'
+import type { Todo, Attachment, Priority } from '../../types'
 import type { NoteStyleEntry } from '../../constants/noteColors'
+import { USER_PRIORITIES } from '../../constants/priority'
 
 interface NoteDetailPanelProps {
   todo: Todo
@@ -13,8 +14,29 @@ interface NoteDetailPanelProps {
   onClose: () => void
   onUpdateTitle: (title: string) => void
   onUpdateDescription: (desc: string) => void
+  onSetPriority: (priority: Priority) => void
+  onToggleSubTask: (subtaskId: string) => void
+  onDeleteSubTask: (subtaskId: string) => void
+  onAddSubTask: (title: string) => void
+  onUpdateSubTask: (subtaskId: string, title: string) => void
   onAddAttachment: (attachment: Attachment) => void
   onRemoveAttachment: (attachmentId: string) => void
+}
+
+const PRIORITY_LABELS: Record<Priority, string> = {
+  high: 'urgent',
+  normal: 'todo',
+  low: 'minor',
+  idea: 'idea',
+  system: 'system',
+}
+
+const PRIORITY_HEX: Record<Priority, string> = {
+  high: '#ff2d78',
+  normal: '#ffb800',
+  low: '#39ff14',
+  idea: '#bf5fff',
+  system: '#00f5ff',
 }
 
 const IMAGE_EXTS = new Set([
@@ -243,6 +265,84 @@ function AttachmentPreview({
   )
 }
 
+function SectionLabel({ ns, children, noMargin }: { ns: NoteStyleEntry; children: React.ReactNode; noMargin?: boolean }) {
+  return (
+    <div
+      style={{
+        color: ns.dim,
+        fontFamily: "'Space Mono', monospace",
+        fontSize: 9,
+        letterSpacing: '0.2em',
+        textTransform: 'uppercase',
+        marginBottom: noMargin ? 0 : 10,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function TimelineRow({ label, value, ns, dimValue }: { label: string; value: string; ns: NoteStyleEntry; dimValue?: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+      <span
+        style={{
+          fontFamily: "'Space Mono', monospace",
+          fontSize: 10,
+          letterSpacing: '0.12em',
+          color: ns.dim,
+          width: 70,
+          flexShrink: 0,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontFamily: "'Space Mono', monospace",
+          fontSize: 11,
+          color: dimValue ? ns.dim : ns.text,
+          opacity: dimValue ? 0.5 : 0.85,
+          letterSpacing: '0.06em',
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function HoverButton({ ns, onClick, children, style }: { ns: NoteStyleEntry; onClick: () => void; children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: 'transparent',
+        border: `1px solid ${ns.dim}`,
+        color: ns.dim,
+        fontFamily: "'Space Mono', monospace",
+        fontSize: 10,
+        letterSpacing: '0.1em',
+        padding: '3px 8px',
+        cursor: 'pointer',
+        borderRadius: 2,
+        transition: 'color 0.15s, border-color 0.15s',
+        ...style,
+      }}
+      onMouseEnter={(e) => {
+        ;(e.currentTarget as HTMLButtonElement).style.color = ns.border
+        ;(e.currentTarget as HTMLButtonElement).style.borderColor = ns.border
+      }}
+      onMouseLeave={(e) => {
+        ;(e.currentTarget as HTMLButtonElement).style.color = ns.dim
+        ;(e.currentTarget as HTMLButtonElement).style.borderColor = ns.dim
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
 export function NoteDetailPanel({
   todo,
   ns,
@@ -251,12 +351,23 @@ export function NoteDetailPanel({
   onClose,
   onUpdateTitle,
   onUpdateDescription,
+  onSetPriority,
+  onToggleSubTask,
+  onDeleteSubTask,
+  onAddSubTask,
+  onUpdateSubTask,
   onAddAttachment,
   onRemoveAttachment,
 }: NoteDetailPanelProps) {
   const [desc, setDesc] = useState(todo.description ?? '')
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState(todo.title)
+  const [isAddingSubTask, setIsAddingSubTask] = useState(false)
+  const [newSubTaskTitle, setNewSubTaskTitle] = useState('')
+  const [editingSubTaskId, setEditingSubTaskId] = useState<string | null>(null)
+  const [editingSubTaskValue, setEditingSubTaskValue] = useState('')
+  const addSubTaskRef = useRef<HTMLInputElement>(null)
+  const editSubTaskRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const savedRect = useRef<DOMRect | null>(null)
@@ -284,6 +395,29 @@ export function NoteDetailPanel({
   useEffect(() => {
     if (isOpen) setTimeout(() => autoGrow(textareaRef.current), 50)
   }, [isOpen, desc])
+
+  // Focus add/edit subtask inputs
+  useEffect(() => { if (isAddingSubTask) addSubTaskRef.current?.focus() }, [isAddingSubTask])
+  useEffect(() => { if (editingSubTaskId) editSubTaskRef.current?.focus() }, [editingSubTaskId])
+
+  const handleAddSubTaskSubmit = () => {
+    const trimmed = newSubTaskTitle.trim()
+    if (trimmed) { onAddSubTask(trimmed); setNewSubTaskTitle('') }
+  }
+  const handleAddSubTaskKeyDown = imeGuard((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') handleAddSubTaskSubmit()
+    if (e.key === 'Escape') { setIsAddingSubTask(false); setNewSubTaskTitle('') }
+  })
+  const saveSubTaskEdit = () => {
+    if (!editingSubTaskId) return
+    const trimmed = editingSubTaskValue.trim()
+    if (trimmed) onUpdateSubTask(editingSubTaskId, trimmed)
+    setEditingSubTaskId(null); setEditingSubTaskValue('')
+  }
+  const handleEditSubTaskKeyDown = imeGuard((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') saveSubTaskEdit()
+    if (e.key === 'Escape') { setEditingSubTaskId(null); setEditingSubTaskValue('') }
+  })
 
   const handleDescBlur = useCallback(() => {
     onUpdateDescription(desc)
@@ -542,20 +676,61 @@ export function NoteDetailPanel({
                     margin: '0 auto',
                   }}
                 >
-                  {/* Description */}
+                  {/* ── Priority ─────────────────────────────────── */}
                   <section>
-                    <div
-                      style={{
-                        color: ns.dim,
-                        fontFamily: "'Space Mono', monospace",
-                        fontSize: 9,
-                        letterSpacing: '0.2em',
-                        textTransform: 'uppercase',
-                        marginBottom: 10,
-                      }}
-                    >
-                      // description
+                    <SectionLabel ns={ns}>// priority</SectionLabel>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      {USER_PRIORITIES.map((p) => {
+                        const active = todo.priority === p
+                        const hex = PRIORITY_HEX[p]
+                        return (
+                          <button
+                            key={p}
+                            onClick={() => onSetPriority(p)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              background: 'transparent',
+                              border: `1px solid ${active ? hex : ns.dim}`,
+                              borderRadius: 2,
+                              padding: '5px 10px',
+                              cursor: 'pointer',
+                              transition: 'border-color 0.15s, box-shadow 0.15s',
+                              boxShadow: active ? `0 0 8px ${hex}66` : 'none',
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 7,
+                                height: 7,
+                                borderRadius: '50%',
+                                background: active ? hex : 'transparent',
+                                border: `1.5px solid ${hex}`,
+                                boxShadow: active ? `0 0 6px ${hex}` : 'none',
+                                flexShrink: 0,
+                              }}
+                            />
+                            <span
+                              style={{
+                                fontFamily: "'Space Mono', monospace",
+                                fontSize: 10,
+                                letterSpacing: '0.14em',
+                                textTransform: 'uppercase',
+                                color: active ? hex : ns.dim,
+                              }}
+                            >
+                              {PRIORITY_LABELS[p]}
+                            </span>
+                          </button>
+                        )
+                      })}
                     </div>
+                  </section>
+
+                  {/* ── Description ──────────────────────────────── */}
+                  <section>
+                    <SectionLabel ns={ns}>// description</SectionLabel>
                     <textarea
                       ref={textareaRef}
                       value={desc}
@@ -593,27 +768,195 @@ export function NoteDetailPanel({
                     />
                   </section>
 
-                  {/* Attachments */}
+                  {/* ── Subtasks ─────────────────────────────────── */}
                   <section>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: 10,
-                      }}
-                    >
-                      <span
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <SectionLabel ns={ns} noMargin>// subtasks</SectionLabel>
+                      {todo.subtasks.length > 0 && (
+                        <span
+                          style={{
+                            fontFamily: "'Space Mono', monospace",
+                            fontSize: 10,
+                            color: ns.dim,
+                            letterSpacing: '0.1em',
+                          }}
+                        >
+                          [{todo.subtasks.filter((s) => s.completed).length}/{todo.subtasks.length}]
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Progress bar */}
+                    {todo.subtasks.length > 0 && (
+                      <div
                         style={{
-                          color: ns.dim,
-                          fontFamily: "'Space Mono', monospace",
-                          fontSize: 9,
-                          letterSpacing: '0.2em',
-                          textTransform: 'uppercase',
+                          height: 2,
+                          background: `${ns.dim}40`,
+                          borderRadius: 1,
+                          marginBottom: 10,
+                          overflow: 'hidden',
                         }}
                       >
-                        // attachments
-                      </span>
+                        <div
+                          style={{
+                            width: `${(todo.subtasks.filter((s) => s.completed).length / todo.subtasks.length) * 100}%`,
+                            height: '100%',
+                            background: ns.border,
+                            boxShadow: `0 0 4px ${ns.glow}`,
+                            transition: 'width 300ms ease',
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Subtask list */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {todo.subtasks.map((s) => (
+                        <div
+                          key={s.id}
+                          className="group"
+                          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                        >
+                          <button
+                            onClick={() => onToggleSubTask(s.id)}
+                            style={{
+                              width: 13,
+                              height: 13,
+                              flexShrink: 0,
+                              border: `1px solid ${ns.border}`,
+                              background: s.completed ? `${ns.border}30` : 'transparent',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              borderRadius: 1,
+                              padding: 0,
+                            }}
+                          >
+                            {s.completed && (
+                              <span style={{ color: ns.check, fontSize: 8, lineHeight: 1, fontFamily: 'monospace' }}>✕</span>
+                            )}
+                          </button>
+
+                          {editingSubTaskId === s.id ? (
+                            <input
+                              ref={editSubTaskRef}
+                              type="text"
+                              value={editingSubTaskValue}
+                              onChange={(e) => setEditingSubTaskValue(e.target.value)}
+                              onKeyDown={handleEditSubTaskKeyDown}
+                              onBlur={saveSubTaskEdit}
+                              style={{
+                                flex: 1,
+                                background: 'transparent',
+                                color: ns.text,
+                                border: 'none',
+                                borderBottom: `1px solid ${ns.border}`,
+                                outline: 'none',
+                                fontFamily: "'Space Mono', monospace",
+                                fontSize: 12,
+                                caretColor: ns.border,
+                              }}
+                            />
+                          ) : (
+                            <span
+                              onDoubleClick={() => {
+                                if (!s.completed) {
+                                  setEditingSubTaskId(s.id)
+                                  setEditingSubTaskValue(s.title)
+                                }
+                              }}
+                              style={{
+                                flex: 1,
+                                fontFamily: "'Space Mono', monospace",
+                                fontSize: 12,
+                                color: ns.text,
+                                opacity: s.completed ? 0.4 : 0.85,
+                                textDecoration: s.completed ? 'line-through' : 'none',
+                                cursor: s.completed ? 'default' : 'text',
+                                wordBreak: 'break-word',
+                              }}
+                            >
+                              {s.title}
+                            </span>
+                          )}
+
+                          <button
+                            onClick={() => onDeleteSubTask(s.id)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#ff3030',
+                              fontFamily: "'Space Mono', monospace",
+                              fontSize: 10,
+                              lineHeight: 1,
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                              padding: 0,
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add subtask */}
+                    {isAddingSubTask ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                        <span style={{ color: ns.dim, fontFamily: 'monospace', fontSize: 10, flexShrink: 0 }}>+</span>
+                        <input
+                          ref={addSubTaskRef}
+                          type="text"
+                          value={newSubTaskTitle}
+                          onChange={(e) => setNewSubTaskTitle(e.target.value)}
+                          onKeyDown={handleAddSubTaskKeyDown}
+                          onBlur={() => { handleAddSubTaskSubmit(); setIsAddingSubTask(false); setNewSubTaskTitle('') }}
+                          placeholder="new subtask..."
+                          style={{
+                            flex: 1,
+                            background: 'transparent',
+                            color: ns.text,
+                            border: 'none',
+                            borderBottom: `1px solid ${ns.border}`,
+                            outline: 'none',
+                            fontFamily: "'Space Mono', monospace",
+                            fontSize: 12,
+                            caretColor: ns.border,
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <HoverButton ns={ns} onClick={() => setIsAddingSubTask(true)} style={{ marginTop: 6 }}>
+                        [+ subtask]
+                      </HoverButton>
+                    )}
+                  </section>
+
+                  {/* ── Timeline ─────────────────────────────────── */}
+                  <section>
+                    <SectionLabel ns={ns}>// timeline</SectionLabel>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <TimelineRow label="created" value={
+                        new Date(todo.createdAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
+                        + ' ' +
+                        new Date(todo.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+                      } ns={ns} />
+                      <TimelineRow
+                        label="reminder"
+                        value={todo.reminder ? new Date(todo.reminder.remindAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) : '——'}
+                        ns={ns}
+                        dimValue={!todo.reminder}
+                      />
+                      <TimelineRow label="due" value="——" ns={ns} dimValue />
+                    </div>
+                  </section>
+
+                  {/* ── Attachments ──────────────────────────────── */}
+                  <section>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <SectionLabel ns={ns} noMargin>// attachments</SectionLabel>
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -622,47 +965,13 @@ export function NoteDetailPanel({
                         style={{ display: 'none' }}
                         onChange={handleFileChange}
                       />
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        style={{
-                          background: 'transparent',
-                          border: `1px solid ${ns.dim}`,
-                          color: ns.dim,
-                          fontFamily: "'Space Mono', monospace",
-                          fontSize: 10,
-                          letterSpacing: '0.1em',
-                          padding: '3px 8px',
-                          cursor: 'pointer',
-                          borderRadius: 2,
-                          transition: 'color 0.15s, border-color 0.15s',
-                        }}
-                        onMouseEnter={(e) => {
-                          ;(e.currentTarget as HTMLButtonElement).style.color =
-                            ns.border
-                          ;(
-                            e.currentTarget as HTMLButtonElement
-                          ).style.borderColor = ns.border
-                        }}
-                        onMouseLeave={(e) => {
-                          ;(e.currentTarget as HTMLButtonElement).style.color =
-                            ns.dim
-                          ;(
-                            e.currentTarget as HTMLButtonElement
-                          ).style.borderColor = ns.dim
-                        }}
-                      >
+                      <HoverButton ns={ns} onClick={() => fileInputRef.current?.click()}>
                         [+]
-                      </button>
+                      </HoverButton>
                     </div>
 
                     {todo.attachments.length > 0 && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 6,
-                        }}
-                      >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {todo.attachments.map((att) => (
                           <AttachmentPreview
                             key={att.id}
