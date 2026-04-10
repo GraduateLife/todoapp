@@ -11,6 +11,9 @@ interface SubTaskListProps {
   dimColor: string
   checkColor: string
   glowColor: string
+  /** When the parent todo is completed, subtask text is struck-through
+   *  but individual checkboxes are NOT force-checked. */
+  parentCompleted?: boolean
   isAddingExternal?: boolean
   onAddingClose?: () => void
   onToggle: (subtaskId: string) => void
@@ -26,6 +29,7 @@ export function SubTaskList({
   dimColor,
   checkColor,
   glowColor,
+  parentCompleted = false,
   isAddingExternal,
   onAddingClose,
   onToggle,
@@ -46,6 +50,20 @@ export function SubTaskList({
   useEffect(() => {
     if (isAddingExternal) { setIsListOpen(true); setIsAdding(true) }
   }, [isAddingExternal])
+
+  // Auto-open the list when the first subtask is added so the add-input
+  // stays visible and focused for consecutive entries.
+  const prevLength = useRef(subtasks.length)
+  useEffect(() => {
+    if (prevLength.current === 0 && subtasks.length > 0) {
+      setIsListOpen(true)
+      setIsAdding(true)
+      // isAdding was already true so the dep-based focus effect won't re-fire.
+      // Manually focus after React renders the new branch.
+      requestAnimationFrame(() => addInputRef.current?.focus())
+    }
+    prevLength.current = subtasks.length
+  }, [subtasks.length])
 
   useEffect(() => { if (isAdding) addInputRef.current?.focus() }, [isAdding])
   useEffect(() => { if (editingId) editInputRef.current?.focus() }, [editingId])
@@ -181,13 +199,15 @@ export function SubTaskList({
               <div key={s.id} className="flex items-center gap-2 group">
                 <button
                   type="button"
-                  onClick={() => onToggle(s.id)}
+                  disabled={parentCompleted}
+                  onClick={() => !parentCompleted && onToggle(s.id)}
                   style={{
                     width: 12, height: 12, flexShrink: 0,
                     border: `1px solid ${borderColor}`,
-                    background: s.completed ? `${borderColor}30` : 'transparent',
+                    background: s.completed && !parentCompleted ? `${borderColor}30` : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', borderRadius: 1,
+                    cursor: parentCompleted ? 'default' : 'pointer', borderRadius: 1,
+                    opacity: parentCompleted ? 0.4 : 1,
                   }}
                 >
                   {s.completed && (
@@ -212,13 +232,13 @@ export function SubTaskList({
                   />
                 ) : (
                   <span
-                    onDoubleClick={() => !s.completed && startEditing(s)}
+                    onDoubleClick={() => !s.completed && !parentCompleted && startEditing(s)}
                     className="flex-1 font-mono text-[0.75rem] leading-tight break-words min-w-0"
                     style={{
                       color: textColor,
-                      opacity: s.completed ? 0.4 : 0.85,
-                      textDecoration: s.completed ? 'line-through' : 'none',
-                      cursor: s.completed ? 'default' : 'text',
+                      opacity: (s.completed || parentCompleted) ? 0.4 : 0.85,
+                      textDecoration: (s.completed || parentCompleted) ? 'line-through' : 'none',
+                      cursor: (s.completed || parentCompleted) ? 'default' : 'text',
                     }}
                   >
                     {s.title}

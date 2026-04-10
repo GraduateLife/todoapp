@@ -438,6 +438,7 @@ export function StickyNote({
             dimColor={ns.dim}
             checkColor={ns.check}
             glowColor={baselineGlow}
+            parentCompleted={todo.completed}
             isAddingExternal={isAddingSubTask}
             onAddingClose={onAddingSubTaskClose}
             onToggle={onToggleSubTask}
