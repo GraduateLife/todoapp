@@ -4,20 +4,27 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch server.ts",
-    "start": "tsx server.ts"
+    "dev": "tsx watch adapters/node/server.ts",
+    "start": "tsx adapters/node/server.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
     "better-sqlite3": "^11.10.0",
+    "dotenv": "^17.4.1",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.7.10"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
+    "drizzle-kit": "^0.31.10",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3"]
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }
