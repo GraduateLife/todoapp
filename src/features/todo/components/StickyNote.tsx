@@ -12,6 +12,7 @@ import {
   NOTE_DEFAULT_TRANSITION,
   NOTE_EXIT,
 } from '../animations/noteEntrance'
+import { GLOW, EDGE_ZONE_OPACITY } from '../constants/glow'
 import type { Todo, NoteColor } from '../types'
 
 type NoteStyles = (typeof NOTE_STYLES)[NoteColor]
@@ -252,7 +253,7 @@ export function StickyNote({
         animate={{
           scale: isInEdgeZone ? 0.82 : 1,
           // Dim is now a reminder-overdue signal, not a low-priority one.
-          opacity: isInEdgeZone ? 0.65 : reminderState === 'overdue' ? 0.8 : 1,
+          opacity: isInEdgeZone ? EDGE_ZONE_OPACITY : GLOW[reminderState].opacity,
         }}
         exit={NOTE_EXIT}
         transition={isFresh ? NOTE_THROW_TRANSITION : NOTE_DEFAULT_TRANSITION}

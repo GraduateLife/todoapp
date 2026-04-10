@@ -4,22 +4,21 @@ import { imeGuard } from '@/lib/utils'
 import { useDragZones } from '../hooks/useDragZones'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
 import { priorityToColor } from '../constants/priority'
+import {
+  STACK_TARGET_ALPHA,
+  EDGE_ZONE_GLOW_SIZE,
+  ZONE_VISUALS,
+  buildBoxShadow,
+  extractRGB,
+  rgbaString,
+  computeCardGlow,
+} from '../constants/glow'
 import { TITLE_MAX_LEN } from '../components/input-bar'
 import { useTheme } from '../hooks/useTheme'
 import { StickyNote, type ReminderVisualState } from '../components/StickyNote'
 import { NoteDetailPanel } from '../components/note/NoteDetailPanel'
 import { useTodoStore } from '../store/todoStore'
 import type { Todo, NoteColor, Priority, Attachment } from '../types'
-
-// ─── Fixed visual strength ───────────────────────────────────────────────────
-// Brightness used to encode priority — it no longer does. These constants
-// match what `normal` priority looked like in the old priority-driven system
-// and now serve as the *baseline* render for every card regardless of
-// priority. Dim / pulse are re-bound to a future reminder system via the
-// `reminderState` prop on StickyNote (see also: constants/priority.ts and
-// MEMORY: priority_color_system).
-const BASELINE_GLOW_SIZE = 18
-const BASELINE_GLOW_ALPHA = 0.35
 
 interface StickyNoteContainerProps {
   todo: Todo
@@ -160,53 +159,34 @@ export function StickyNoteContainer({
 
   // ─── Style computation ────────────────────────────────────────────────────
   const ns = (theme === 'light' ? LIGHT_NOTE_STYLES : NOTE_STYLES)[color]
+  const [r, g, b] = extractRGB(ns.glow)
 
-  const rgbMatch = ns.glow.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
-  const [r, g, b] = rgbMatch
-    ? [rgbMatch[1], rgbMatch[2], rgbMatch[3]]
-    : ['0', '245', '255']
-
-  // Fixed baseline visuals — see BASELINE_* constants at top of file.
-  const baselineGlow = `rgba(${r},${g},${b},${BASELINE_GLOW_ALPHA})`
-  const baselineBorder = ns.border
+  // Reminder-driven baseline glow (will vary once reminder system lands).
+  const cardGlow = computeCardGlow(reminderState, ns.glow)
 
   const isInEdgeZone =
     isInDeleteZone || isInArchiveZone || isInReminderZone || isInFolderZone
   const isInZone = isInEdgeZone || isInStackZone
 
-  const zoneColor = isInDeleteZone
-    ? '#ff3030'
+  // Resolve which zone we're in (if any).
+  const activeZone = isInDeleteZone
+    ? ZONE_VISUALS.delete
     : isInArchiveZone
-      ? '#39ff14'
+      ? ZONE_VISUALS.archive
       : isInFolderZone
-        ? '#bf5fff'
+        ? ZONE_VISUALS.folder
         : isInStackZone
-          ? '#00f5ff'
-          : '#ffb800'
-  const zoneGlow = isInDeleteZone
-    ? 'rgba(255,48,48,0.5)'
-    : isInArchiveZone
-      ? 'rgba(57,255,20,0.5)'
-      : isInFolderZone
-        ? 'rgba(191,95,255,0.5)'
-        : isInStackZone
-          ? 'rgba(0,245,255,0.5)'
-          : 'rgba(255,184,0,0.5)'
-  const zoneLabel = isInDeleteZone
-    ? '[ delete ]'
-    : isInArchiveZone
-      ? '[ archive ]'
-      : isInFolderZone
-        ? '[ folder ]'
-        : isInStackZone
-          ? '[ stack ]'
-          : '[ remind ]'
+          ? ZONE_VISUALS.stack
+          : ZONE_VISUALS.reminder
+  const zoneColor = activeZone.color
+  const zoneGlow = activeZone.glow
+  const zoneLabel = activeZone.label
 
   const borderColor = isInZone
     ? zoneColor
     : isStackTarget
       ? ns.border
-      : baselineBorder
+      : ns.border
   const bgColor = isInDeleteZone
     ? 'rgba(255,30,30,0.12)'
     : isInArchiveZone
@@ -215,9 +195,12 @@ export function StickyNoteContainer({
   const glowColor = isInZone
     ? zoneGlow
     : isStackTarget
-      ? `rgba(${r},${g},${b},0.65)`
-      : baselineGlow
-  const boxShadow = `0 0 ${isInZone || isStackTarget ? 20 : BASELINE_GLOW_SIZE}px ${glowColor}, 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`
+      ? rgbaString(r, g, b, STACK_TARGET_ALPHA)
+      : cardGlow.glowColor
+  const glowSize = isInZone || isStackTarget
+    ? EDGE_ZONE_GLOW_SIZE
+    : cardGlow.glowSize
+  const boxShadow = buildBoxShadow(glowColor, glowSize)
 
   const stackCount = stackedNotes.length
 
@@ -240,7 +223,7 @@ export function StickyNoteContainer({
       bgColor={bgColor}
       glowColor={glowColor}
       boxShadow={boxShadow}
-      baselineGlow={baselineGlow}
+      baselineGlow={cardGlow.glowColor}
       reminderState={reminderState}
       isInZone={isInZone}
       isInEdgeZone={isInEdgeZone}
