@@ -211,19 +211,6 @@ export function FolderTodoCard({
           </p>
         )}
 
-        {/* High-priority bottom accent */}
-        {todo.priority === 'high' && (
-          <div
-            style={{
-              marginTop: 6,
-              height: 1,
-              width: '100%',
-              background: sNs.border,
-              boxShadow: `0 0 4px ${sNs.border}`,
-              opacity: 0.7,
-            }}
-          />
-        )}
       </div>
 
       {contextMenu}

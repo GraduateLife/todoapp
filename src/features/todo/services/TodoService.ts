@@ -1,35 +1,50 @@
 import { useTodoStore } from '../store/todoStore'
-import type { NoteColor, Attachment } from '../types'
+import { parseTrailingMark } from '../constants/priority'
+import type { Attachment } from '../types'
 
 /**
  * TodoService — the single entry point for creating todos from any source.
  * All creation paths (typing, voice, AI generation, import, ...) go through here.
  * UI code should call these methods instead of reaching into the store directly.
+ *
+ * Priority is derived from the title's trailing mark (`! . ? ~`). Color is
+ * then derived from priority inside the store. Callers must never pass a
+ * color — priority is the single source of truth.
  */
 export const TodoService = {
   /**
-   * Create a todo from plain text (e.g. the input bar).
+   * Create a todo from plain text (e.g. the terminal input bar or the
+   * right-click ContextInput). The title's trailing mark decides priority.
    */
   createFromText(
     title: string,
-    options: { color?: NoteColor; attachments?: Attachment[]; position?: { x: number; y: number } } = {},
+    options: {
+      attachments?: Attachment[]
+      position?: { x: number; y: number }
+    } = {},
   ): void {
     const trimmed = title.trim()
     if (!trimmed) return
-    useTodoStore.getState().addTodo(trimmed, options.attachments, options.color, options.position)
+    const { priority, stripped } = parseTrailingMark(trimmed)
+    if (!stripped) return
+    useTodoStore.getState().addTodo(stripped, {
+      attachments: options.attachments,
+      priority,
+      position: options.position,
+    })
   },
 
   /**
    * Create a todo from a voice transcript.
-   * The transcript is treated as the todo title.
+   * The transcript is treated as the todo title; trailing marks are honored
+   * so the user can dictate "Buy milk exclamation" equivalents if they want.
    */
-  createFromVoice(
-    transcript: string,
-    options: { color?: NoteColor } = {},
-  ): void {
+  createFromVoice(transcript: string): void {
     const trimmed = transcript.trim()
     if (!trimmed) return
-    useTodoStore.getState().addTodo(trimmed, [], options.color)
+    const { priority, stripped } = parseTrailingMark(trimmed)
+    if (!stripped) return
+    useTodoStore.getState().addTodo(stripped, { priority })
   },
 
   /**
@@ -38,11 +53,12 @@ export const TodoService = {
   createFromVoiceWithSubtasks(
     title: string,
     subtasks: { title: string; completed: boolean }[],
-    options: { color?: NoteColor } = {},
   ): void {
     const trimmed = title.trim()
     if (!trimmed) return
-    useTodoStore.getState().addTodoWithDetails(trimmed, subtasks, 'none', [], options.color)
+    const { priority, stripped } = parseTrailingMark(trimmed)
+    if (!stripped) return
+    useTodoStore.getState().addTodoWithDetails(stripped, subtasks, priority)
   },
 
   /**
@@ -51,10 +67,13 @@ export const TodoService = {
    */
   createFromAI(
     title: string,
-    options: { color?: NoteColor; description?: string } = {},
+    options: { description?: string } = {},
   ): void {
+    void options
     const trimmed = title.trim()
     if (!trimmed) return
-    useTodoStore.getState().addTodo(trimmed, [], options.color)
+    const { priority, stripped } = parseTrailingMark(trimmed)
+    if (!stripped) return
+    useTodoStore.getState().addTodo(stripped, { priority })
   },
 }

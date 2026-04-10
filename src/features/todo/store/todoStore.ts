@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { Todo, Attachment, NoteColor, Priority, Reminder } from '../types'
-import { NOTE_COLORS } from '../types'
+import type { Todo, Attachment, Priority, Reminder } from '../types'
+import { priorityToColor } from '../constants/priority'
 import { getStrategy as getAdapter } from '../../../lib/strategies'
 
 import { TITLE_MAX_LEN, MAX_STACK_SIZE } from '../../../lib/limits'
@@ -25,16 +25,17 @@ interface TodoState {
   initialize: (todos: Todo[]) => void
   addTodo: (
     title: string,
-    attachments?: Attachment[],
-    color?: NoteColor,
-    position?: { x: number; y: number },
+    options?: {
+      attachments?: Attachment[]
+      priority?: Priority
+      position?: { x: number; y: number }
+    },
   ) => void
   addTodoWithDetails: (
     title: string,
     subtasks: { title: string; completed: boolean }[],
     priority: Priority,
     attachments?: Attachment[],
-    color?: NoteColor,
   ) => void
   deleteTodo: (id: string) => void
   toggleTodo: (id: string) => void
@@ -115,18 +116,23 @@ function randomStackName(): string {
   return `${p}-${s}`
 }
 
-function randomColor(): NoteColor {
-  return NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)]
-}
-
 function randomRotation(): number {
   return parseFloat(((Math.random() - 0.5) * 10).toFixed(2))
 }
 
+/**
+ * Internal factory: create a new Todo.
+ *
+ * Priority is the single source of truth for color. Callers do NOT pass color —
+ * it is derived from priority via `priorityToColor`. This guarantees card color
+ * and priority can never drift out of sync, and keeps cyan (the system-reserved
+ * color) unreachable from any user-facing creation path unless the caller
+ * explicitly passes `priority: 'system'`.
+ */
 function createTodo(
   title: string,
   attachments: Attachment[] = [],
-  color?: NoteColor,
+  priority: Priority = 'normal',
 ): Todo {
   return {
     id: crypto.randomUUID(),
@@ -136,9 +142,9 @@ function createTodo(
     attachments,
     position: randomPosition(),
     zIndex: 10,
-    color: color ?? randomColor(),
+    color: priorityToColor(priority),
     rotation: randomRotation(),
-    priority: 'normal',
+    priority,
     subtasks: [],
     folderId: null,
     reminder: null,
@@ -152,10 +158,11 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
 
   initialize: (todos) => set({ todos }),
 
-  addTodo: (title, attachments = [], color, position) => {
+  addTodo: (title, options = {}) => {
+    const { attachments = [], priority = 'normal', position } = options
     const maxZ = get().todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
     const todo = {
-      ...createTodo(title, attachments, color),
+      ...createTodo(title, attachments, priority),
       zIndex: maxZ + 1,
       ...(position ? { position } : {}),
     }
@@ -163,12 +170,11 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
     getAdapter().saveTodo(todo).catch(console.error)
   },
 
-  addTodoWithDetails: (title, subtasks, priority, attachments = [], color) => {
+  addTodoWithDetails: (title, subtasks, priority, attachments = []) => {
     const maxZ = get().todos.reduce((m, t) => Math.max(m, t.zIndex), 10)
     const todo = {
-      ...createTodo(title, attachments, color),
+      ...createTodo(title, attachments, priority),
       zIndex: maxZ + 1,
-      priority,
       subtasks: subtasks.map((s) => ({
         id: crypto.randomUUID(),
         title: s.title,
@@ -272,8 +278,13 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
   },
 
   setPriority: (id, priority) => {
+    // Priority is the single source of truth for color: any priority change
+    // must re-derive the color so cards cannot drift out of sync.
+    const color = priorityToColor(priority)
     set((state) => ({
-      todos: state.todos.map((t) => (t.id === id ? { ...t, priority } : t)),
+      todos: state.todos.map((t) =>
+        t.id === id ? { ...t, priority, color } : t,
+      ),
     }))
     const updated = get().todos.find((t) => t.id === id)
     if (updated) getAdapter().saveTodo(updated).catch(console.error)

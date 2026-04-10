@@ -5,7 +5,7 @@ import { useFolderStore } from '../store'
 import { TodoInput } from '../components/input-bar'
 import { fileToDataUrl } from '#/components/Attachment/ImageAttachment'
 import { MAX_FILE_SIZE, MAX_FILES_PER_TODO, ALLOWED_FILE_TYPES } from '../../../lib/limits'
-import type { Attachment, NoteColor } from '../types'
+import type { Attachment } from '../types'
 import type { ParsedTodo } from '../utils/parseMarkdownInput'
 
 function getFileType(file: File): Attachment['type'] {
@@ -33,9 +33,6 @@ export function TodoInputContainer() {
   const [value, setValue] = useState('')
   const valueRef = useRef('')
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([])
-  const [selectedColor, setSelectedColor] = useState<NoteColor | 'random'>(
-    'random',
-  )
   const addTodoWithDetails = useTodoStore((s) => s.addTodoWithDetails)
   const hasOpenFolder = useFolderStore((s) => s.folders.some((f) => f.isOpen))
   const isDragging =
@@ -46,22 +43,20 @@ export function TodoInputContainer() {
     setValue(nextValue)
   }, [])
 
-  const resolvedColor = selectedColor === 'random' ? undefined : selectedColor
-
   const handleSubmitExpanded = useCallback(
     (parsed: ParsedTodo) => {
+      // Priority is the source of truth; color is derived inside the store.
       addTodoWithDetails(
         parsed.title,
         parsed.subtasks,
         parsed.priority,
         pendingAttachments.length > 0 ? pendingAttachments : undefined,
-        parsed.color ?? resolvedColor,
       )
       valueRef.current = ''
       setValue('')
       setPendingAttachments([])
     },
-    [pendingAttachments, addTodoWithDetails, resolvedColor],
+    [pendingAttachments, addTodoWithDetails],
   )
 
   const handleAddFile = useCallback(async (file: File) => {
@@ -88,8 +83,6 @@ export function TodoInputContainer() {
       onChange={onChange}
       onSubmitExpanded={handleSubmitExpanded}
       isDragging={isDragging}
-      selectedColor={selectedColor}
-      onColorChange={setSelectedColor}
       pendingFiles={pendingAttachments}
       onAddFile={handleAddFile}
       onRemoveFile={handleRemoveFile}

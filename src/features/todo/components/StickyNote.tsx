@@ -1,7 +1,6 @@
 import { motion, animate } from 'framer-motion'
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useMemo, useEffect, useRef } from 'react'
 import type { MotionValue } from 'framer-motion'
-import { TodoContextMenu } from './TodoContextMenu'
 import { SubTaskList } from './note/SubTaskList'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
 import { useTheme } from '../hooks/useTheme'
@@ -13,9 +12,22 @@ import {
   NOTE_DEFAULT_TRANSITION,
   NOTE_EXIT,
 } from '../animations/noteEntrance'
-import type { Todo, NoteColor, Priority } from '../types'
+import type { Todo, NoteColor } from '../types'
 
 type NoteStyles = (typeof NOTE_STYLES)[NoteColor]
+
+/**
+ * Visual state driven by the (future) reminder system — NOT by priority.
+ *
+ * - `none`    : no reminder set, or reminder is quiet; render baseline.
+ * - `active`  : reminder is armed but not yet due; render the pulsing ring
+ *               (the animation formerly used for high-priority cards).
+ * - `overdue` : reminder fired without acknowledgement; dim the card (the
+ *               dim opacity formerly used for low-priority cards).
+ *
+ * Until the reminder system is wired up, every card ships with `none`.
+ */
+export type ReminderVisualState = 'none' | 'active' | 'overdue'
 
 export interface StickyNoteProps {
   todo: Todo
@@ -31,8 +43,8 @@ export interface StickyNoteProps {
   bgColor: string
   glowColor: string
   boxShadow: string
-  adjustedGlow: string
-  priority: Priority
+  baselineGlow: string
+  reminderState: ReminderVisualState
   // ── Zone feedback ────────────────────────────────────────────────────────────
   isInZone: boolean
   isInEdgeZone: boolean
@@ -51,8 +63,6 @@ export interface StickyNoteProps {
   isEditing: boolean
   editValue: string
   isAddingSubTask: boolean
-  // ── Context menu state ───────────────────────────────────────────────────────
-  contextMenu: { open: boolean; pos: { x: number; y: number } }
   // ── Drag handlers ────────────────────────────────────────────────────────────
   onDragStart: () => void
   onDrag: () => void
@@ -71,15 +81,6 @@ export interface StickyNoteProps {
   onUpdateSubTask: (subtaskId: string, title: string) => void
   onAddingSubTaskClose: () => void
   onToggleExpand: () => void
-  onOpenAddSubTask: () => void
-  // ── Context menu actions ──────────────────────────────────────────────────────
-  onDelete: () => void
-  onArchive: () => void
-  onSetPriority: (priority: Priority) => void
-  onRequestReminder: () => void
-  onRequestFolder: () => void
-  onDisbandStack?: () => void
-  onCloseContextMenu: () => void
   onInspect: (rect: DOMRect) => void
 }
 
@@ -181,8 +182,8 @@ export function StickyNote({
   bgColor,
   glowColor,
   boxShadow,
-  adjustedGlow,
-  priority,
+  baselineGlow,
+  reminderState,
   isInZone,
   isInEdgeZone,
   isInDeleteZone,
@@ -198,7 +199,6 @@ export function StickyNote({
   isEditing,
   editValue,
   isAddingSubTask,
-  contextMenu,
   onDragStart,
   onDrag,
   onDragEnd,
@@ -215,14 +215,6 @@ export function StickyNote({
   onUpdateSubTask,
   onAddingSubTaskClose,
   onToggleExpand,
-  onOpenAddSubTask,
-  onDelete,
-  onArchive,
-  onSetPriority,
-  onRequestReminder,
-  onRequestFolder,
-  onDisbandStack,
-  onCloseContextMenu,
   onInspect,
 }: StickyNoteProps) {
   const theme = useTheme()
@@ -259,7 +251,8 @@ export function StickyNote({
         initial={isFresh ? { scale: 0.75, opacity: 0 } : NOTE_DEFAULT_INITIAL}
         animate={{
           scale: isInEdgeZone ? 0.82 : 1,
-          opacity: isInEdgeZone ? 0.65 : priority === 'low' ? 0.8 : 1,
+          // Dim is now a reminder-overdue signal, not a low-priority one.
+          opacity: isInEdgeZone ? 0.65 : reminderState === 'overdue' ? 0.8 : 1,
         }}
         exit={NOTE_EXIT}
         transition={isFresh ? NOTE_THROW_TRANSITION : NOTE_DEFAULT_TRANSITION}
@@ -321,8 +314,9 @@ export function StickyNote({
             />
           )}
 
-          {/* High-priority pulsing ring */}
-          {priority === 'high' && !isInZone && (
+          {/* Reminder-active pulsing ring
+              (was: high-priority ring; now reused by the reminder system) */}
+          {reminderState === 'active' && !isInZone && (
             <div
               className="absolute inset-[-2px] rounded-[4px] pointer-events-none rf-priority-ring"
               style={{ border: `1px solid ${ns.border}`, color: ns.border }}
@@ -341,33 +335,6 @@ export function StickyNote({
               >
                 {todo.completed ? 'done' : 'todo'}
               </span>
-              {priority === 'high' && (
-                <span
-                  className="font-mono text-[10px] tracking-[0.12em]"
-                  style={{
-                    color: ns.border,
-                    textShadow: `0 0 8px ${ns.border}, 0 0 16px ${ns.border}66`,
-                  }}
-                >
-                  high [!+]
-                </span>
-              )}
-              {priority === 'normal' && (
-                <span
-                  className="font-mono text-[9px] tracking-[0.12em]"
-                  style={{ color: ns.border, opacity: 0.55 }}
-                >
-                  normal [!]
-                </span>
-              )}
-              {priority === 'low' && (
-                <span
-                  className="font-mono text-[9px] tracking-[0.12em]"
-                  style={{ color: ns.dim, opacity: 0.4 }}
-                >
-                  low [!-]
-                </span>
-              )}
             </div>
             <span
               style={{
@@ -460,7 +427,7 @@ export function StickyNote({
             textColor={ns.text}
             dimColor={ns.dim}
             checkColor={ns.check}
-            glowColor={adjustedGlow}
+            glowColor={baselineGlow}
             isAddingExternal={isAddingSubTask}
             onAddingClose={onAddingSubTaskClose}
             onToggle={onToggleSubTask}
@@ -578,21 +545,6 @@ export function StickyNote({
           [ inspect ]
         </button>
       </motion.div>
-
-      <TodoContextMenu
-        open={contextMenu.open}
-        position={contextMenu.pos}
-        onClose={onCloseContextMenu}
-        onDelete={onDelete}
-        onArchive={onArchive}
-        onSetPriority={onSetPriority}
-        onAddSubTask={onOpenAddSubTask}
-        onSetReminder={onRequestReminder}
-        onMoveToFolder={onRequestFolder}
-        onDisbandStack={onDisbandStack}
-        currentPriority={priority}
-        noteColor={ns.border}
-      />
     </>
   )
 }

@@ -1,4 +1,5 @@
 import type { Priority, NoteColor } from '../types'
+import { parseTrailingMark } from '../constants/priority'
 
 export type ParsedSubTask = { title: string; completed: boolean }
 
@@ -33,23 +34,23 @@ const COLOR_MAP: Record<string, NoteColor> = {
 
 /**
  * Extract priority suffix from title text:
- *   "Buy groceries!" → { text: "Buy groceries", priority: "high" }
- *   "Maybe later?"   → { text: "Maybe later",   priority: "low" }
- *   "Normal task"    → { text: "Normal task",    priority: "normal" }
+ *   "Buy groceries!" → { text: "Buy groceries", priority: "high"   } (pink)
+ *   "Ship it."       → { text: "Ship it",       priority: "normal" } (amber)
+ *   "Maybe later?"   → { text: "Maybe later",   priority: "low"    } (green)
+ *   "Dark mode~"     → { text: "Dark mode",     priority: "idea"   } (purple)
+ *   "No mark"        → { text: "No mark",       priority: "normal" } (amber)
+ *
+ * `system` priority (cyan) has no mark — it is reserved for agent-created
+ * cards and is unreachable from user input.
  */
 function parseTitlePriority(text: string): { text: string; priority: Priority } {
-  if (text.endsWith('!')) {
-    return { text: text.slice(0, -1).trimEnd(), priority: 'high' }
-  }
-  if (text.endsWith('?')) {
-    return { text: text.slice(0, -1).trimEnd(), priority: 'low' }
-  }
-  return { text, priority: 'normal' }
+  const { priority, stripped } = parseTrailingMark(text)
+  return { text: stripped, priority }
 }
 
 /**
  * Relaxed tokeniser:
- * - First non-empty line → title (with priority suffix: ! = high, ? = low)
+ * - First non-empty line → title (priority from trailing mark: !/./?/~)
  * - Lines starting with "- " → subtask (supports [x]/[] checkbox prefix)
  * - Lines starting with "-" but no space → warn (typo hint)
  * - Color markers still recognised

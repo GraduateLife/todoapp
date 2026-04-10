@@ -14,7 +14,7 @@ export const NOTE_COLORS: NoteColor[] = [
   'purple',
 ]
 
-export type Priority = 'low' | 'normal' | 'high'
+export type Priority = 'high' | 'normal' | 'low' | 'idea' | 'system'
 
 export interface SubTask {
   id: string

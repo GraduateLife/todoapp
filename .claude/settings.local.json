@@ -67,7 +67,8 @@
       "Bash(find /Users/zhangyuntao/Desktop/code/todoapp/node_modules -maxdepth 2 -name \"package.json\" -exec grep -l '\"nitro\"' {} \\\\;)",
       "Bash(pnpm info:*)",
       "Bash(echo \"---exit:$?\")",
-      "Bash(echo \"exit:$?\")"
+      "Bash(echo \"exit:$?\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx|json\\)$\")"
     ]
   }
 }

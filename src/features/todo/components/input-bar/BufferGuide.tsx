@@ -1,3 +1,13 @@
+// Color hexes are inlined (rather than imported from NOTE_STYLES) to keep this
+// legend theme-agnostic — it always shows the dark-theme accent hues so the
+// guide's visual identity stays consistent regardless of board theme.
+const PRIORITY_SWATCHES = [
+  { mark: 'title',   label: 'normal',      hex: '#ffb800' }, // amber — no mark implies normal
+  { mark: 'title!',  label: 'high',        hex: '#ff2d78' }, // pink
+  { mark: 'title?',  label: 'low',         hex: '#39ff14' }, // green
+  { mark: 'title~',  label: 'inspiration', hex: '#bf5fff' }, // purple
+] as const
+
 export function BufferGuide() {
   return (
     <div
@@ -25,27 +35,63 @@ export function BufferGuide() {
         GUIDE
       </div>
 
-      {[
-        { text: 'title', color: 'var(--rf-text)', op: 0.6 },
-        { text: 'title!  → high priority', color: 'var(--rf-danger, #ff3030)', op: 0.6 },
-        { text: 'title?  → low priority', color: 'var(--rf-amber, #ffb800)', op: 0.6 },
-        { text: '- item → subtask', color: 'var(--rf-cyan)', op: 0.6 },
-        { text: '- [x] done subtask', color: 'var(--rf-cyan)', op: 0.5 },
-      ].map((l) => (
+      {PRIORITY_SWATCHES.map((s) => (
         <div
-          key={l.text}
+          key={s.mark}
           style={{
             fontSize: 9,
             letterSpacing: '0.04em',
             lineHeight: 1.6,
-            color: l.color,
-            opacity: l.op,
+            color: s.hex,
+            opacity: 0.75,
             whiteSpace: 'pre',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
           }}
         >
-          {l.text}
+          <span
+            style={{
+              display: 'inline-block',
+              width: 5,
+              height: 5,
+              borderRadius: 1,
+              backgroundColor: s.hex,
+              boxShadow: `0 0 3px 0.5px ${s.hex}`,
+              flexShrink: 0,
+            }}
+          />
+          <span>{s.mark}</span>
+          <span style={{ opacity: 0.55 }}>→ {s.label}</span>
         </div>
       ))}
+
+      {/* subtask syntax */}
+      <div
+        style={{
+          fontSize: 9,
+          letterSpacing: '0.04em',
+          lineHeight: 1.6,
+          color: 'var(--rf-cyan)',
+          opacity: 0.55,
+          whiteSpace: 'pre',
+          marginTop: 4,
+        }}
+      >
+        - item → subtask
+      </div>
+      <div
+        style={{
+          fontSize: 9,
+          letterSpacing: '0.04em',
+          lineHeight: 1.6,
+          color: 'var(--rf-cyan)',
+          opacity: 0.45,
+          whiteSpace: 'pre',
+        }}
+      >
+        - [x] done subtask
+      </div>
 
       {/* hints */}
       <div

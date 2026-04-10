@@ -3,20 +3,23 @@ import { useState, useCallback } from 'react'
 import { imeGuard } from '@/lib/utils'
 import { useDragZones } from '../hooks/useDragZones'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
+import { priorityToColor } from '../constants/priority'
 import { TITLE_MAX_LEN } from '../components/input-bar'
 import { useTheme } from '../hooks/useTheme'
-import { StickyNote } from '../components/StickyNote'
+import { StickyNote, type ReminderVisualState } from '../components/StickyNote'
 import { NoteDetailPanel } from '../components/note/NoteDetailPanel'
 import { useTodoStore } from '../store/todoStore'
 import type { Todo, NoteColor, Priority, Attachment } from '../types'
 
-// ─── Priority modifiers ───────────────────────────────────────────────────────
-const PRIORITY_GLOW: Record<Priority, number> = { low: 6, normal: 18, high: 32 }
-const PRIORITY_BORDER_OPACITY: Record<Priority, number> = {
-  low: 0.45,
-  normal: 1,
-  high: 1,
-}
+// ─── Fixed visual strength ───────────────────────────────────────────────────
+// Brightness used to encode priority — it no longer does. These constants
+// match what `normal` priority looked like in the old priority-driven system
+// and now serve as the *baseline* render for every card regardless of
+// priority. Dim / pulse are re-bound to a future reminder system via the
+// `reminderState` prop on StickyNote (see also: constants/priority.ts and
+// MEMORY: priority_color_system).
+const BASELINE_GLOW_SIZE = 18
+const BASELINE_GLOW_ALPHA = 0.35
 
 interface StickyNoteContainerProps {
   todo: Todo
@@ -25,7 +28,6 @@ interface StickyNoteContainerProps {
   onDelete: (id: string) => void
   onToggle: (id: string) => void
   onUpdateTitle: (id: string, title: string) => void
-  onSetPriority: (id: string, priority: Priority) => void
   onArchive: (id: string) => void
   onAddSubTask: (id: string, title: string) => void
   onToggleSubTask: (id: string, subtaskId: string) => void
@@ -51,7 +53,6 @@ export function StickyNoteContainer({
   onDelete,
   onToggle,
   onUpdateTitle,
-  onSetPriority,
   onArchive,
   onAddSubTask,
   onToggleSubTask,
@@ -69,10 +70,19 @@ export function StickyNoteContainer({
   onToggleExpand,
   onDisbandStack,
 }: StickyNoteContainerProps) {
-  const color: NoteColor = todo.color ?? 'cyan'
-  const rotation = todo.rotation ?? 0
   const priority: Priority = todo.priority ?? 'normal'
+  // Color is always derived from priority. We tolerate a stale `todo.color`
+  // in memory (e.g. legacy data from before the refactor) by preferring the
+  // derived value, so cards can't render mismatched hue+priority.
+  const color: NoteColor = priorityToColor(priority)
+  const rotation = todo.rotation ?? 0
   const theme = useTheme()
+
+  // No reminder system yet — every card renders with the baseline visual.
+  // When the reminder system lands, compute this from `todo.reminder` and the
+  // current time: 'active' while a pending reminder is set, 'overdue' after
+  // its trigger time has passed without acknowledgement.
+  const reminderState: ReminderVisualState = 'none'
 
   // ─── Motion values ────────────────────────────────────────────────────────
   const x = useMotionValue(todo.position?.x ?? 120)
@@ -109,10 +119,6 @@ export function StickyNoteContainer({
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(todo.title)
   const [isAddingSubTask, setIsAddingSubTask] = useState(false)
-  const [contextMenu, setContextMenu] = useState<{
-    open: boolean
-    pos: { x: number; y: number }
-  }>({ open: false, pos: { x: 0, y: 0 } })
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [inspectRect, setInspectRect] = useState<DOMRect | null>(null)
 
@@ -141,33 +147,27 @@ export function StickyNoteContainer({
     [saveEdit, todo.title],
   )
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault()
-      onBringToFront(todo.id)
-      setContextMenu({ open: true, pos: { x: e.clientX, y: e.clientY } })
-    },
-    [todo.id, onBringToFront],
-  )
+  // Right-click on a card is intentionally a no-op: we used to open a
+  // TodoContextMenu here but it was unintuitive enough to be archived.
+  // We still prevent the browser's native menu and stop propagation so the
+  // canvas right-click handler (which opens the quick-task ContextInput)
+  // doesn't fire when the user's cursor happens to be over a card.
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
 
   // ─── Style computation ────────────────────────────────────────────────────
   const ns = (theme === 'light' ? LIGHT_NOTE_STYLES : NOTE_STYLES)[color]
-  const glowSize = PRIORITY_GLOW[priority]
-  const borderOpacity = PRIORITY_BORDER_OPACITY[priority]
 
-  const glowAlphaMap: Record<Priority, number> = {
-    low: 0.15,
-    normal: 0.35,
-    high: 0.65,
-  }
   const rgbMatch = ns.glow.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
   const [r, g, b] = rgbMatch
     ? [rgbMatch[1], rgbMatch[2], rgbMatch[3]]
     : ['0', '245', '255']
 
-  const adjustedGlow = `rgba(${r},${g},${b},${glowAlphaMap[priority]})`
-  const adjustedBorder =
-    borderOpacity < 1 ? `rgba(${r},${g},${b},${borderOpacity})` : ns.border
+  // Fixed baseline visuals — see BASELINE_* constants at top of file.
+  const baselineGlow = `rgba(${r},${g},${b},${BASELINE_GLOW_ALPHA})`
+  const baselineBorder = ns.border
 
   const isInEdgeZone =
     isInDeleteZone || isInArchiveZone || isInReminderZone || isInFolderZone
@@ -205,7 +205,7 @@ export function StickyNoteContainer({
     ? zoneColor
     : isStackTarget
       ? ns.border
-      : adjustedBorder
+      : baselineBorder
   const bgColor = isInDeleteZone
     ? 'rgba(255,30,30,0.12)'
     : isInArchiveZone
@@ -215,8 +215,8 @@ export function StickyNoteContainer({
     ? zoneGlow
     : isStackTarget
       ? `rgba(${r},${g},${b},0.65)`
-      : adjustedGlow
-  const boxShadow = `0 0 ${isInZone || isStackTarget ? 20 : glowSize}px ${glowColor}, 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`
+      : baselineGlow
+  const boxShadow = `0 0 ${isInZone || isStackTarget ? 20 : BASELINE_GLOW_SIZE}px ${glowColor}, 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`
 
   const stackCount = stackedNotes.length
 
@@ -239,8 +239,8 @@ export function StickyNoteContainer({
       bgColor={bgColor}
       glowColor={glowColor}
       boxShadow={boxShadow}
-      adjustedGlow={adjustedGlow}
-      priority={priority}
+      baselineGlow={baselineGlow}
+      reminderState={reminderState}
       isInZone={isInZone}
       isInEdgeZone={isInEdgeZone}
       isInDeleteZone={isInDeleteZone}
@@ -256,7 +256,6 @@ export function StickyNoteContainer({
       isEditing={isEditing}
       editValue={editValue}
       isAddingSubTask={isAddingSubTask}
-      contextMenu={contextMenu}
       onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
@@ -273,16 +272,8 @@ export function StickyNoteContainer({
       onUpdateSubTask={(subtaskId, title) =>
         onUpdateSubTask(todo.id, subtaskId, title)
       }
-      onOpenAddSubTask={() => setIsAddingSubTask(true)}
       onAddingSubTaskClose={() => setIsAddingSubTask(false)}
       onToggleExpand={onToggleExpand}
-      onDelete={() => onDelete(todo.id)}
-      onArchive={() => onArchive(todo.id)}
-      onSetPriority={(p) => onSetPriority(todo.id, p)}
-      onRequestReminder={() => onRequestReminder(todo.id)}
-      onRequestFolder={() => onRequestFolder(todo.id)}
-      onDisbandStack={stackCount > 0 ? onDisbandStack : undefined}
-      onCloseContextMenu={() => setContextMenu((p) => ({ ...p, open: false }))}
       onInspect={handleInspect}
     />
     <NoteDetailPanel

@@ -237,11 +237,6 @@ function StackCard({
           </p>
         )}
 
-        {/* High priority accent line (replaces dot) */}
-        {todo.priority === 'high' && (
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, background: sNs.border, opacity: 0.7, boxShadow: `0 0 4px ${sNs.glow}` }} />
-        )}
-
         {/* Scanline */}
         <div
           style={{

@@ -23,7 +23,6 @@ export function StickyNoteCanvas() {
   const deleteTodo = useTodoStore((s) => s.deleteTodo)
   const toggleTodo = useTodoStore((s) => s.toggleTodo)
   const updateTitle = useTodoStore((s) => s.updateTitle)
-  const setPriority = useTodoStore((s) => s.setPriority)
   const archiveTodo = useTodoStore((s) => s.archiveTodo)
   const addSubTask = useTodoStore((s) => s.addSubTask)
   const toggleSubTask = useTodoStore((s) => s.toggleSubTask)
@@ -251,7 +250,6 @@ export function StickyNoteCanvas() {
               onDelete={deleteTodo}
               onToggle={toggleTodo}
               onUpdateTitle={updateTitle}
-              onSetPriority={setPriority}
               onArchive={archiveTodo}
               onAddSubTask={addSubTask}
               onToggleSubTask={toggleSubTask}

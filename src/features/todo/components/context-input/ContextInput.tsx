@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ColorPicker } from '../input-bar/ColorPicker'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { TITLE_MAX_LEN } from '../input-bar/constants'
 import { TodoService } from '../../services/TodoService'
 import { VoiceInputOverlay } from '../voice/VoiceInputOverlay'
 import { VOICE_MOCK } from '../../../../lib/env'
 import { imeGuard } from '@/lib/utils'
-import type { NoteColor } from '../../types'
+import { parseTrailingMark } from '../../constants/priority'
+import type { NoteColor, Priority } from '../../types'
 
 interface ContextInputProps {
   /** Screen position where the user right-clicked */
@@ -19,12 +19,44 @@ const CARD_W = 256
 const CARD_H = 160
 const POPOVER_W = 320
 
+/**
+ * Priority legend: 4 lamps shown under the quick-task input.
+ *
+ * This is a *read-only indicator*, not a selector. The currently active lamp
+ * is driven by parsing the trailing mark of the user's input text — clicking
+ * a lamp does nothing. `system`/cyan is deliberately absent (see
+ * constants/priority.ts for the rationale).
+ *
+ * Hexes are inlined so the legend's colors stay theme-agnostic.
+ */
+const LEGEND_SLOTS: {
+  mark: string
+  priority: Priority
+  label: string
+  hex: string
+}[] = [
+  { mark: '!', priority: 'high',   label: 'high',        hex: '#ff2d78' },
+  { mark: '.', priority: 'normal', label: 'normal',      hex: '#ffb800' },
+  { mark: '?', priority: 'low',    label: 'low',         hex: '#39ff14' },
+  { mark: '~', priority: 'idea',   label: 'inspiration', hex: '#bf5fff' },
+]
+
 export function ContextInput({ position, onClose }: ContextInputProps) {
   const [value, setValue] = useState('')
-  const [selectedColor, setSelectedColor] = useState<NoteColor | 'random'>('random')
+  // Waveform color for the voice overlay only — has no effect on the created
+  // card (card color is derived from priority at store level).
+  const [voiceWaveformColor, setVoiceWaveformColor] = useState<
+    NoteColor | 'random'
+  >('amber')
   const [voiceOpen, setVoiceOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Live-parse the trailing mark so the legend can highlight the matching lamp.
+  const parsedPriority: Priority = useMemo(
+    () => parseTrailingMark(value.trim()).priority,
+    [value],
+  )
 
   // Auto-focus input on mount
   useEffect(() => {
@@ -62,12 +94,10 @@ export function ContextInput({ position, onClose }: ContextInputProps) {
       x: Math.max(8, position.x - CARD_W / 2),
       y: Math.max(8, position.y - CARD_H / 2),
     }
-    TodoService.createFromText(trimmed, {
-      color: selectedColor === 'random' ? undefined : selectedColor,
-      position: notePos,
-    })
+    // Priority + color are derived from the trailing mark inside the service.
+    TodoService.createFromText(trimmed, { position: notePos })
     onClose()
-  }, [value, selectedColor, position, onClose])
+  }, [value, position, onClose])
 
   const handleKeyDown = imeGuard((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -195,27 +225,61 @@ export function ContextInput({ position, onClose }: ContextInputProps) {
             ) : null}
           </div>
 
-          {/* Color picker row */}
+          {/* Priority legend row (read-only indicator) */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               borderTop: '1px solid rgba(192, 216, 240, 0.06)',
               paddingTop: 3,
+              gap: 12,
+              paddingLeft: 6,
+              paddingRight: 6,
             }}
           >
-            <div
-              style={
-                {
-                  '--rf-text-dim': 'rgba(192,216,240,0.55)',
-                } as React.CSSProperties
-              }
-            >
-              <ColorPicker
-                selectedColor={selectedColor}
-                onColorChange={setSelectedColor}
-              />
-            </div>
+            {LEGEND_SLOTS.map((slot) => {
+              const active = slot.priority === parsedPriority
+              return (
+                <div
+                  key={slot.priority}
+                  title={`type "${slot.mark}" for ${slot.label}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    userSelect: 'none',
+                    // Display-only: no pointer events, no click handler.
+                    cursor: 'default',
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      width: 6,
+                      height: 6,
+                      borderRadius: 1,
+                      backgroundColor: slot.hex,
+                      opacity: active ? 1 : 0.18,
+                      boxShadow: active ? `0 0 5px 1px ${slot.hex}` : 'none',
+                      transition: 'box-shadow 150ms, opacity 150ms',
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontFamily: "'Space Mono', ui-monospace, monospace",
+                      fontSize: 8,
+                      fontWeight: 700,
+                      letterSpacing: '0.06em',
+                      color: active ? slot.hex : 'rgba(192,216,240,0.3)',
+                      opacity: active ? 1 : 0.5,
+                      transition: 'color 150ms, opacity 150ms',
+                    }}
+                  >
+                    {slot.mark} {slot.label}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       </motion.div>
@@ -227,8 +291,8 @@ export function ContextInput({ position, onClose }: ContextInputProps) {
           setVoiceOpen(false)
           onClose()
         }}
-        selectedColor={selectedColor}
-        onColorChange={setSelectedColor}
+        selectedColor={voiceWaveformColor}
+        onColorChange={setVoiceWaveformColor}
       />
     </>
   )

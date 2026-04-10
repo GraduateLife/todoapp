@@ -6,7 +6,6 @@ import {
   type ParsedTodo,
 } from '../../utils/parseMarkdownInput'
 import { localFixSyntax } from '../../services/aiParse'
-import type { NoteColor } from '../../types'
 import {
   EXPAND_TRANSITION,
   COLLAPSE_TRANSITION,
@@ -27,8 +26,6 @@ interface TodoInputProps {
   onChange: (value: string) => void
   onSubmitExpanded: (parsed: ParsedTodo) => void
   isDragging?: boolean
-  selectedColor: NoteColor | 'random'
-  onColorChange: (color: NoteColor | 'random') => void
   pendingFiles: Attachment[]
   onAddFile: (file: File) => void
   onRemoveFile: (id: string) => void

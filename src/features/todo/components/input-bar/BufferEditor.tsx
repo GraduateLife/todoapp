@@ -182,14 +182,23 @@ export function BufferEditor({ value, onChange, onKeyDown, tokens, suggestion, s
                   )
                 }
                 const s = TOKEN_STYLE[tok.kind]
-                // For title tokens, show priority suffix in the label
+                // For title tokens, show priority mark in the label and color
+                // it with the matching priority hue.
                 let label = s.label
                 let labelColor = s.color
                 if (tok.kind === 'title' && tok.priority !== 'normal') {
-                  label = tok.priority === 'high' ? 'TITLE !' : 'TITLE ?'
-                  labelColor = tok.priority === 'high'
-                    ? 'var(--rf-danger, #ff3030)'
-                    : 'var(--rf-amber, #ffb800)'
+                  const markMap = {
+                    high: { mark: '!', hex: '#ff2d78' }, // pink
+                    low:  { mark: '?', hex: '#39ff14' }, // green
+                    idea: { mark: '~', hex: '#bf5fff' }, // purple
+                    // `normal` is filtered out above; `system` is unreachable
+                    // from user input so we never see it here.
+                    normal: { mark: '', hex: s.color },
+                    system: { mark: '', hex: s.color },
+                  } as const
+                  const m = markMap[tok.priority]
+                  label = `TITLE ${m.mark}`
+                  labelColor = m.hex
                 }
                 return (
                   <div
