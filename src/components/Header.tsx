@@ -3,20 +3,12 @@ import ThemeToggle from './ThemeToggle'
 
 export default function Header() {
   return (
-    <header className="rf-header relative" style={{ zIndex: 50 }}>
+    <header className="relative" style={{ zIndex: 50 }}>
       <nav
-        className="page-wrap flex items-center gap-6 py-3"
+        className="w-[95%] mx-auto flex items-stretch gap-6 py-3 bg-transparent"
         style={{ minHeight: 52 }}
       >
         {/* Logo */}
-        <Link
-          to="/"
-          style={{ textDecoration: 'none' }}
-          className="rf-logo flex items-center"
-        >
-          <span className="rf-logo-dot" />
-          NEURAL-TODO
-        </Link>
 
         {/* Nav links */}
         <div className="flex items-center gap-5">
@@ -25,7 +17,7 @@ export default function Header() {
             className="nav-link"
             activeProps={{ className: 'nav-link is-active' }}
           >
-            board
+            deck
           </Link>
           <Link
             to="/about"
@@ -50,13 +42,13 @@ export default function Header() {
       </nav>
 
       {/* Bottom gradient line */}
-      <div
+      {/* <div
         className="absolute bottom-0 left-0 right-0 h-[1px] pointer-events-none"
         style={{
           background:
             'linear-gradient(90deg, transparent, rgba(0,245,255,0.45) 30%, rgba(191,95,255,0.3) 70%, transparent)',
         }}
-      />
+      /> */}
     </header>
   )
 }

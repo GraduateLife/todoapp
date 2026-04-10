@@ -43,7 +43,10 @@ const COLOR_MAP: Record<string, NoteColor> = {
  * `system` priority (cyan) has no mark — it is reserved for agent-created
  * cards and is unreachable from user input.
  */
-function parseTitlePriority(text: string): { text: string; priority: Priority } {
+function parseTitlePriority(text: string): {
+  text: string
+  priority: Priority
+} {
   const { priority, stripped } = parseTrailingMark(text)
   return { text: stripped, priority }
 }
@@ -117,7 +120,11 @@ export function parseMarkdownInput(raw: string): ParseResult | null {
   // Collect subtasks from subtask tokens and extra lines
   const subtasks = tokens
     .filter(
-      (t): t is Extract<LineToken, { kind: 'subtask' }> | Extract<LineToken, { kind: 'extra' }> =>
+      (
+        t,
+      ): t is
+        | Extract<LineToken, { kind: 'subtask' }>
+        | Extract<LineToken, { kind: 'extra' }> =>
         t.kind === 'subtask' || t.kind === 'extra',
     )
     .map((t) => ({
@@ -138,8 +145,8 @@ export function parseMarkdownInput(raw: string): ParseResult | null {
     : { text: '', priority: 'normal' as Priority }
 
   // Fallback: use first non-empty token text if no title
-  const title = titleText
-    || (nonEmpty[0] && 'text' in nonEmpty[0] ? nonEmpty[0].text : '')
+  const title =
+    titleText || (nonEmpty[0] && 'text' in nonEmpty[0] ? nonEmpty[0].text : '')
 
   if (!title) {
     return {

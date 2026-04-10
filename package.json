@@ -11,6 +11,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
+    "lint:changed": "bash scripts/lint-changed.sh",
+    "lint:changed:fix": "bash scripts/lint-changed.sh --fix",
+    "lint:staged": "bash scripts/lint-changed.sh --staged",
+    "hooks:install": "git config core.hooksPath .githooks",
     "format": "prettier --check .",
     "check": "prettier --write . && eslint --fix"
   },

@@ -27,7 +27,7 @@ const TOKEN_STYLE: Record<
 > = {
   title: { color: 'var(--rf-text)', label: 'TITLE' },
   subtask: { color: 'var(--rf-cyan)', label: 'SUB' },
-  priority: { color: 'var(--rf-purple, #bf5fff)', label: 'PRI' },
+  // priority: { color: 'var(--rf-purple, #bf5fff)', label: 'PRI' },
   color: { color: 'var(--rf-amber, #ffb800)', label: 'CLR' },
   warn: {
     color: 'var(--rf-amber, #ffb800)',
