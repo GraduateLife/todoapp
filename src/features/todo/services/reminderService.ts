@@ -48,13 +48,12 @@ export function getNotificationService(): INotificationService {
   return activeService
 }
 
-// ─── Reminder scheduler ───────────────────────────────────────────────────────
+// ─── Reminder scheduler (trigger-array model) ────────────────────────────────
 
 export interface ScheduledReminder {
   todoId: string
   title: string
-  remindAt: number // next fire timestamp
-  interval?: number // ms — if set, reschedule after firing
+  nextTrigger: number // the specific timestamp this timer is set for
 }
 
 type ReminderCallback = (todoId: string) => void
@@ -67,24 +66,17 @@ class ReminderScheduler {
     this.onFire = cb
   }
 
+  /** Schedule a timer for a single trigger timestamp. */
   schedule(reminder: ScheduledReminder): void {
     this.cancel(reminder.todoId)
-    const delay = Math.max(0, reminder.remindAt - Date.now())
+    const delay = Math.max(0, reminder.nextTrigger - Date.now())
     const timer = setTimeout(() => {
       getNotificationService().notify(
         `⏰ ${reminder.title}`,
         'Reminder from your todo list',
       )
+      this.timers.delete(reminder.todoId)
       this.onFire?.(reminder.todoId)
-      // Reschedule if recurring
-      if (reminder.interval && reminder.interval > 0) {
-        this.schedule({
-          ...reminder,
-          remindAt: Date.now() + reminder.interval,
-        })
-      } else {
-        this.timers.delete(reminder.todoId)
-      }
     }, delay)
     this.timers.set(reminder.todoId, timer)
   }

@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom'
 import { useState, useEffect, useRef } from 'react'
+import type { Reminder } from '../../types'
 
 const QUICK_OPTIONS = [
   { label: '15 min', ms: 15 * 60 * 1000 },
@@ -12,9 +13,15 @@ const QUICK_OPTIONS = [
 interface ReminderModalProps {
   open: boolean
   todoTitle: string
-  onConfirm: (remindAt: number, interval?: number) => void
+  onConfirm: (reminder: Reminder) => void
   onCancel: () => void
   onTitleChange?: (newTitle: string) => void
+}
+
+function toLocalDatetimeValue(ts: number): string {
+  const d = new Date(ts)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 export function ReminderModal({
@@ -29,6 +36,7 @@ export function ReminderModal({
   const [selectedMs, setSelectedMs] = useState<number | null>(null)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
+  const [deadlineValue, setDeadlineValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
 
@@ -39,6 +47,7 @@ export function ReminderModal({
       setSelectedMs(null)
       setEditingTitle(false)
       setTitleDraft('')
+      setDeadlineValue('')
     }
   }, [open])
 
@@ -65,7 +74,23 @@ export function ReminderModal({
       ms = parseFloat(customMinutes) * 60 * 1000
     }
     if (!ms || ms <= 0) return
-    onConfirm(Date.now() + ms, repeat ? ms : undefined)
+
+    const firstTrigger = Date.now() + ms
+
+    if (repeat) {
+      const deadline = deadlineValue ? new Date(deadlineValue).getTime() : undefined
+      onConfirm({
+        source: 'recurring',
+        triggers: [firstTrigger],
+        interval: ms,
+        deadline,
+      })
+    } else {
+      onConfirm({
+        source: 'manual',
+        triggers: [firstTrigger],
+      })
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -208,7 +233,7 @@ export function ReminderModal({
         </div>
 
         {/* Repeat toggle */}
-        <div className="flex items-center gap-2 mb-5">
+        <div className="flex items-center gap-2 mb-3">
           <button
             type="button"
             onClick={() => setRepeat((v) => !v)}
@@ -229,6 +254,40 @@ export function ReminderModal({
             </span>
           )}
         </div>
+
+        {/* Deadline picker (only when repeat is on) */}
+        {repeat && (
+          <div className="mb-5">
+            <label
+              className="font-mono text-[9px] tracking-[0.15em] uppercase opacity-50 block mb-1"
+              style={{ color: 'var(--rf-text-dim)' }}
+            >
+              deadline (optional)
+            </label>
+            <div className="flex items-center gap-2">
+              <span
+                className="font-mono text-[0.9rem]"
+                style={{ color: 'var(--rf-cyan)' }}
+              >
+                ›
+              </span>
+              <input
+                type="datetime-local"
+                value={deadlineValue}
+                onChange={(e) => setDeadlineValue(e.target.value)}
+                min={toLocalDatetimeValue(Date.now())}
+                className="rf-input-field flex-1"
+                style={{
+                  borderBottom: '1px solid rgba(0,245,255,0.2)',
+                  paddingBottom: 2,
+                  colorScheme: 'dark',
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {!repeat && <div className="mb-2" />}
 
         {/* Actions */}
         <div className="flex gap-2 justify-end">

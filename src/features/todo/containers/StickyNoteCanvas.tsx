@@ -2,12 +2,12 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useState, useEffect, useCallback } from 'react'
 import { useTodoStore } from '../store'
 import { useFolderStore } from '../store'
+import type { Reminder } from '../types'
 import { initStrategy as initAdapter } from '../../../lib/strategies'
 import { initAIProvider } from '../../../lib/ai'
 import { useUiStore } from '../store/uiStore'
 import { StickyNoteContainer as StickyNote } from './StickyNoteContainer'
 import { ReminderModal } from '../components/reminder/ReminderModal'
-import { ReminderMarkers } from '../components/reminder/ReminderMarkers'
 import { ReminderToast } from '../components/reminder/ReminderToast'
 import { FolderPickerModal } from '../components/folder/FolderPickerModal'
 import { FolderMarkers } from '../components/folder/FolderMarkers'
@@ -66,9 +66,9 @@ export function StickyNoteCanvas() {
     ? (todos.find((t) => t.id === reminderTarget) ?? null)
     : null
 
-  const handleReminderConfirm = (remindAt: number, interval?: number) => {
+  const handleReminderConfirm = (reminder: Reminder) => {
     if (!reminderTarget) return
-    setReminder(reminderTarget, { remindAt, interval })
+    setReminder(reminderTarget, reminder)
     setReminderTarget(null)
   }
 
@@ -313,9 +313,6 @@ export function StickyNoteCanvas() {
 
       {/* Left-edge folder markers (hidden when drawer is open) */}
       {!hasOpenFolder && <FolderMarkers />}
-
-      {/* Right-edge reminder countdown markers */}
-      <ReminderMarkers onEditReminder={setReminderTarget} />
 
       {/* Reminder setup modal */}
       <ReminderModal

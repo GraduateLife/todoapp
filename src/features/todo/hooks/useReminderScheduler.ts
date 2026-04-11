@@ -23,60 +23,71 @@ export function useReminderScheduler() {
   const [activeToast, setActiveToast] = useState<ReminderToast | null>(null)
   const clearToast = useCallback(() => setActiveToast(null), [])
 
-  // When a reminder fires, clear it from the store if it was one-shot
+  // When a reminder fires, advance to the next trigger or clear
   useEffect(() => {
     reminderScheduler.setOnFire((todoId) => {
       const todo = useTodoStore.getState().todos.find((t) => t.id === todoId)
       if (!todo?.reminder) return
 
-      // Always show in-app toast as fallback (visible even if browser notifications denied)
+      // Show in-app toast
       setActiveToast({ todoId, title: todo.title })
 
-      if (!todo.reminder.interval) {
-        // one-shot — clear the reminder
-        setReminder(todoId, null)
+      const r = todo.reminder
+      const remaining = r.triggers.slice(1) // pop the fired trigger
+
+      if (remaining.length > 0) {
+        // More triggers queued — advance
+        setReminder(todoId, { ...r, triggers: remaining })
+      } else if (r.source === 'recurring' && r.interval) {
+        // Recurring with no more triggers — generate next if before deadline
+        const next = Date.now() + r.interval
+        if (!r.deadline || next <= r.deadline) {
+          setReminder(todoId, { ...r, triggers: [next] })
+        } else {
+          // Past deadline — clear reminder
+          setReminder(todoId, null)
+        }
       } else {
-        // recurring — update next remindAt in store
-        setReminder(todoId, {
-          ...todo.reminder,
-          remindAt: Date.now() + todo.reminder.interval,
-        })
+        // One-shot or AI with no more triggers — clear
+        setReminder(todoId, null)
       }
     })
   }, [setReminder])
 
   // Sync scheduled timers with todos that have reminders
   useEffect(() => {
-    const todosWithReminders = todos.filter((t) => t.reminder && !t.archived)
+    const todosWithReminders = todos.filter(
+      (t) => t.reminder && t.reminder.triggers.length > 0 && !t.archived,
+    )
     const scheduledIds = new Set(todosWithReminders.map((t) => t.id))
 
     todosWithReminders.forEach((t) => {
       if (!t.reminder) return
-      // Only reschedule if not already running (avoid resetting timer on unrelated store updates)
+      const nextTrigger = t.reminder.triggers[0]
+      if (nextTrigger === undefined) return
+      // Only reschedule if not already running
       if (!reminderScheduler.isScheduled(t.id)) {
         reminderScheduler.schedule({
           todoId: t.id,
           title: t.title,
-          remindAt: t.reminder.remindAt,
-          interval: t.reminder.interval,
+          nextTrigger,
         })
       }
     })
 
     // Cancel timers for todos that no longer have reminders
     todos
-      .filter((t) => !t.reminder || t.archived)
+      .filter((t) => !t.reminder || t.reminder.triggers.length === 0 || t.archived)
       .forEach((t) => reminderScheduler.cancel(t.id))
 
     return () => {
-      // On unmount, cancel reminders not in current set
       todos
         .filter((t) => !scheduledIds.has(t.id))
         .forEach((t) => reminderScheduler.cancel(t.id))
     }
   }, [todos])
 
-  // Request notification permission on mount (silently — no prompt spam)
+  // Request notification permission on mount
   useEffect(() => {
     getNotificationService().requestPermission()
   }, [])

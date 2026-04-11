@@ -21,6 +21,7 @@ interface NoteDetailPanelProps {
   onUpdateSubTask: (subtaskId: string, title: string) => void
   onAddAttachment: (attachment: Attachment) => void
   onRemoveAttachment: (attachmentId: string) => void
+  onClearReminder: () => void
 }
 
 const PRIORITY_LABELS: Record<Priority, string> = {
@@ -343,6 +344,135 @@ function HoverButton({ ns, onClick, children, style }: { ns: NoteStyleEntry; onC
   )
 }
 
+// ─── Reminder helpers ──────────────────────────────────────────────────────
+
+function formatCountdown(ms: number): string {
+  const abs = Math.abs(ms)
+  const totalSec = Math.ceil(abs / 1000)
+  const d = Math.floor(totalSec / 86400)
+  const h = Math.floor((totalSec % 86400) / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  if (d > 0) return `${d}d ${h}h ${m}m`
+  if (h > 0) return `${h}h ${m}m`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  manual: 'one-shot',
+  recurring: 'recurring',
+  ai: 'ai',
+}
+
+function useNow(intervalMs = 1000) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs)
+    return () => clearInterval(id)
+  }, [intervalMs])
+  return now
+}
+
+function ReminderSection({ todo, ns, onClear }: { todo: Todo; ns: NoteStyleEntry; onClear: () => void }) {
+  const now = useNow()
+  const r = todo.reminder
+
+  if (!r || r.triggers.length === 0) {
+    return (
+      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: ns.dim, opacity: 0.5, letterSpacing: '0.06em' }}>
+        no reminder set
+      </span>
+    )
+  }
+
+  const next = r.triggers[0]
+  const delta = next - now
+  const isOverdue = delta <= 0
+
+  const typeLabel = SOURCE_LABELS[r.source] ?? r.source
+  const intervalLabel = r.source === 'recurring' && r.interval
+    ? ` ↻ ${formatCountdown(r.interval)}`
+    : ''
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Type badge */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span
+          style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: 10,
+            letterSpacing: '0.12em',
+            color: ns.border,
+            border: `1px solid ${ns.border}`,
+            borderRadius: 2,
+            padding: '2px 6px',
+            textTransform: 'uppercase',
+          }}
+        >
+          [{typeLabel}{intervalLabel}]
+        </span>
+        <HoverButton ns={ns} onClick={onClear}>[clear]</HoverButton>
+      </div>
+
+      {/* Next trigger countdown */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, letterSpacing: '0.12em', color: ns.dim, width: 70, flexShrink: 0 }}>
+          next
+        </span>
+        <span style={{
+          fontFamily: "'Space Mono', monospace",
+          fontSize: 11,
+          color: isOverdue ? '#ff3030' : ns.text,
+          opacity: 0.85,
+          letterSpacing: '0.06em',
+          textShadow: isOverdue ? '0 0 6px rgba(255,48,48,0.5)' : 'none',
+        }}>
+          {isOverdue ? `overdue by ${formatCountdown(delta)}` : `→ in ${formatCountdown(delta)}`}
+        </span>
+      </div>
+
+      {/* Deadline (if set) */}
+      {r.deadline && (
+        <TimelineRow
+          label="deadline"
+          value={
+            new Date(r.deadline).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
+            + ' ' +
+            new Date(r.deadline).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+          }
+          ns={ns}
+        />
+      )}
+
+      {/* All upcoming triggers (if more than 1) */}
+      {r.triggers.length > 1 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, color: ns.dim, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            upcoming ({r.triggers.length})
+          </span>
+          <div style={{ maxHeight: 80, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }} className="rf-scrollbar">
+            {r.triggers.map((ts, i) => (
+              <span key={i} style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 10,
+                color: ts <= now ? '#ff3030' : ns.text,
+                opacity: 0.7,
+                letterSpacing: '0.06em',
+              }}>
+                {i === 0 ? '→ ' : '  '}
+                {new Date(ts).toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}
+                {' '}({ts <= now ? 'overdue' : `in ${formatCountdown(ts - now)}`})
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function NoteDetailPanel({
   todo,
   ns,
@@ -358,6 +488,7 @@ export function NoteDetailPanel({
   onUpdateSubTask,
   onAddAttachment,
   onRemoveAttachment,
+  onClearReminder,
 }: NoteDetailPanelProps) {
   const [desc, setDesc] = useState(todo.description ?? '')
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -934,6 +1065,12 @@ export function NoteDetailPanel({
                     )}
                   </section>
 
+                  {/* ── Reminder ──────────────────────────────────── */}
+                  <section>
+                    <SectionLabel ns={ns}>// reminder</SectionLabel>
+                    <ReminderSection todo={todo} ns={ns} onClear={onClearReminder} />
+                  </section>
+
                   {/* ── Timeline ─────────────────────────────────── */}
                   <section>
                     <SectionLabel ns={ns}>// timeline</SectionLabel>
@@ -943,13 +1080,6 @@ export function NoteDetailPanel({
                         + ' ' +
                         new Date(todo.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
                       } ns={ns} />
-                      <TimelineRow
-                        label="reminder"
-                        value={todo.reminder ? new Date(todo.reminder.remindAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) : '——'}
-                        ns={ns}
-                        dimValue={!todo.reminder}
-                      />
-                      <TimelineRow label="due" value="——" ns={ns} dimValue />
                     </div>
                   </section>
 

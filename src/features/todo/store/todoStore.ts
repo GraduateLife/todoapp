@@ -156,7 +156,30 @@ function createTodo(
 export const useTodoStore = create<TodoState>()((set, get) => ({
   todos: [],
 
-  initialize: (todos) => set({ todos }),
+  initialize: (todos) => {
+    // Migrate legacy reminder format { remindAt, interval } → trigger-array model
+    const migrated = todos.map((t) => {
+      if (!t.reminder) return t
+      const r = t.reminder as unknown as Record<string, unknown>
+      // Already new format — has `triggers` array
+      if (Array.isArray(r.triggers)) return t
+      // Legacy format: { remindAt: number, interval?: number }
+      if (typeof r.remindAt === 'number') {
+        const remindAt = r.remindAt as number
+        const interval = typeof r.interval === 'number' ? (r.interval as number) : undefined
+        return {
+          ...t,
+          reminder: {
+            source: interval ? 'recurring' as const : 'manual' as const,
+            triggers: [remindAt],
+            ...(interval ? { interval } : {}),
+          },
+        }
+      }
+      return t
+    })
+    set({ todos: migrated })
+  },
 
   addTodo: (title, options = {}) => {
     const { attachments = [], priority = 'normal', position } = options

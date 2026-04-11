@@ -1,5 +1,5 @@
 import { useMotionValue } from 'framer-motion'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { imeGuard } from '@/lib/utils'
 import { useDragZones } from '../hooks/useDragZones'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
@@ -77,11 +77,18 @@ export function StickyNoteContainer({
   const rotation = todo.rotation ?? 0
   const theme = useTheme()
 
-  // No reminder system yet — every card renders with the baseline visual.
-  // When the reminder system lands, compute this from `todo.reminder` and the
-  // current time: 'active' while a pending reminder is set, 'overdue' after
-  // its trigger time has passed without acknowledgement.
-  const reminderState: ReminderVisualState = 'none'
+  // Tick every 30s so glow reacts to overdue transitions without perf cost
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const reminderState: ReminderVisualState = useMemo(() => {
+    if (!todo.reminder || todo.reminder.triggers.length === 0) return 'none'
+    const next = todo.reminder.triggers[0]
+    return next <= now ? 'overdue' : 'active'
+  }, [todo.reminder, now])
 
   // ─── Motion values ────────────────────────────────────────────────────────
   const x = useMotionValue(todo.position?.x ?? 120)
@@ -125,6 +132,7 @@ export function StickyNoteContainer({
   const setPriority = useTodoStore((s) => s.setPriority)
   const addAttachment = useTodoStore((s) => s.addAttachment)
   const removeAttachment = useTodoStore((s) => s.removeAttachment)
+  const setReminder = useTodoStore((s) => s.setReminder)
 
   const saveEdit = useCallback(() => {
     const trimmed = editValue.trim()
@@ -275,6 +283,7 @@ export function StickyNoteContainer({
       onUpdateSubTask={(subtaskId, title) => onUpdateSubTask(todo.id, subtaskId, title)}
       onAddAttachment={(att: Attachment) => addAttachment(todo.id, att)}
       onRemoveAttachment={(attId) => removeAttachment(todo.id, attId)}
+      onClearReminder={() => setReminder(todo.id, null)}
     />
     </>
   )

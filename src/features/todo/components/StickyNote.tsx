@@ -1,5 +1,5 @@
 import { motion, animate } from 'framer-motion'
-import { useMemo, useEffect, useRef, useState } from 'react'
+import { useMemo, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { MotionValue } from 'framer-motion'
 import { SubTaskList } from './note/SubTaskList'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
@@ -168,6 +168,48 @@ function StackBadge({
         · {stackName}
       </span>
     </button>
+  )
+}
+
+// ─── Compact reminder badge for the card footer ─────────────────────────────
+
+function formatCompactDelta(ms: number): string {
+  const abs = Math.abs(ms)
+  if (abs < 60_000) return `${Math.ceil(abs / 1000)}s`
+  if (abs < 3_600_000) return `${Math.ceil(abs / 60_000)}m`
+  if (abs < 86_400_000) return `${Math.ceil(abs / 3_600_000)}h`
+  return `${Math.ceil(abs / 86_400_000)}d`
+}
+
+function ReminderBadge({ todo, ns }: { todo: Todo; ns: NoteStyles }): ReactNode {
+  const r = todo.reminder
+  if (!r || r.triggers.length === 0) return null
+
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 10_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const next = r.triggers[0]
+  const delta = next - now
+  const isOverdue = delta <= 0
+  const isUrgent = !isOverdue && delta < 3_600_000 // < 1h
+  const prefix = r.source === 'recurring' ? '↻' : isOverdue ? '!' : '→'
+  const label = isOverdue
+    ? `${formatCompactDelta(delta)} ago`
+    : formatCompactDelta(delta)
+
+  const color = isOverdue ? '#ff3030' : ns.border
+  const opacity = isOverdue || isUrgent ? 1 : 0.65
+
+  return (
+    <span
+      className={`font-mono text-[9px] tracking-[0.06em] ${isOverdue || isUrgent ? 'animate-pulse' : ''}`}
+      style={{ color, opacity, textShadow: isOverdue ? `0 0 6px ${color}` : 'none' }}
+    >
+      {prefix} {label}
+    </span>
   )
 }
 
@@ -460,6 +502,7 @@ export function StickyNote({
                 year: '2-digit',
               })}
             </span>
+            <ReminderBadge todo={todo} ns={ns} />
           </div>
 
           {/* Scanline overlay */}

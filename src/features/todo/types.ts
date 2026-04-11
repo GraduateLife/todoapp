@@ -22,9 +22,16 @@ export interface SubTask {
   completed: boolean
 }
 
+export type ReminderSource = 'manual' | 'recurring' | 'ai'
+
 export interface Reminder {
-  remindAt: number // next trigger timestamp (ms)
-  interval?: number // ms — if set, recurring; if absent, one-shot
+  source: ReminderSource
+  triggers: number[]       // sorted ascending — upcoming fire timestamps
+  // Recurring config (source === 'recurring')
+  interval?: number        // ms between fires
+  deadline?: number        // stop generating triggers after this timestamp; doubles as "due date"
+  // AI placeholder (source === 'ai')
+  aiConfig?: Record<string, unknown>
 }
 
 export interface Todo {
