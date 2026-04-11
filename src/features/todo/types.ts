@@ -40,6 +40,7 @@ export interface Todo {
   description?: string
   completed: boolean
   createdAt: number // Date.now()
+  updatedAt: number // Date.now() — last meaningful mutation
   attachments: Attachment[]
   position: { x: number; y: number }
   zIndex: number

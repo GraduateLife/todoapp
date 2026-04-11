@@ -284,6 +284,7 @@ export function StickyNoteContainer({
       onAddAttachment={(att: Attachment) => addAttachment(todo.id, att)}
       onRemoveAttachment={(attId) => removeAttachment(todo.id, attId)}
       onClearReminder={() => setReminder(todo.id, null)}
+      onSetReminder={(r) => setReminder(todo.id, r)}
     />
     </>
   )

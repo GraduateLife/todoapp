@@ -139,6 +139,7 @@ function createTodo(
     title: title.slice(0, TITLE_MAX_LEN),
     completed: false,
     createdAt: Date.now(),
+    updatedAt: Date.now(),
     attachments,
     position: randomPosition(),
     zIndex: 10,
@@ -157,18 +158,20 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
   todos: [],
 
   initialize: (todos) => {
-    // Migrate legacy reminder format { remindAt, interval } → trigger-array model
+    // Migrate: add updatedAt if missing, and convert legacy reminder format
     const migrated = todos.map((t) => {
-      if (!t.reminder) return t
-      const r = t.reminder as unknown as Record<string, unknown>
+      // Ensure updatedAt exists (backfill from createdAt)
+      const withUpdatedAt = t.updatedAt ? t : { ...t, updatedAt: t.createdAt }
+      if (!withUpdatedAt.reminder) return withUpdatedAt
+      const r = withUpdatedAt.reminder as unknown as Record<string, unknown>
       // Already new format — has `triggers` array
-      if (Array.isArray(r.triggers)) return t
+      if (Array.isArray(r.triggers)) return withUpdatedAt
       // Legacy format: { remindAt: number, interval?: number }
       if (typeof r.remindAt === 'number') {
         const remindAt = r.remindAt as number
         const interval = typeof r.interval === 'number' ? (r.interval as number) : undefined
         return {
-          ...t,
+          ...withUpdatedAt,
           reminder: {
             source: interval ? 'recurring' as const : 'manual' as const,
             triggers: [remindAt],
@@ -176,7 +179,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
           },
         }
       }
-      return t
+      return withUpdatedAt
     })
     set({ todos: migrated })
   },
@@ -221,6 +224,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
         return {
           ...t,
           completed: completing,
+          updatedAt: Date.now(),
           subtasks: completing
             ? t.subtasks
             : t.subtasks.map((s) => ({ ...s, completed: false })),
@@ -233,7 +237,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
 
   updateTitle: (id, title) => {
     set((state) => ({
-      todos: state.todos.map((t) => (t.id === id ? { ...t, title } : t)),
+      todos: state.todos.map((t) => (t.id === id ? { ...t, title, updatedAt: Date.now() } : t)),
     }))
     const updated = get().todos.find((t) => t.id === id)
     if (updated) getAdapter().saveTodo(updated).catch(console.error)
@@ -241,7 +245,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
 
   updateDescription: (id, description) => {
     set((state) => ({
-      todos: state.todos.map((t) => (t.id === id ? { ...t, description } : t)),
+      todos: state.todos.map((t) => (t.id === id ? { ...t, description, updatedAt: Date.now() } : t)),
     }))
     const updated = get().todos.find((t) => t.id === id)
     if (updated) getAdapter().saveTodo(updated).catch(console.error)
@@ -306,7 +310,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
     const color = priorityToColor(priority)
     set((state) => ({
       todos: state.todos.map((t) =>
-        t.id === id ? { ...t, priority, color } : t,
+        t.id === id ? { ...t, priority, color, updatedAt: Date.now() } : t,
       ),
     }))
     const updated = get().todos.find((t) => t.id === id)
@@ -320,6 +324,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
           ? {
               ...t,
               completed: false,
+              updatedAt: Date.now(),
               subtasks: [
                 ...t.subtasks,
                 { id: crypto.randomUUID(), title, completed: false },
@@ -342,7 +347,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
         const allDone =
           updatedSubtasks.length > 0 &&
           updatedSubtasks.every((s) => s.completed)
-        return { ...t, subtasks: updatedSubtasks, completed: allDone }
+        return { ...t, subtasks: updatedSubtasks, completed: allDone, updatedAt: Date.now() }
       }),
     }))
     const updated = get().todos.find((t) => t.id === todoId)
@@ -357,7 +362,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
         const allDone =
           updatedSubtasks.length > 0 &&
           updatedSubtasks.every((s) => s.completed)
-        return { ...t, subtasks: updatedSubtasks, completed: allDone }
+        return { ...t, subtasks: updatedSubtasks, completed: allDone, updatedAt: Date.now() }
       }),
     }))
     const updated = get().todos.find((t) => t.id === todoId)
@@ -391,7 +396,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
 
   setReminder: (id, reminder) => {
     set((state) => ({
-      todos: state.todos.map((t) => (t.id === id ? { ...t, reminder } : t)),
+      todos: state.todos.map((t) => (t.id === id ? { ...t, reminder, updatedAt: Date.now() } : t)),
     }))
     const updated = get().todos.find((t) => t.id === id)
     if (updated) getAdapter().saveTodo(updated).catch(console.error)
@@ -400,7 +405,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
   archiveTodo: (id) => {
     set((state) => ({
       todos: state.todos.map((t) =>
-        t.id === id ? { ...t, archived: true, folderId: null } : t,
+        t.id === id ? { ...t, archived: true, folderId: null, updatedAt: Date.now() } : t,
       ),
     }))
     const updated = get().todos.find((t) => t.id === id)
@@ -410,7 +415,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
   unarchiveTodo: (id) => {
     set((state) => ({
       todos: state.todos.map((t) =>
-        t.id === id ? { ...t, archived: false } : t,
+        t.id === id ? { ...t, archived: false, updatedAt: Date.now() } : t,
       ),
     }))
     const updated = get().todos.find((t) => t.id === id)

@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { imeGuard } from '@/lib/utils'
-import type { Todo, Attachment, Priority } from '../../types'
+import type { Todo, Attachment, Priority, Reminder } from '../../types'
 import type { NoteStyleEntry } from '../../constants/noteColors'
 import { USER_PRIORITIES } from '../../constants/priority'
 
@@ -22,6 +22,7 @@ interface NoteDetailPanelProps {
   onAddAttachment: (attachment: Attachment) => void
   onRemoveAttachment: (attachmentId: string) => void
   onClearReminder: () => void
+  onSetReminder: (reminder: Reminder) => void
 }
 
 const PRIORITY_LABELS: Record<Priority, string> = {
@@ -374,18 +375,165 @@ function useNow(intervalMs = 1000) {
   return now
 }
 
-function ReminderSection({ todo, ns, onClear }: { todo: Todo; ns: NoteStyleEntry; onClear: () => void }) {
+/**
+ * Parse a compact duration string like "15m", "1h", "3d", "1h30m", "2d12h".
+ * Returns milliseconds, or null if invalid.
+ */
+function parseDuration(input: string): number | null {
+  const trimmed = input.trim().toLowerCase()
+  if (!trimmed) return null
+  let total = 0
+  let matched = false
+  const regex = /(\d+(?:\.\d+)?)\s*(d|h|m|s)/g
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(trimmed)) !== null) {
+    matched = true
+    const val = parseFloat(match[1])
+    switch (match[2]) {
+      case 'd': total += val * 86_400_000; break
+      case 'h': total += val * 3_600_000; break
+      case 'm': total += val * 60_000; break
+      case 's': total += val * 1_000; break
+    }
+  }
+  // Also accept plain number as minutes
+  if (!matched && /^\d+(\.\d+)?$/.test(trimmed)) {
+    total = parseFloat(trimmed) * 60_000
+    matched = true
+  }
+  return matched && total > 0 ? total : null
+}
+
+function ReminderSection({ todo, ns, onClear, onSet }: { todo: Todo; ns: NoteStyleEntry; onClear: () => void; onSet: (r: Reminder) => void }) {
   const now = useNow()
   const r = todo.reminder
 
+  // ── Inline creation state ────────────────────────────────────────────────
+  const [mode, setMode] = useState<'oneshot' | 'recurring' | null>(null)
+  const [durationInput, setDurationInput] = useState('')
+  const [deadlineInput, setDeadlineInput] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (mode) inputRef.current?.focus()
+  }, [mode])
+
+  const handleSubmit = () => {
+    const ms = parseDuration(durationInput)
+    if (!ms) return
+    if (mode === 'recurring') {
+      const deadline = deadlineInput ? new Date(deadlineInput).getTime() : undefined
+      onSet({ source: 'recurring', triggers: [Date.now() + ms], interval: ms, deadline })
+    } else {
+      onSet({ source: 'manual', triggers: [Date.now() + ms] })
+    }
+    setMode(null)
+    setDurationInput('')
+    setDeadlineInput('')
+  }
+
+  const handleCancel = () => {
+    setMode(null)
+    setDurationInput('')
+    setDeadlineInput('')
+  }
+
+  const handleKeyDown = imeGuard((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSubmit()
+    if (e.key === 'Escape') handleCancel()
+  })
+
+  // ── No reminder → show inline creation ───────────────────────────────────
   if (!r || r.triggers.length === 0) {
+    const modeStyle = (active: boolean) => ({
+      background: 'transparent',
+      border: `1px solid ${active ? ns.border : ns.dim}`,
+      color: active ? ns.border : ns.dim,
+      fontFamily: "'Space Mono', monospace" as const,
+      fontSize: 12,
+      padding: '3px 8px',
+      cursor: 'pointer' as const,
+      borderRadius: 2,
+      boxShadow: active ? `0 0 8px ${ns.glow}` : 'none',
+      transition: 'all 0.15s',
+    })
+
     return (
-      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: ns.dim, opacity: 0.5, letterSpacing: '0.06em' }}>
-        no reminder set
-      </span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Mode selectors */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button style={modeStyle(mode === 'oneshot')} onClick={() => setMode(mode === 'oneshot' ? null : 'oneshot')}>→</button>
+          <button style={modeStyle(mode === 'recurring')} onClick={() => setMode(mode === 'recurring' ? null : 'recurring')}>↻</button>
+          {!mode && (
+            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: ns.dim, opacity: 0.4, letterSpacing: '0.06em' }}>
+              one-shot / recurring
+            </span>
+          )}
+        </div>
+
+        {/* Inline input (appears when mode selected) */}
+        {mode && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: ns.dim, flexShrink: 0 }}>
+                {mode === 'oneshot' ? '→' : '↻'}
+              </span>
+              <input
+                ref={inputRef}
+                type="text"
+                value={durationInput}
+                onChange={(e) => setDurationInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="15m, 1h, 3d..."
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  color: ns.text,
+                  border: 'none',
+                  borderBottom: `1px solid ${ns.border}`,
+                  outline: 'none',
+                  fontFamily: "'Space Mono', monospace",
+                  fontSize: 12,
+                  caretColor: ns.border,
+                  letterSpacing: '0.06em',
+                }}
+              />
+            </div>
+            {mode === 'recurring' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: ns.dim, flexShrink: 0 }}>
+                  until
+                </span>
+                <input
+                  type="datetime-local"
+                  value={deadlineInput}
+                  onChange={(e) => setDeadlineInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    color: ns.text,
+                    border: 'none',
+                    borderBottom: `1px solid ${ns.border}`,
+                    outline: 'none',
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: 11,
+                    caretColor: ns.border,
+                    colorScheme: 'dark',
+                  }}
+                />
+              </div>
+            )}
+            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, color: ns.dim, opacity: 0.4 }}>
+              enter to confirm · esc to cancel
+            </span>
+          </div>
+        )}
+      </div>
     )
   }
 
+  // ── Has reminder → show status ───────────────────────────────────────────
   const next = r.triggers[0]
   const delta = next - now
   const isOverdue = delta <= 0
@@ -489,6 +637,7 @@ export function NoteDetailPanel({
   onAddAttachment,
   onRemoveAttachment,
   onClearReminder,
+  onSetReminder,
 }: NoteDetailPanelProps) {
   const [desc, setDesc] = useState(todo.description ?? '')
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -1068,7 +1217,7 @@ export function NoteDetailPanel({
                   {/* ── Reminder ──────────────────────────────────── */}
                   <section>
                     <SectionLabel ns={ns}>// reminder</SectionLabel>
-                    <ReminderSection todo={todo} ns={ns} onClear={onClearReminder} />
+                    <ReminderSection todo={todo} ns={ns} onClear={onClearReminder} onSet={onSetReminder} />
                   </section>
 
                   {/* ── Timeline ─────────────────────────────────── */}
@@ -1080,6 +1229,20 @@ export function NoteDetailPanel({
                         + ' ' +
                         new Date(todo.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
                       } ns={ns} />
+                      <TimelineRow label="updated" value={
+                        todo.updatedAt && todo.updatedAt !== todo.createdAt
+                          ? new Date(todo.updatedAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
+                            + ' ' +
+                            new Date(todo.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+                          : '——'
+                      } ns={ns} dimValue={!todo.updatedAt || todo.updatedAt === todo.createdAt} />
+                      <TimelineRow label="due" value={
+                        todo.reminder?.deadline
+                          ? new Date(todo.reminder.deadline).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
+                            + ' ' +
+                            new Date(todo.reminder.deadline).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+                          : '——'
+                      } ns={ns} dimValue={!todo.reminder?.deadline} />
                     </div>
                   </section>
 
