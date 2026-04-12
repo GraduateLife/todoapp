@@ -38,11 +38,11 @@ export const GLOW = {
     alpha: 0.55,
     opacity: 1.0,
   },
-  /** Reminder has fired and the user hasn't acknowledged it — dim. */
+  /** Reminder has fired and the user hasn't acknowledged it — dim glow, flicker via CSS. */
   overdue: {
     size: 10,
     alpha: 0.18,
-    opacity: 0.8,
+    opacity: 1.0,
   },
 } as const satisfies Record<ReminderVisualState, { size: number; alpha: number; opacity: number }>
 

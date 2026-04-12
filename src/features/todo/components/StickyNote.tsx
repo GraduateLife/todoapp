@@ -205,7 +205,7 @@ function ReminderBadge({ todo, ns }: { todo: Todo; ns: NoteStyles }): ReactNode 
 
   return (
     <span
-      className={`font-mono text-[9px] tracking-[0.06em] ${isOverdue || isUrgent ? 'animate-pulse' : ''}`}
+      className="font-mono text-[9px] tracking-[0.06em]"
       style={{ color, opacity, textShadow: isOverdue ? `0 0 6px ${color}` : 'none' }}
     >
       {prefix} {label}
@@ -344,7 +344,13 @@ export function StickyNote({
             position: 'relative',
             zIndex: 1,
           }}
-          className="rounded-[3px] p-4 overflow-hidden"
+          className={`rounded-[3px] p-4 overflow-hidden ${
+            reminderState === 'overdue'
+              ? 'rf-reminder-flicker-urgent'
+              : reminderState === 'active'
+                ? 'rf-reminder-flicker'
+                : ''
+          }`}
         >
           {/* Stack-target ring */}
           {isStackTarget && (
