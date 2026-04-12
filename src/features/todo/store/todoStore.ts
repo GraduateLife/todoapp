@@ -169,8 +169,8 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
       if (Array.isArray(r.triggers)) return withUpdatedAt
       // Legacy format: { remindAt: number, interval?: number }
       if (typeof r.remindAt === 'number') {
-        const remindAt = r.remindAt as number
-        const interval = typeof r.interval === 'number' ? (r.interval as number) : undefined
+        const remindAt = r.remindAt
+        const interval = typeof r.interval === 'number' ? r.interval : undefined
         return {
           ...withUpdatedAt,
           reminder: {
@@ -452,9 +452,9 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
     const root = todos.find((t) => t.id === rootId)
     const child = todos.find((t) => t.id === childId)
     if (!root || !child) return
-    const childOwnStack = child.stackedIds ?? []
+    const childOwnStack = child.stackedIds
     const allChildIds = [childId, ...childOwnStack]
-    const currentCount = root.stackedIds?.length ?? 0
+    const currentCount = root.stackedIds.length
     if (currentCount + allChildIds.length > MAX_STACK_SIZE) return
 
     set((state) => ({
@@ -462,7 +462,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
         if (t.id === rootId)
           return {
             ...t,
-            stackedIds: [...(t.stackedIds ?? []), ...allChildIds],
+            stackedIds: [...t.stackedIds, ...allChildIds],
             stackName: t.stackName ?? randomStackName(),
           }
         if (t.id === childId) return { ...t, stackedIds: [] }
@@ -485,7 +485,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
         if (t.id === rootId)
           return {
             ...t,
-            stackedIds: (t.stackedIds ?? []).filter((id) => id !== childId),
+            stackedIds: t.stackedIds.filter((id) => id !== childId),
           }
         if (t.id === childId) return { ...t, position: newPos }
         return t
@@ -500,7 +500,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
   reorderStack: (rootId, fromIdx, toIdx) => {
     const root = get().todos.find((t) => t.id === rootId)
     if (!root) return
-    const ids = [...(root.stackedIds ?? [])]
+    const ids = [...root.stackedIds]
     if (
       fromIdx < 0 ||
       fromIdx >= ids.length ||
@@ -533,7 +533,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
   disbandStack: (rootId) => {
     const root = get().todos.find((t) => t.id === rootId)
     if (!root) return
-    const stackedIds = root.stackedIds ?? []
+    const stackedIds = root.stackedIds
     const affectedIds = [rootId, ...stackedIds]
 
     set((state) => ({

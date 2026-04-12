@@ -65,7 +65,6 @@ export function useReminderScheduler() {
     todosWithReminders.forEach((t) => {
       if (!t.reminder) return
       const nextTrigger = t.reminder.triggers[0]
-      if (nextTrigger === undefined) return
       // Only reschedule if not already running
       if (!reminderScheduler.isScheduled(t.id)) {
         reminderScheduler.schedule({

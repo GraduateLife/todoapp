@@ -16,9 +16,10 @@ import {
 } from '../constants/glow'
 import { TITLE_MAX_LEN } from '../components/input-bar'
 import { useTheme } from '../hooks/useTheme'
-import { StickyNote, type ReminderVisualState } from '../components/StickyNote'
+import { StickyNote } from '../components/StickyNote'
 import { NoteDetailPanel } from '../components/note/NoteDetailPanel'
 import { useTodoStore } from '../store/todoStore'
+import type { ReminderVisualState } from '../components/StickyNote'
 import type { Todo, NoteColor, Priority, Attachment } from '../types'
 
 interface StickyNoteContainerProps {
@@ -70,12 +71,12 @@ export function StickyNoteContainer({
   onToggleExpand,
   onDisbandStack,
 }: StickyNoteContainerProps) {
-  const priority: Priority = todo.priority ?? 'normal'
+  const priority: Priority = todo.priority
   // Color is always derived from priority. We tolerate a stale `todo.color`
   // in memory (e.g. legacy data from before the refactor) by preferring the
   // derived value, so cards can't render mismatched hue+priority.
   const color: NoteColor = priorityToColor(priority)
-  const rotation = todo.rotation ?? 0
+  const rotation = todo.rotation
   const theme = useTheme()
 
   // Tick every 30s so glow reacts to overdue transitions without perf cost
@@ -105,8 +106,8 @@ export function StickyNoteContainer({
   }, [todo.reminder, now])
 
   // ─── Motion values ────────────────────────────────────────────────────────
-  const x = useMotionValue(todo.position?.x ?? 120)
-  const y = useMotionValue(todo.position?.y ?? 120)
+  const x = useMotionValue(todo.position.x)
+  const y = useMotionValue(todo.position.y)
 
   // ─── Drag zone logic ──────────────────────────────────────────────────────
   const {
@@ -298,7 +299,7 @@ export function StickyNoteContainer({
       onAddAttachment={(att: Attachment) => addAttachment(todo.id, att)}
       onRemoveAttachment={(attId) => removeAttachment(todo.id, attId)}
       onClearReminder={() => setReminder(todo.id, null)}
-      onSetReminder={(r) => setReminder(todo.id, r)}
+      onSetReminder={(reminder) => setReminder(todo.id, reminder)}
     />
     </>
   )

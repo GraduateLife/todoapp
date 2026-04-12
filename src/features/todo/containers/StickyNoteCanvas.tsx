@@ -1,7 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState, useEffect, useCallback } from 'react'
-import { useTodoStore } from '../store'
-import { useFolderStore } from '../store'
+import { useTodoStore, useFolderStore } from '../store'
 import type { Reminder } from '../types'
 import { initStrategy as initAdapter } from '../../../lib/strategies'
 import { initAIProvider } from '../../../lib/ai'
@@ -49,14 +48,13 @@ export function StickyNoteCanvas() {
   const initializeFolders = useFolderStore((s) => s.initialize)
   useEffect(() => {
     initAdapter()
-      .then(({ todos, folders }) => {
-        initializeTodos(todos)
+      .then(({ todos: loadedTodos, folders }) => {
+        initializeTodos(loadedTodos)
         initializeFolders(folders)
       })
       .catch(console.error)
     initAIProvider().catch(console.error)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [initializeFolders, initializeTodos])
 
   // Boot reminder scheduler (idempotent)
   const { activeToast, clearToast } = useReminderScheduler()
@@ -108,7 +106,7 @@ export function StickyNoteCanvas() {
   const [stackTargetId, setStackTargetId] = useState<string | null>(null)
 
   // Build a set of all IDs that are "inside" a stack (not the root)
-  const stackedSet = new Set(todos.flatMap((t) => t.stackedIds ?? []))
+  const stackedSet = new Set(todos.flatMap((t) => t.stackedIds))
 
   // Main canvas: non-archived, not in any folder, not stacked inside another
   const visibleTodos = todos.filter(
@@ -120,7 +118,7 @@ export function StickyNoteCanvas() {
     const dragged = todos.find((t) => t.id === draggedId)
     if (!dragged) return
     if (draggedId === targetId) return
-    if ((dragged.stackedIds ?? []).includes(targetId)) return
+    if (dragged.stackedIds.includes(targetId)) return
     stackOnto(targetId, draggedId)
     // If the dragged note was the expanded stack, close expansion
     if (expandedStackId === draggedId) setExpandedStack(null)
@@ -130,7 +128,7 @@ export function StickyNoteCanvas() {
     unstackTodo(rootId, childId)
     // Auto-collapse if stack is now empty
     const root = todos.find((t) => t.id === rootId)
-    if (root && (root.stackedIds ?? []).length <= 1) {
+    if (root && root.stackedIds.length <= 1) {
       setExpandedStack(null)
     }
   }
@@ -145,7 +143,7 @@ export function StickyNoteCanvas() {
     ? (visibleTodos.find((t) => t.id === expandedStackId) ?? null)
     : null
   const fanStackedNotes: typeof todos = fanRootTodo
-    ? ((fanRootTodo.stackedIds ?? [])
+    ? (fanRootTodo.stackedIds
         .map((id) => todos.find((t) => t.id === id))
         .filter(Boolean) as typeof todos)
     : []
@@ -231,7 +229,7 @@ export function StickyNoteCanvas() {
       <AnimatePresence>
         {visibleTodos.map((todo) => {
           // Resolve stacked note objects
-          const stackedNotes = (todo.stackedIds ?? [])
+          const stackedNotes = todo.stackedIds
             .map((id) => todos.find((t) => t.id === id))
             .filter(Boolean) as typeof todos
 
