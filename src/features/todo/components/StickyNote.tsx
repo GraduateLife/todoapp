@@ -1,6 +1,7 @@
 import { motion, animate } from 'framer-motion'
-import { useMemo, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import type { MotionValue } from 'framer-motion'
+import type { ReactNode } from 'react'
 import { SubTaskList } from './note/SubTaskList'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
 import { useTheme } from '../hooks/useTheme'
@@ -311,7 +312,7 @@ export function StickyNote({
           stackCount > 0 &&
           Array.from({ length: stackCount }, (_, i) => {
             const depth = stackCount - i
-            const ghostNote = stackedNotes[i]
+            const ghostNote = stackedNotes.at(i)
             const ghostNs = palette[ghostNote?.color ?? 'cyan']
             const offset = depth * 3
             return (
@@ -392,7 +393,7 @@ export function StickyNote({
                         idea: 'idea',
                         system: 'system',
                       } as const
-                    )[todo.priority ?? 'normal']}
+                    )[todo.priority]}
               </span>
             </div>
             <span
