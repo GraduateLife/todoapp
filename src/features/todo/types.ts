@@ -27,6 +27,7 @@ export type ReminderSource = 'manual' | 'recurring' | 'ai'
 export interface Reminder {
   source: ReminderSource
   triggers: number[]       // sorted ascending — upcoming fire timestamps
+  firedAt?: number         // timestamp when last trigger fired; cleared on user dismiss
   // Recurring config (source === 'recurring')
   interval?: number        // ms between fires
   deadline?: number        // stop generating triggers after this timestamp; doubles as "due date"

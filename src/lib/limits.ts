@@ -19,11 +19,16 @@ export const MAX_FILE_SIZE = 2 * 1024 * 1024
 export const MAX_FILES_PER_TODO = 5
 
 /** Allowed MIME type prefixes for file uploads */
-export const ALLOWED_FILE_TYPES: readonly string[] = [
-  'image/',
-  'audio/',
-]
+export const ALLOWED_FILE_TYPES: readonly string[] = ['image/', 'audio/']
 
 // ── Structure ───────────────────────────────────────────────────────────────
 /** Max todos in a stack */
 export const MAX_STACK_SIZE = 5
+
+// ── Reminders ──────────────────────────────────────────────────────────────
+/** How long after firing the reminder stays in "overdue" (urgent flicker) before
+ *  transitioning to "stale" (dim flicker). Also used as auto-dismiss for toast. */
+
+const hourAsMs = 60 * 60 * 1000
+const minuteAsMs = 60 * 1000
+export const REMINDER_OVERDUE_MS = minuteAsMs

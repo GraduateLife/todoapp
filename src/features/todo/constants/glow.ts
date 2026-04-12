@@ -38,10 +38,16 @@ export const GLOW = {
     alpha: 0.55,
     opacity: 1.0,
   },
-  /** Reminder has fired and the user hasn't acknowledged it — dim glow, flicker via CSS. */
+  /** Reminder just fired, user hasn't dismissed — urgent flicker. */
   overdue: {
     size: 10,
     alpha: 0.18,
+    opacity: 1.0,
+  },
+  /** Fired a while ago, fading — dim weak flicker. */
+  stale: {
+    size: 6,
+    alpha: 0.10,
     opacity: 1.0,
   },
 } as const satisfies Record<ReminderVisualState, { size: number; alpha: number; opacity: number }>

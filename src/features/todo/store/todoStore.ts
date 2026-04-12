@@ -56,6 +56,7 @@ interface TodoState {
   setFolder: (id: string, folderId: string | null) => void
   // Reminder
   setReminder: (id: string, reminder: Reminder | null) => void
+  dismissReminder: (id: string) => void
   // Archive
   archiveTodo: (id: string) => void
   unarchiveTodo: (id: string) => void
@@ -398,6 +399,29 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
     set((state) => ({
       todos: state.todos.map((t) => (t.id === id ? { ...t, reminder, updatedAt: Date.now() } : t)),
     }))
+    const updated = get().todos.find((t) => t.id === id)
+    if (updated) getAdapter().saveTodo(updated).catch(console.error)
+  },
+
+  dismissReminder: (id) => {
+    const todo = get().todos.find((t) => t.id === id)
+    if (!todo?.reminder) return
+    const r = todo.reminder
+    if (r.triggers.length > 0) {
+      // Still has future triggers — just clear firedAt
+      set((state) => ({
+        todos: state.todos.map((t) =>
+          t.id === id ? { ...t, reminder: { ...r, firedAt: undefined }, updatedAt: Date.now() } : t,
+        ),
+      }))
+    } else {
+      // No more triggers — fully clear the reminder
+      set((state) => ({
+        todos: state.todos.map((t) =>
+          t.id === id ? { ...t, reminder: null, updatedAt: Date.now() } : t,
+        ),
+      }))
+    }
     const updated = get().todos.find((t) => t.id === id)
     if (updated) getAdapter().saveTodo(updated).catch(console.error)
   },

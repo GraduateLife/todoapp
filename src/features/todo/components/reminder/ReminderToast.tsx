@@ -4,17 +4,20 @@ import type { ReminderToast as ReminderToastType } from '../../hooks/useReminder
 
 interface ReminderToastProps {
   toast: ReminderToastType | null
+  /** User actively dismissed — clears firedAt */
   onDismiss: () => void
+  /** Toast auto-expired — firedAt stays so card transitions to stale */
+  onExpire: () => void
 }
 
 const AUTO_DISMISS_MS = 8000
 
-export function ReminderToast({ toast, onDismiss }: ReminderToastProps) {
+export function ReminderToast({ toast, onDismiss, onExpire }: ReminderToastProps) {
   useEffect(() => {
     if (!toast) return
-    const t = setTimeout(onDismiss, AUTO_DISMISS_MS)
+    const t = setTimeout(onExpire, AUTO_DISMISS_MS)
     return () => clearTimeout(t)
-  }, [toast, onDismiss])
+  }, [toast, onExpire])
 
   if (!toast || typeof document === 'undefined') return null
 

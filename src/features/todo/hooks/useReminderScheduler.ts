@@ -23,7 +23,7 @@ export function useReminderScheduler() {
   const [activeToast, setActiveToast] = useState<ReminderToast | null>(null)
   const clearToast = useCallback(() => setActiveToast(null), [])
 
-  // When a reminder fires, advance to the next trigger or clear
+  // When a reminder fires, mark firedAt and advance triggers
   useEffect(() => {
     reminderScheduler.setOnFire((todoId) => {
       const todo = useTodoStore.getState().todos.find((t) => t.id === todoId)
@@ -34,22 +34,23 @@ export function useReminderScheduler() {
 
       const r = todo.reminder
       const remaining = r.triggers.slice(1) // pop the fired trigger
+      const firedAt = Date.now()
 
       if (remaining.length > 0) {
-        // More triggers queued — advance
-        setReminder(todoId, { ...r, triggers: remaining })
+        // More triggers queued — advance, mark as fired
+        setReminder(todoId, { ...r, triggers: remaining, firedAt })
       } else if (r.source === 'recurring' && r.interval) {
         // Recurring with no more triggers — generate next if before deadline
         const next = Date.now() + r.interval
         if (!r.deadline || next <= r.deadline) {
-          setReminder(todoId, { ...r, triggers: [next] })
+          setReminder(todoId, { ...r, triggers: [next], firedAt })
         } else {
-          // Past deadline — clear reminder
-          setReminder(todoId, null)
+          // Past deadline — keep reminder with firedAt so overdue state persists
+          setReminder(todoId, { ...r, triggers: [], firedAt })
         }
       } else {
-        // One-shot or AI with no more triggers — clear
-        setReminder(todoId, null)
+        // One-shot or AI with no more triggers — keep reminder with firedAt
+        setReminder(todoId, { ...r, triggers: [], firedAt })
       }
     })
   }, [setReminder])

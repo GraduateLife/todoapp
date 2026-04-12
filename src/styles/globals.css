@@ -600,6 +600,24 @@ pre code {
   animation: rf-neon-flicker-urgent 2s step-end infinite;
 }
 
+/* Stale reminder: slow, faint flicker — neon tube almost dead */
+@keyframes rf-neon-flicker-stale {
+  0%   { opacity: 0.55; }
+  20%  { opacity: 0.55; }
+  22%  { opacity: 0.4; }
+  24%  { opacity: 0.55; }
+  70%  { opacity: 0.55; }
+  72%  { opacity: 0.42; }
+  74%  { opacity: 0.5; }
+  75%  { opacity: 0.38; }
+  77%  { opacity: 0.55; }
+  100% { opacity: 0.55; }
+}
+
+.rf-reminder-flicker-stale {
+  animation: rf-neon-flicker-stale 4s step-end infinite;
+}
+
 @keyframes rf-reminder-spin {
   from {
     transform: rotate(0deg);

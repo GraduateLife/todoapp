@@ -19,17 +19,14 @@ import type { Todo, NoteColor } from '../types'
 type NoteStyles = (typeof NOTE_STYLES)[NoteColor]
 
 /**
- * Visual state driven by the (future) reminder system — NOT by priority.
+ * Visual state driven by the reminder system — NOT by priority.
  *
  * - `none`    : no reminder set, or reminder is quiet; render baseline.
- * - `active`  : reminder is armed but not yet due; render the pulsing ring
- *               (the animation formerly used for high-priority cards).
- * - `overdue` : reminder fired without acknowledgement; dim the card (the
- *               dim opacity formerly used for low-priority cards).
- *
- * Until the reminder system is wired up, every card ships with `none`.
+ * - `active`  : reminder is armed but not yet due; pulsing ring.
+ * - `overdue` : reminder just fired, user hasn't dismissed; urgent flicker.
+ * - `stale`   : fired a while ago (> REMINDER_OVERDUE_MS), fading flicker.
  */
-export type ReminderVisualState = 'none' | 'active' | 'overdue'
+export type ReminderVisualState = 'none' | 'active' | 'overdue' | 'stale'
 
 export interface StickyNoteProps {
   todo: Todo
@@ -348,9 +345,11 @@ export function StickyNote({
           className={`rounded-[3px] p-4 overflow-hidden ${
             reminderState === 'overdue'
               ? 'rf-reminder-flicker-urgent'
-              : reminderState === 'active'
-                ? 'rf-reminder-flicker'
-                : ''
+              : reminderState === 'stale'
+                ? 'rf-reminder-flicker-stale'
+                : reminderState === 'active'
+                  ? 'rf-reminder-flicker'
+                  : ''
           }`}
         >
           {/* Stack-target ring */}

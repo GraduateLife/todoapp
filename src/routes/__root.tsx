@@ -10,6 +10,7 @@ import Footer from '../components/Footer'
 import Header from '../components/Header'
 import { STORAGE_STRATEGY, AI_PROVIDER, AI_MODEL } from '../lib/env'
 
+import { lazy, Suspense } from 'react'
 import TanStackQueryProvider from '../integrations/tanstack-query/root-provider'
 
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
@@ -23,6 +24,8 @@ import type { QueryClient } from '@tanstack/react-query'
 interface MyRouterContext {
   queryClient: QueryClient
 }
+
+const DevTools = lazy(() => import('../components/DevTools'))
 
 const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`
 
@@ -79,11 +82,20 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                   opacity: 0.45,
                   color: 'var(--rf-text)',
                   userSelect: 'none',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  position: 'relative',
+                  zIndex: 51,
+                  pointerEvents: 'none',
                 }}
               >
-                data storage mode: {STORAGE_STRATEGY}
-                {' · '}
-                ai model: {AI_PROVIDER}/{AI_MODEL || 'default'}
+                <span>
+                  data storage mode: {STORAGE_STRATEGY}
+                  {' · '}
+                  ai model: {AI_PROVIDER}/{AI_MODEL || 'default'}
+                </span>
+                <Suspense><DevTools /></Suspense>
               </div>
             )}
             {children}

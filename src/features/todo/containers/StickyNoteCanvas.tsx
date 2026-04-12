@@ -29,6 +29,7 @@ export function StickyNoteCanvas() {
   const deleteSubTask = useTodoStore((s) => s.deleteSubTask)
   const updateSubTask = useTodoStore((s) => s.updateSubTask)
   const setReminder = useTodoStore((s) => s.setReminder)
+  const dismissReminder = useTodoStore((s) => s.dismissReminder)
   const setFolder = useTodoStore((s) => s.setFolder)
   const stackOnto = useTodoStore((s) => s.stackOnto)
   const unstackTodo = useTodoStore((s) => s.unstackTodo)
@@ -333,7 +334,14 @@ export function StickyNoteCanvas() {
       />
 
       {/* In-app reminder toast (fallback when browser notifications are denied) */}
-      <ReminderToast toast={activeToast} onDismiss={clearToast} />
+      <ReminderToast
+        toast={activeToast}
+        onDismiss={() => {
+          if (activeToast) dismissReminder(activeToast.todoId)
+          clearToast()
+        }}
+        onExpire={clearToast}
+      />
 
       {/* Right-click context input */}
       <AnimatePresence>
