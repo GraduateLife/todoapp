@@ -413,9 +413,22 @@ function ReminderSection({ todo, ns, onClear, onSet }: { todo: Todo; ns: NoteSty
   const [durationInput, setDurationInput] = useState('')
   const [deadlineInput, setDeadlineInput] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const sectionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (mode) inputRef.current?.focus()
+  }, [mode])
+
+  // Click-outside to cancel inline creation
+  useEffect(() => {
+    if (!mode) return
+    const handler = (e: MouseEvent) => {
+      if (sectionRef.current && !sectionRef.current.contains(e.target as Node)) {
+        handleCancel()
+      }
+    }
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
   }, [mode])
 
   const handleSubmit = () => {
@@ -459,7 +472,7 @@ function ReminderSection({ todo, ns, onClear, onSet }: { todo: Todo; ns: NoteSty
     })
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div ref={sectionRef} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* Mode selectors */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button style={modeStyle(mode === 'oneshot')} onClick={() => setMode(mode === 'oneshot' ? null : 'oneshot')}>→</button>
@@ -578,6 +591,17 @@ function ReminderSection({ todo, ns, onClear, onSet }: { todo: Todo; ns: NoteSty
           textShadow: isOverdue ? '0 0 6px rgba(255,48,48,0.5)' : 'none',
         }}>
           {isOverdue ? `overdue by ${formatCountdown(delta)}` : `→ in ${formatCountdown(delta)}`}
+        </span>
+        <span style={{
+          fontFamily: "'Space Mono', monospace",
+          fontSize: 10,
+          color: ns.dim,
+          opacity: 0.5,
+          letterSpacing: '0.06em',
+        }}>
+          {new Date(next).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
+          {' '}
+          {new Date(next).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
         </span>
       </div>
 
