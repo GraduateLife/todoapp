@@ -23,10 +23,9 @@ type NoteStyles = (typeof NOTE_STYLES)[NoteColor]
  *
  * - `none`    : no reminder set, or reminder is quiet; render baseline.
  * - `active`  : reminder is armed but not yet due; pulsing ring.
- * - `overdue` : reminder just fired, user hasn't dismissed; urgent flicker.
- * - `stale`   : fired a while ago (> REMINDER_OVERDUE_MS), fading flicker.
+ * - `stale`   : reminder has fired; dim flicker until user dismisses.
  */
-export type ReminderVisualState = 'none' | 'active' | 'overdue' | 'stale'
+export type ReminderVisualState = 'none' | 'active' | 'stale'
 
 export interface StickyNoteProps {
   todo: Todo
@@ -343,13 +342,11 @@ export function StickyNote({
             zIndex: 1,
           }}
           className={`rounded-[3px] p-4 overflow-hidden ${
-            reminderState === 'overdue'
-              ? 'rf-reminder-flicker-urgent'
-              : reminderState === 'stale'
-                ? 'rf-reminder-flicker-stale'
-                : reminderState === 'active'
-                  ? 'rf-reminder-flicker'
-                  : ''
+            reminderState === 'stale'
+              ? 'rf-reminder-flicker-stale'
+              : reminderState === 'active'
+                ? 'rf-reminder-flicker'
+                : ''
           }`}
         >
           {/* Stack-target ring */}

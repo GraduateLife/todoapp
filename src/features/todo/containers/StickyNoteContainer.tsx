@@ -1,7 +1,6 @@
 import { useMotionValue } from 'framer-motion'
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { imeGuard } from '@/lib/utils'
-import { REMINDER_OVERDUE_MS } from '@/lib/limits'
 import { useDragZones } from '../hooks/useDragZones'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
 import { priorityToColor } from '../constants/priority'
@@ -90,16 +89,13 @@ export function StickyNoteContainer({
     const r = todo.reminder
     if (!r) return 'none'
 
-    // Fired and awaiting dismiss — overdue or stale based on elapsed time
-    if (r.firedAt) {
-      const elapsed = now - r.firedAt
-      return elapsed < REMINDER_OVERDUE_MS ? 'overdue' : 'stale'
-    }
+    // Fired and awaiting dismiss
+    if (r.firedAt) return 'stale'
 
     // Has future triggers — active
     if (r.triggers.length > 0) {
       const next = r.triggers[0]
-      return next <= now ? 'overdue' : 'active'
+      return next <= now ? 'stale' : 'active'
     }
 
     return 'none'

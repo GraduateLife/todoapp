@@ -38,13 +38,7 @@ export const GLOW = {
     alpha: 0.55,
     opacity: 1.0,
   },
-  /** Reminder just fired, user hasn't dismissed — urgent flicker. */
-  overdue: {
-    size: 10,
-    alpha: 0.18,
-    opacity: 1.0,
-  },
-  /** Fired a while ago, fading — dim weak flicker. */
+  /** Reminder has fired, user hasn't dismissed — dim flicker. */
   stale: {
     size: 6,
     alpha: 0.10,
@@ -74,11 +68,10 @@ export const ZONE_VISUALS = {
  * Build the three-layer box-shadow string used by every StickyNote card.
  *
  *   1. Coloured glow   — `0 0 <size>px <glowColor>`
- *   2. Drop shadow      — `0 4px 24px rgba(0,0,0,0.5)`
- *   3. Inset highlight  — `inset 0 1px 0 rgba(255,255,255,0.04)`
+ *   2. Inset highlight  — `inset 0 1px 0 rgba(255,255,255,0.04)`
  */
 export function buildBoxShadow(glowColor: string, glowSize: number): string {
-  return `0 0 ${glowSize}px ${glowColor}, 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`
+  return `0 0 ${glowSize}px ${glowColor}, inset 0 1px 0 rgba(255,255,255,0.04)`
 }
 
 /**
