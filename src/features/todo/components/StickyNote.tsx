@@ -48,7 +48,6 @@ export interface StickyNoteProps {
   isInEdgeZone: boolean
   isInDeleteZone: boolean
   isInArchiveZone: boolean
-  isInFolderZone: boolean
   isInStackZone: boolean
   zoneColor: string
   zoneLabel: string
@@ -228,7 +227,6 @@ export function StickyNote({
   isInEdgeZone,
   isInDeleteZone,
   isInArchiveZone,
-  isInFolderZone,
   isInStackZone,
   zoneColor,
   zoneLabel,
@@ -553,11 +551,9 @@ export function StickyNote({
                   ? 'rgba(255,30,30,0.08)'
                   : isInArchiveZone
                     ? 'rgba(57,255,20,0.06)'
-                    : isInFolderZone
-                      ? 'rgba(191,95,255,0.08)'
-                      : isInStackZone
-                        ? 'rgba(0,245,255,0.06)'
-                        : 'rgba(255,184,0,0.06)',
+                    : isInStackZone
+                      ? 'rgba(0,245,255,0.06)'
+                      : 'transparent',
               }}
             >
               <span

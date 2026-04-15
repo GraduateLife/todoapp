@@ -57,9 +57,7 @@ export const EDGE_ZONE_GLOW_SIZE = 20
 export const ZONE_VISUALS = {
   delete:   { color: '#ff3030', glow: 'rgba(255,48,48,0.5)',    label: '[ delete ]' },
   archive:  { color: '#39ff14', glow: 'rgba(57,255,20,0.5)',    label: '[ archive ]' },
-  folder:   { color: '#bf5fff', glow: 'rgba(191,95,255,0.5)',   label: '[ folder ]' },
   stack:    { color: '#00f5ff', glow: 'rgba(0,245,255,0.5)',    label: '[ stack ]' },
-  reminder: { color: '#ffb800', glow: 'rgba(255,184,0,0.5)',    label: '[ remind ]' },
 } as const
 
 // ─── Box-shadow builder ─────────────────────────────────────────────────────

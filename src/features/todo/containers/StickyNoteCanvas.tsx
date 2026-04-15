@@ -165,22 +165,6 @@ export function StickyNoteCanvas() {
             label: '↓  delete',
             style: { bottom: 96, left: '50%', transform: 'translateX(-50%)' },
           },
-          {
-            label: '↑  remind',
-            style: {
-              right: 12,
-              top: '50%',
-              transform: 'translateY(-50%) rotate(90deg)',
-            },
-          },
-          {
-            label: '↑  folder',
-            style: {
-              left: 12,
-              top: '50%',
-              transform: 'translateY(-50%) rotate(-90deg)',
-            },
-          },
         ] as const
       ).map(({ label, style }) => (
         <div
@@ -254,8 +238,6 @@ export function StickyNoteCanvas() {
               onToggleSubTask={toggleSubTask}
               onDeleteSubTask={deleteSubTask}
               onUpdateSubTask={updateSubTask}
-              onRequestReminder={setReminderTarget}
-              onRequestFolder={setFolderTarget}
               // Stack props
               otherNotes={otherNotes}
               isStackTarget={stackTargetId === todo.id}

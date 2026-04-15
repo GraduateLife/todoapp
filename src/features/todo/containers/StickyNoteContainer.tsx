@@ -34,8 +34,6 @@ interface StickyNoteContainerProps {
   onToggleSubTask: (id: string, subtaskId: string) => void
   onDeleteSubTask: (id: string, subtaskId: string) => void
   onUpdateSubTask: (id: string, subtaskId: string, title: string) => void
-  onRequestReminder: (id: string) => void
-  onRequestFolder: (id: string) => void
   zIndexOverride?: number
   otherNotes: Array<{ id: string; position: { x: number; y: number } }>
   isStackTarget: boolean
@@ -59,8 +57,6 @@ export function StickyNoteContainer({
   onToggleSubTask,
   onDeleteSubTask,
   onUpdateSubTask,
-  onRequestReminder,
-  onRequestFolder,
   zIndexOverride,
   otherNotes,
   isStackTarget,
@@ -113,8 +109,6 @@ export function StickyNoteContainer({
     handleDragEnd,
     isInDeleteZone,
     isInArchiveZone,
-    isInReminderZone,
-    isInFolderZone,
     isInStackZone,
   } = useDragZones({
     todoId: todo.id,
@@ -125,8 +119,6 @@ export function StickyNoteContainer({
     onMove,
     onDelete,
     onArchive,
-    onRequestReminder,
-    onRequestFolder,
     onBringToFront,
     onDropOnNote,
     onStackTargetChange,
@@ -209,8 +201,7 @@ export function StickyNoteContainer({
   // Reminder-driven baseline glow (will vary once reminder system lands).
   const cardGlow = computeCardGlow(reminderState, ns.glow)
 
-  const isInEdgeZone =
-    isInDeleteZone || isInArchiveZone || isInReminderZone || isInFolderZone
+  const isInEdgeZone = isInDeleteZone || isInArchiveZone
   const isInZone = isInEdgeZone || isInStackZone
 
   // Resolve which zone we're in (if any).
@@ -218,11 +209,7 @@ export function StickyNoteContainer({
     ? ZONE_VISUALS.delete
     : isInArchiveZone
       ? ZONE_VISUALS.archive
-      : isInFolderZone
-        ? ZONE_VISUALS.folder
-        : isInStackZone
-          ? ZONE_VISUALS.stack
-          : ZONE_VISUALS.reminder
+      : ZONE_VISUALS.stack
   const zoneColor = activeZone.color
   const zoneGlow = activeZone.glow
   const zoneLabel = activeZone.label
@@ -274,7 +261,6 @@ export function StickyNoteContainer({
       isInEdgeZone={isInEdgeZone}
       isInDeleteZone={isInDeleteZone}
       isInArchiveZone={isInArchiveZone}
-      isInFolderZone={isInFolderZone}
       isInStackZone={isInStackZone}
       zoneColor={zoneColor}
       zoneLabel={zoneLabel}

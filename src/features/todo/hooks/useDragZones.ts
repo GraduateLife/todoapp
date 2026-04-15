@@ -5,8 +5,6 @@ import { useUiStore } from '../store/uiStore'
 // ─── Zone thresholds ─────────────────────────────────────────────────────────
 const DELETE_ZONE_OFFSET = 160 // px from bottom of viewport
 const ARCHIVE_ZONE_OFFSET = 48 // px from top of viewport — must clear the header
-const REMINDER_ZONE_OFFSET = 80 // px from right of viewport
-const FOLDER_ZONE_OFFSET = 80 // px from left of viewport
 
 // ─── Stack hit area ──────────────────────────────────────────────────────────
 const STACK_HIT_W = 200
@@ -21,8 +19,6 @@ interface UseDragZonesOptions {
   onMove: (id: string, x: number, y: number) => void
   onDelete: (id: string) => void
   onArchive: (id: string) => void
-  onRequestReminder: (id: string) => void
-  onRequestFolder: (id: string) => void
   onBringToFront: (id: string) => void
   onDropOnNote: (targetId: string) => void
   onStackTargetChange: (targetId: string | null) => void
@@ -38,8 +34,6 @@ export function useDragZones({
   onMove,
   onDelete,
   onArchive,
-  onRequestReminder,
-  onRequestFolder,
   onBringToFront,
   onDropOnNote,
   onStackTargetChange,
@@ -49,8 +43,6 @@ export function useDragZones({
 
   const [isInDeleteZone, setIsInDeleteZone] = useState(false)
   const [isInArchiveZone, setIsInArchiveZone] = useState(false)
-  const [isInReminderZone, setIsInReminderZone] = useState(false)
-  const [isInFolderZone, setIsInFolderZone] = useState(false)
   const [isInStackZone, setIsInStackZone] = useState(false)
 
   // Ref to track current stack target without stale closure issues
@@ -68,17 +60,12 @@ export function useDragZones({
     const cy = y.get() + 90 // approximate center Y
     const inDelete = y.get() > window.innerHeight - DELETE_ZONE_OFFSET
     const inArchive = y.get() < ARCHIVE_ZONE_OFFSET
-    const inReminder =
-      cx > window.innerWidth - REMINDER_ZONE_OFFSET && !inDelete && !inArchive
-    const inFolder = x.get() < FOLDER_ZONE_OFFSET && !inDelete && !inArchive
 
     setIsInDeleteZone(inDelete)
     setIsInArchiveZone(inArchive && !inDelete)
-    setIsInReminderZone(inReminder)
-    setIsInFolderZone(inFolder)
 
     // Stack detection — only when not in any edge zone
-    if (!inDelete && !inArchive && !inReminder && !inFolder) {
+    if (!inDelete && !inArchive) {
       const target = otherNotes.find(
         (n) =>
           cx > n.position.x + 28 &&
@@ -104,20 +91,11 @@ export function useDragZones({
   const handleDragEnd = useCallback(() => {
     setDragging(false)
     if (typeof window === 'undefined') return
-    const cx = x.get() + 128
     const inDelete = y.get() > window.innerHeight - DELETE_ZONE_OFFSET
     const inArchive = y.get() < ARCHIVE_ZONE_OFFSET
-    const inReminder = cx > window.innerWidth - REMINDER_ZONE_OFFSET
-    const inFolder = x.get() < FOLDER_ZONE_OFFSET
 
     // Stack drop (edge zones take precedence)
-    if (
-      !inDelete &&
-      !inArchive &&
-      !inReminder &&
-      !inFolder &&
-      stackTargetRef.current
-    ) {
+    if (!inDelete && !inArchive && stackTargetRef.current) {
       onDropOnNote(stackTargetRef.current)
       stackTargetRef.current = null
       onStackTargetChange(null)
@@ -129,20 +107,10 @@ export function useDragZones({
       onDelete(todoId)
     } else if (inArchive) {
       onArchive(todoId)
-    } else if (inReminder) {
-      onMove(todoId, x.get(), y.get())
-      onRequestReminder(todoId)
-      setIsInReminderZone(false)
-    } else if (inFolder) {
-      onMove(todoId, x.get(), y.get())
-      onRequestFolder(todoId)
-      setIsInFolderZone(false)
     } else {
       onMove(todoId, x.get(), y.get())
       setIsInDeleteZone(false)
       setIsInArchiveZone(false)
-      setIsInReminderZone(false)
-      setIsInFolderZone(false)
     }
   }, [
     todoId,
@@ -151,8 +119,6 @@ export function useDragZones({
     onMove,
     onDelete,
     onArchive,
-    onRequestReminder,
-    onRequestFolder,
     onDropOnNote,
     onStackTargetChange,
     setDragging,
@@ -164,8 +130,6 @@ export function useDragZones({
     handleDragEnd,
     isInDeleteZone,
     isInArchiveZone,
-    isInReminderZone,
-    isInFolderZone,
     isInStackZone,
   }
 }
