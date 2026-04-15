@@ -13,7 +13,7 @@ import {
   NOTE_DEFAULT_TRANSITION,
   NOTE_EXIT,
 } from '../animations/noteEntrance'
-import { GLOW, EDGE_ZONE_OPACITY } from '../constants/glow'
+import { GLOW } from '../constants/glow'
 import type { Todo, NoteColor } from '../types'
 
 type NoteStyles = (typeof NOTE_STYLES)[NoteColor]
@@ -45,9 +45,9 @@ export interface StickyNoteProps {
   reminderState: ReminderVisualState
   // ── Zone feedback ────────────────────────────────────────────────────────────
   isInZone: boolean
-  isInEdgeZone: boolean
   isInDeleteZone: boolean
   isInArchiveZone: boolean
+  glitchIntensity: number
   isInStackZone: boolean
   zoneColor: string
   zoneLabel: string
@@ -209,6 +209,76 @@ function ReminderBadge({ todo, ns }: { todo: Todo; ns: NoteStyles }): ReactNode 
   )
 }
 
+// ─── Glitch overlay — horizontal corruption bars for delete zone ─────────────
+
+/** Seed-based pseudo-random for deterministic-per-frame bar generation */
+function seededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000
+  return x - Math.floor(x)
+}
+
+function GlitchOverlay({
+  intensity,
+  color,
+}: {
+  intensity: number
+  color: string
+}) {
+  const [tick, setTick] = useState(0)
+
+  useEffect(() => {
+    if (intensity <= 0) return
+    // Flicker rate increases with intensity: 120ms → 50ms
+    const ms = Math.max(50, 120 - intensity * 70)
+    const id = setInterval(() => setTick((t) => t + 1), ms)
+    return () => clearInterval(id)
+  }, [intensity > 0 ? Math.floor(intensity * 4) : 0])
+
+  if (intensity <= 0) return null
+
+  // Generate bars — more bars at higher intensity
+  const count = Math.floor(3 + intensity * 10)
+  const bars: Array<{
+    top: number
+    left: number
+    width: number
+    height: number
+    opacity: number
+  }> = []
+  for (let i = 0; i < count; i++) {
+    const seed = tick * 17 + i * 31
+    bars.push({
+      top: seededRandom(seed) * 100,
+      left: seededRandom(seed + 1) * 30,
+      width: 30 + seededRandom(seed + 2) * 70,
+      height: 1 + seededRandom(seed + 3) * (2 + intensity * 5),
+      opacity: 0.12 + seededRandom(seed + 4) * intensity * 0.55,
+    })
+  }
+
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none overflow-hidden rounded-[3px]"
+      style={{ zIndex: 12 }}
+    >
+      {bars.map((bar, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            top: `${bar.top}%`,
+            left: `${bar.left}%`,
+            width: `${bar.width}%`,
+            height: `${bar.height}px`,
+            background: color,
+            opacity: bar.opacity,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 export function StickyNote({
   todo,
   x,
@@ -224,9 +294,9 @@ export function StickyNote({
   baselineGlow,
   reminderState,
   isInZone,
-  isInEdgeZone,
   isInDeleteZone,
   isInArchiveZone,
+  glitchIntensity,
   isInStackZone,
   zoneColor,
   zoneLabel,
@@ -288,9 +358,8 @@ export function StickyNote({
         }}
         initial={isFresh ? { scale: 0.75, opacity: 0 } : NOTE_DEFAULT_INITIAL}
         animate={{
-          scale: isInEdgeZone ? 0.82 : 1,
-          // Dim is now a reminder-overdue signal, not a low-priority one.
-          opacity: isInEdgeZone ? EDGE_ZONE_OPACITY : GLOW[reminderState].opacity,
+          scale: 1,
+          opacity: GLOW[reminderState].opacity,
         }}
         exit={NOTE_EXIT}
         transition={isFresh ? NOTE_THROW_TRANSITION : NOTE_DEFAULT_TRANSITION}
@@ -533,6 +602,9 @@ export function StickyNote({
             <ReminderBadge todo={todo} ns={ns} />
           </div>
 
+          {/* Glitch overlay — horizontal corruption bars (delete zone) */}
+          <GlitchOverlay intensity={glitchIntensity} color={zoneColor} />
+
           {/* Scanline overlay */}
           <div
             className="pointer-events-none absolute inset-0 rounded-[3px]"
@@ -550,7 +622,7 @@ export function StickyNote({
                 background: isInDeleteZone
                   ? 'rgba(255,30,30,0.08)'
                   : isInArchiveZone
-                    ? 'rgba(57,255,20,0.06)'
+                    ? 'rgba(255,30,30,0.08)'
                     : isInStackZone
                       ? 'rgba(0,245,255,0.06)'
                       : 'transparent',

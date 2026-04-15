@@ -107,8 +107,8 @@ export function StickyNoteContainer({
     handleDragStart,
     handleDrag,
     handleDragEnd,
-    isInDeleteZone,
-    isInArchiveZone,
+    isInBottomZone,
+    glitchIntensity,
     isInStackZone,
   } = useDragZones({
     todoId: todo.id,
@@ -201,8 +201,10 @@ export function StickyNoteContainer({
   // Reminder-driven baseline glow (will vary once reminder system lands).
   const cardGlow = computeCardGlow(reminderState, ns.glow)
 
-  const isInEdgeZone = isInDeleteZone || isInArchiveZone
-  const isInZone = isInEdgeZone || isInStackZone
+  // Derive archive vs delete from bottom zone + glitch
+  const isInDeleteZone = isInBottomZone && glitchIntensity > 0
+  const isInArchiveZone = isInBottomZone && glitchIntensity === 0
+  const isInZone = isInBottomZone || isInStackZone
 
   // Resolve which zone we're in (if any).
   const activeZone = isInDeleteZone
@@ -212,7 +214,16 @@ export function StickyNoteContainer({
       : ZONE_VISUALS.stack
   const zoneColor = activeZone.color
   const zoneGlow = activeZone.glow
-  const zoneLabel = activeZone.label
+
+  // Build zone label — delete phase shows a progress bar
+  const zoneLabel = isInDeleteZone
+    ? (() => {
+        const total = 5
+        const filled = Math.min(total, Math.ceil(glitchIntensity * total))
+        const bar = '▓'.repeat(filled) + '░'.repeat(total - filled)
+        return `[ delete ${bar} ]`
+      })()
+    : activeZone.label
 
   const borderColor = isInZone
     ? zoneColor
@@ -222,7 +233,7 @@ export function StickyNoteContainer({
   const bgColor = isInDeleteZone
     ? 'rgba(255,30,30,0.12)'
     : isInArchiveZone
-      ? 'rgba(57,255,20,0.08)'
+      ? 'rgba(255,30,30,0.12)'
       : ns.bg
   const glowColor = isInZone
     ? zoneGlow
@@ -258,9 +269,9 @@ export function StickyNoteContainer({
       baselineGlow={cardGlow.glowColor}
       reminderState={reminderState}
       isInZone={isInZone}
-      isInEdgeZone={isInEdgeZone}
       isInDeleteZone={isInDeleteZone}
       isInArchiveZone={isInArchiveZone}
+      glitchIntensity={glitchIntensity}
       isInStackZone={isInStackZone}
       zoneColor={zoneColor}
       zoneLabel={zoneLabel}

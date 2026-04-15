@@ -51,12 +51,11 @@ export const STACK_TARGET_ALPHA = 0.65
 
 // ─── Edge zone drag overrides ───────────────────────────────────────────────
 
-export const EDGE_ZONE_OPACITY = 0.65
 export const EDGE_ZONE_GLOW_SIZE = 20
 
 export const ZONE_VISUALS = {
   delete:   { color: '#ff3030', glow: 'rgba(255,48,48,0.5)',    label: '[ delete ]' },
-  archive:  { color: '#39ff14', glow: 'rgba(57,255,20,0.5)',    label: '[ archive ]' },
+  archive:  { color: '#ff3030', glow: 'rgba(255,48,48,0.5)',    label: '[ archive ]' },
   stack:    { color: '#00f5ff', glow: 'rgba(0,245,255,0.5)',    label: '[ stack ]' },
 } as const
 

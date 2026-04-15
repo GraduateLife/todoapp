@@ -154,32 +154,20 @@ export function StickyNoteCanvas() {
       aria-label="Sticky notes canvas"
       onContextMenu={handleCanvasContextMenu}
     >
-      {/* Drag-zone edge hints */}
-      {(
-        [
-          {
-            label: '↑  archive',
-            style: { top: 62, left: '50%', transform: 'translateX(-50%)' },
-          },
-          {
-            label: '↓  delete',
-            style: { bottom: 96, left: '50%', transform: 'translateX(-50%)' },
-          },
-        ] as const
-      ).map(({ label, style }) => (
-        <div
-          key={label}
-          className="absolute font-mono text-[8px] tracking-[0.22em] uppercase pointer-events-none select-none"
-          style={{
-            ...style,
-            color: 'var(--rf-text-dim, rgba(0,245,255,0.3))',
-            opacity: 0.4,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {label}
-        </div>
-      ))}
+      {/* Drag-zone edge hint */}
+      <div
+        className="absolute font-mono text-[8px] tracking-[0.22em] uppercase pointer-events-none select-none"
+        style={{
+          bottom: 96,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          color: 'var(--rf-text-dim, rgba(0,245,255,0.3))',
+          opacity: 0.4,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        ↓  archive · hold to delete
+      </div>
 
       {/* Empty state */}
       {visibleTodos.length === 0 && (

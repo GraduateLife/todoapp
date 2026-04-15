@@ -35,10 +35,10 @@ const LEGEND_SLOTS: {
   label: string
   hex: string
 }[] = [
-  { mark: '!', priority: 'high',   label: 'high',        hex: '#ff2d78' },
-  { mark: '.', priority: 'normal', label: 'normal',      hex: '#ffb800' },
-  { mark: '?', priority: 'low',    label: 'low',         hex: '#39ff14' },
-  { mark: '~', priority: 'idea',   label: 'inspiration', hex: '#bf5fff' },
+  { mark: '!', priority: 'high', label: 'high', hex: '#ff2d78' },
+  { mark: '.', priority: 'normal', label: 'normal', hex: '#ffb800' },
+  { mark: '?', priority: 'low', label: 'low', hex: '#39ff14' },
+  { mark: '~', priority: 'idea', label: 'inspiration', hex: '#bf5fff' },
 ]
 
 export function ContextInput({ position, onClose }: ContextInputProps) {
@@ -69,7 +69,10 @@ export function ContextInput({ position, onClose }: ContextInputProps) {
   useEffect(() => {
     const handler = (e: PointerEvent) => {
       if (voiceOpen) return
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         onClose()
       }
     }
@@ -160,6 +163,7 @@ export function ContextInput({ position, onClose }: ContextInputProps) {
               onKeyDown={handleKeyDown}
               placeholder="quick task..."
               maxLength={TITLE_MAX_LEN}
+              autoFocus
               autoComplete="off"
               spellCheck={false}
               style={{
@@ -191,15 +195,26 @@ export function ContextInput({ position, onClose }: ContextInputProps) {
                 transition: 'color 0.15s',
                 flexShrink: 0,
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(192, 216, 240, 0.8)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(192, 216, 240, 0.4)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'rgba(192, 216, 240, 0.8)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgba(192, 216, 240, 0.4)'
+              }}
             >
               🎤
             </button>
 
             {/* Char count + Enter hint */}
             {value.trim() ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  flexShrink: 0,
+                }}
+              >
                 <span
                   style={{
                     fontFamily: "'Space Mono', monospace",

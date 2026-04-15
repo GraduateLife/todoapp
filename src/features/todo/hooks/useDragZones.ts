@@ -1,10 +1,10 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import type { MotionValue } from 'framer-motion'
 import { useUiStore } from '../store/uiStore'
+import { DELETE_GLITCH_DELAY, DELETE_GLITCH_DURATION } from '@/lib/limits'
 
 // ─── Zone thresholds ─────────────────────────────────────────────────────────
-const DELETE_ZONE_OFFSET = 160 // px from bottom of viewport
-const ARCHIVE_ZONE_OFFSET = 48 // px from top of viewport — must clear the header
+const BOTTOM_ZONE_OFFSET = 160 // px from bottom of viewport
 
 // ─── Stack hit area ──────────────────────────────────────────────────────────
 const STACK_HIT_W = 200
@@ -41,12 +41,60 @@ export function useDragZones({
 }: UseDragZonesOptions) {
   const setDragging = useUiStore((s) => s.setDragging)
 
-  const [isInDeleteZone, setIsInDeleteZone] = useState(false)
-  const [isInArchiveZone, setIsInArchiveZone] = useState(false)
+  const [isInBottomZone, setIsInBottomZone] = useState(false)
+  const [glitchIntensity, setGlitchIntensity] = useState(0)
   const [isInStackZone, setIsInStackZone] = useState(false)
+
+  // Refs to avoid stale closures in the glitch timer
+  const onDeleteRef = useRef(onDelete)
+  onDeleteRef.current = onDelete
+  const todoIdRef = useRef(todoId)
+  todoIdRef.current = todoId
 
   // Ref to track current stack target without stale closure issues
   const stackTargetRef = useRef<string | null>(null)
+
+  // Glitch timer refs
+  const bottomEnteredAtRef = useRef<number>(0)
+  const glitchTickRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const autoDeletedRef = useRef(false)
+
+  const stopGlitchTimer = useCallback(() => {
+    if (glitchTickRef.current) {
+      clearInterval(glitchTickRef.current)
+      glitchTickRef.current = null
+    }
+    setGlitchIntensity(0)
+    autoDeletedRef.current = false
+  }, [])
+
+  const startGlitchTimer = useCallback(() => {
+    if (glitchTickRef.current) return
+    bottomEnteredAtRef.current = Date.now()
+    glitchTickRef.current = setInterval(() => {
+      const elapsed = Date.now() - bottomEnteredAtRef.current
+      if (elapsed < DELETE_GLITCH_DELAY) {
+        setGlitchIntensity(0)
+      } else {
+        const intensity = Math.min(
+          1,
+          (elapsed - DELETE_GLITCH_DELAY) / DELETE_GLITCH_DURATION,
+        )
+        setGlitchIntensity(intensity)
+        if (intensity >= 1 && !autoDeletedRef.current) {
+          autoDeletedRef.current = true
+          onDeleteRef.current(todoIdRef.current)
+        }
+      }
+    }, 80)
+  }, [])
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (glitchTickRef.current) clearInterval(glitchTickRef.current)
+    }
+  }, [])
 
   const handleDragStart = useCallback(() => {
     setDragging(true)
@@ -58,14 +106,19 @@ export function useDragZones({
     if (typeof window === 'undefined') return
     const cx = x.get() + 128 // center of 256px card
     const cy = y.get() + 90 // approximate center Y
-    const inDelete = y.get() > window.innerHeight - DELETE_ZONE_OFFSET
-    const inArchive = y.get() < ARCHIVE_ZONE_OFFSET
+    const inBottom = y.get() > window.innerHeight - BOTTOM_ZONE_OFFSET
 
-    setIsInDeleteZone(inDelete)
-    setIsInArchiveZone(inArchive && !inDelete)
+    // Bottom zone enter/leave
+    if (inBottom && !isInBottomZone) {
+      setIsInBottomZone(true)
+      startGlitchTimer()
+    } else if (!inBottom && isInBottomZone) {
+      setIsInBottomZone(false)
+      stopGlitchTimer()
+    }
 
-    // Stack detection — only when not in any edge zone
-    if (!inDelete && !inArchive) {
+    // Stack detection — only when not in bottom zone
+    if (!inBottom) {
       const target = otherNotes.find(
         (n) =>
           cx > n.position.x + 28 &&
@@ -86,16 +139,15 @@ export function useDragZones({
         setIsInStackZone(false)
       }
     }
-  }, [x, y, otherNotes, onStackTargetChange])
+  }, [x, y, otherNotes, onStackTargetChange, isInBottomZone, startGlitchTimer, stopGlitchTimer])
 
   const handleDragEnd = useCallback(() => {
     setDragging(false)
     if (typeof window === 'undefined') return
-    const inDelete = y.get() > window.innerHeight - DELETE_ZONE_OFFSET
-    const inArchive = y.get() < ARCHIVE_ZONE_OFFSET
+    const inBottom = y.get() > window.innerHeight - BOTTOM_ZONE_OFFSET
 
-    // Stack drop (edge zones take precedence)
-    if (!inDelete && !inArchive && stackTargetRef.current) {
+    // Stack drop (bottom zone takes precedence)
+    if (!inBottom && stackTargetRef.current) {
       onDropOnNote(stackTargetRef.current)
       stackTargetRef.current = null
       onStackTargetChange(null)
@@ -103,15 +155,22 @@ export function useDragZones({
       return
     }
 
-    if (inDelete) {
-      onDelete(todoId)
-    } else if (inArchive) {
-      onArchive(todoId)
-    } else {
+    if (inBottom && !autoDeletedRef.current) {
+      const elapsed = Date.now() - bottomEnteredAtRef.current
+      if (elapsed < DELETE_GLITCH_DELAY) {
+        // Quick release → archive
+        onArchive(todoId)
+      } else {
+        // In glitch phase → delete immediately
+        onDelete(todoId)
+      }
+    } else if (!inBottom) {
       onMove(todoId, x.get(), y.get())
-      setIsInDeleteZone(false)
-      setIsInArchiveZone(false)
     }
+
+    // Always clean up
+    stopGlitchTimer()
+    setIsInBottomZone(false)
   }, [
     todoId,
     x,
@@ -122,14 +181,15 @@ export function useDragZones({
     onDropOnNote,
     onStackTargetChange,
     setDragging,
+    stopGlitchTimer,
   ])
 
   return {
     handleDragStart,
     handleDrag,
     handleDragEnd,
-    isInDeleteZone,
-    isInArchiveZone,
+    isInBottomZone,
+    glitchIntensity,
     isInStackZone,
   }
 }

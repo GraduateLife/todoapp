@@ -30,3 +30,9 @@ export const MAX_STACK_SIZE = 5
  *  Drag further than this → normal move; drag less → shake dismiss. */
 export const REMINDER_SHAKE_DISTANCE = 60
 
+// ── Delete zone ────────────────────────────────────────────────────────────
+/** Time (ms) in bottom zone before glitch/delete phase begins */
+export const DELETE_GLITCH_DELAY = 1500
+/** Duration (ms) of glitch phase before auto-delete fires */
+export const DELETE_GLITCH_DURATION = 5000
+

@@ -68,7 +68,10 @@
       "Bash(pnpm info:*)",
       "Bash(echo \"---exit:$?\")",
       "Bash(echo \"exit:$?\")",
-      "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx|json\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx|json\\)$\")",
+      "Bash(npx vite:*)",
+      "Bash(ls -la /Users/zhangyuntao/Desktop/code/todoapp/backend/*.toml)",
+      "Bash(grep -r \"upload\\\\|file\\\\|storage\\\\|r2\\\\|blob\" /Users/zhangyuntao/Desktop/code/todoapp/backend --include=\"*.ts\" --include=\"*.js\" ! -path \"*/node_modules/*\")"
     ]
   }
 }

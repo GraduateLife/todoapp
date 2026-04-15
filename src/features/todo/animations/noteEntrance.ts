@@ -42,7 +42,7 @@ export const NOTE_DEFAULT_TRANSITION: Transition = {
 // ── Exit ────────────────────────────────────────────────────────────────────
 
 export const NOTE_EXIT = {
-  scale: 0.3,
+  y: 400,
   opacity: 0,
-  transition: { duration: 0.15, ease: 'easeIn' } as Transition,
+  transition: { duration: 0.25, ease: 'easeIn' } as Transition,
 } as const
