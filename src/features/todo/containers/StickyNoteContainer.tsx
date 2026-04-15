@@ -1,6 +1,7 @@
 import { useMotionValue } from 'framer-motion'
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { imeGuard } from '@/lib/utils'
+import { REMINDER_SHAKE_DISTANCE } from '@/lib/limits'
 import { useDragZones } from '../hooks/useDragZones'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
 import { priorityToColor } from '../constants/priority'
@@ -132,6 +133,31 @@ export function StickyNoteContainer({
     onToggleExpand,
   })
 
+  // ─── Shake-to-dismiss (stale reminder) ─────────────────────────────────────
+  const dismissReminder = useTodoStore((s) => s.dismissReminder)
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null)
+
+  const wrappedDragStart = useCallback(() => {
+    dragStartPos.current = { x: x.get(), y: y.get() }
+    handleDragStart()
+  }, [handleDragStart, x, y])
+
+  const wrappedDragEnd = useCallback(() => {
+    // Capture position before handleDragEnd potentially modifies things
+    const endX = x.get()
+    const endY = y.get()
+    handleDragEnd()
+    if (reminderState === 'stale' && dragStartPos.current) {
+      const dx = endX - dragStartPos.current.x
+      const dy = endY - dragStartPos.current.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist > 0 && dist <= REMINDER_SHAKE_DISTANCE) {
+        dismissReminder(todo.id)
+      }
+    }
+    dragStartPos.current = null
+  }, [handleDragEnd, reminderState, todo.id, dismissReminder, x, y])
+
   // ─── Editing state ────────────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(todo.title)
@@ -259,9 +285,9 @@ export function StickyNoteContainer({
       isEditing={isEditing}
       editValue={editValue}
       isAddingSubTask={isAddingSubTask}
-      onDragStart={handleDragStart}
+      onDragStart={wrappedDragStart}
       onDrag={handleDrag}
-      onDragEnd={handleDragEnd}
+      onDragEnd={wrappedDragEnd}
       onContextMenu={handleContextMenu}
       onBringToFront={() => onBringToFront(todo.id)}
       onToggle={() => onToggle(todo.id)}

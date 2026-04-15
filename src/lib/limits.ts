@@ -25,3 +25,8 @@ export const ALLOWED_FILE_TYPES: readonly string[] = ['image/', 'audio/']
 /** Max todos in a stack */
 export const MAX_STACK_SIZE = 5
 
+// ── Reminders ──────────────────────────────────────────────────────────────
+/** Max drag distance (px) to count as a "shake" that dismisses a stale reminder.
+ *  Drag further than this → normal move; drag less → shake dismiss. */
+export const REMINDER_SHAKE_DISTANCE = 60
+

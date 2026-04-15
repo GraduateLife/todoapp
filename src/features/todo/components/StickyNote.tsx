@@ -369,6 +369,33 @@ export function StickyNote({
             />
           )}
 
+          {/* Stale watermark — "shake to fix" diagonal stamp */}
+          {reminderState === 'stale' && (
+            <div
+              className="absolute inset-0 pointer-events-none overflow-hidden rounded-[3px]"
+              style={{ zIndex: 10 }}
+            >
+              <span
+                className="font-mono"
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%) rotate(-28deg)',
+                  fontSize: 14,
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  color: ns.border,
+                  opacity: 0.25,
+                  whiteSpace: 'nowrap',
+                  userSelect: 'none',
+                }}
+              >
+                shake to fix
+              </span>
+            </div>
+          )}
+
           {/* Header row */}
           <div
             style={{ borderBottom: `1px solid ${ns.dim}` }}
