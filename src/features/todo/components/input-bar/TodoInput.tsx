@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { imeGuard } from '@/lib/utils'
+import { useUiStore } from '../../store/uiStore'
 import {
   parseMarkdownInput,
-  type ParsedTodo,
 } from '../../utils/parseMarkdownInput'
+import type { ParsedTodo } from '../../utils/parseMarkdownInput'
 import { localFixSyntax } from '../../services/aiParse'
 import {
   EXPAND_TRANSITION,
@@ -105,7 +106,8 @@ export function TodoInput({
 
   // ── Local parse (always, instant) ────────────────────────────────────────
   const localResult = isExpanded ? parseMarkdownInput(value) : null
-  const canExec = localResult?.ok === true
+  const execResult = localResult && localResult.ok ? localResult : null
+  const canExec = execResult !== null
 
   // ── Local syntax fix (600ms debounce, no AI) ─────────────────────────────
   useLocalSyntaxFix(value, onChange, isExpanded, autoFix, composingRef)
@@ -131,15 +133,32 @@ export function TodoInput({
   })
 
   const handleExec = useCallback(() => {
-    if (canExec && localResult?.ok) {
-      onSubmitExpanded(localResult.data)
-      onChange('')
-      setIsExpanded(false)
-    }
-  }, [canExec, localResult, onSubmitExpanded, onChange, setIsExpanded])
+    if (!execResult) return
+    onSubmitExpanded(execResult.data)
+    onChange('')
+    setIsExpanded(false)
+  }, [execResult, onSubmitExpanded, onChange, setIsExpanded])
+
+  // Publish the bar's live height to the UI store so drag-zone math and
+  // bottom-edge UI hints can position themselves against the *real* bar
+  // height (collapsed ~28px, expanded much taller) instead of a constant.
+  const barRef = useRef<HTMLDivElement | null>(null)
+  const setInputBarHeight = useUiStore((s) => s.setInputBarHeight)
+  useEffect(() => {
+    const el = barRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    setInputBarHeight(el.getBoundingClientRect().height)
+    const ro = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect.height ?? el.getBoundingClientRect().height
+      setInputBarHeight(h)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [setInputBarHeight])
 
   return (
     <motion.div
+      ref={barRef}
       className={isExpanded ? 'rf-input-bar' : 'rf-input-bar rf-input-bar--collapsed'}
       animate={{ y: isDragging ? '100%' : 0 }}
       transition={{ type: 'spring', stiffness: 380, damping: 34, mass: 0.8 }}
@@ -216,7 +235,7 @@ export function TodoInput({
             <ParseSummary parseResult={localResult} />
 
             <div
-              className="flex items-center gap-2 flex-shrink-0"
+              className="flex items-center gap-2 shrink-0"
               style={{ paddingRight: '0.5rem' }}
             >
               <input
@@ -233,7 +252,7 @@ export function TodoInput({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="rf-btn flex-shrink-0"
+                className="rf-btn shrink-0"
                 style={{ opacity: 0.5 }}
                 onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85' }}
                 onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.5' }}
@@ -244,7 +263,7 @@ export function TodoInput({
                 type="button"
                 onClick={handleExec}
                 disabled={!canExec}
-                className="rf-btn flex-shrink-0"
+                className="rf-btn shrink-0"
                 style={{
                   opacity: canExec ? 1 : 0.3,
                   cursor: canExec ? 'pointer' : 'not-allowed',

@@ -4,8 +4,12 @@ import { useUiStore } from '../store/uiStore'
 import { DELETE_GLITCH_DELAY, DELETE_GLITCH_DURATION } from '@/lib/limits'
 
 // ─── Zone thresholds ─────────────────────────────────────────────────────────
-const BOTTOM_ZONE_OFFSET = 160 // px from bottom of viewport
-const TOP_ZONE_OFFSET = 80 // px from top of viewport — must clear the header
+// Top zone    = (live header height)    + TOP_ZONE_BUFFER
+// Bottom zone = (live input-bar height) + BOTTOM_ZONE_BUFFER
+// Buffers give a comfortable trigger band beyond the obstacle (header / bar)
+// so the user doesn't have to drag the card all the way *into* the obstacle.
+const TOP_ZONE_BUFFER = 20
+const BOTTOM_ZONE_BUFFER = 130
 
 // ─── Stack hit area ──────────────────────────────────────────────────────────
 const STACK_HIT_W = 200
@@ -43,6 +47,15 @@ export function useDragZones({
   onToggleExpand,
 }: UseDragZonesOptions) {
   const setDragging = useUiStore((s) => s.setDragging)
+  // Live header / input-bar heights — fed through refs so the drag callbacks
+  // can read the freshest values without being rebuilt every time either one
+  // resizes.
+  const headerHeight = useUiStore((s) => s.headerHeight)
+  const inputBarHeight = useUiStore((s) => s.inputBarHeight)
+  const topZoneOffsetRef = useRef(headerHeight + TOP_ZONE_BUFFER)
+  topZoneOffsetRef.current = headerHeight + TOP_ZONE_BUFFER
+  const bottomZoneOffsetRef = useRef(inputBarHeight + BOTTOM_ZONE_BUFFER)
+  bottomZoneOffsetRef.current = inputBarHeight + BOTTOM_ZONE_BUFFER
 
   const [isInBottomZone, setIsInBottomZone] = useState(false)
   const [isInTopZone, setIsInTopZone] = useState(false)
@@ -117,9 +130,10 @@ export function useDragZones({
     // until the card leaves them.
     if (typeof window !== 'undefined') {
       const startInBottom =
-        y.get() > window.innerHeight - BOTTOM_ZONE_OFFSET
+        y.get() > window.innerHeight - bottomZoneOffsetRef.current
       startInBottomZoneRef.current = startInBottom
-      startInTopZoneRef.current = !startInBottom && y.get() < TOP_ZONE_OFFSET
+      startInTopZoneRef.current =
+        !startInBottom && y.get() < topZoneOffsetRef.current
     } else {
       startInBottomZoneRef.current = false
       startInTopZoneRef.current = false
@@ -130,8 +144,8 @@ export function useDragZones({
     if (typeof window === 'undefined') return
     const cx = x.get() + 128 // center of 256px card
     const cy = y.get() + 90 // approximate center Y
-    const inBottom = y.get() > window.innerHeight - BOTTOM_ZONE_OFFSET
-    const inTop = !inBottom && y.get() < TOP_ZONE_OFFSET
+    const inBottom = y.get() > window.innerHeight - bottomZoneOffsetRef.current
+    const inTop = !inBottom && y.get() < topZoneOffsetRef.current
 
     // Once the card leaves a zone it started inside, lift the suppression so
     // a fresh re-entry can trigger normally.
@@ -186,8 +200,8 @@ export function useDragZones({
   const handleDragEnd = useCallback(() => {
     setDragging(false)
     if (typeof window === 'undefined') return
-    const inBottom = y.get() > window.innerHeight - BOTTOM_ZONE_OFFSET
-    const inTop = !inBottom && y.get() < TOP_ZONE_OFFSET
+    const inBottom = y.get() > window.innerHeight - bottomZoneOffsetRef.current
+    const inTop = !inBottom && y.get() < topZoneOffsetRef.current
 
     // Apply the same suppression: a zone the drag started in is inert until
     // the card leaves it. If it never left, treat it as "not in zone".

@@ -16,6 +16,13 @@ import { useReminderScheduler } from '../hooks/useReminderScheduler'
 import { StackFan } from '../components/stack/StackFan'
 import { ContextInput } from '../components/context-input/ContextInput'
 
+// ─── Edge-hint vertical offsets ──────────────────────────────────────────────
+// Pixel gap between the live header / input-bar and their adjacent hint text.
+// Pure UI tuning — not a business rule, so it lives here, not in limits.ts.
+// Tweak freely.
+const TOP_HINT_OFFSET_BELOW_HEADER = 24
+const BOTTOM_HINT_OFFSET_ABOVE_BAR = 36
+
 export function StickyNoteCanvas() {
   const todos = useTodoStore((s) => s.todos)
   const moveTodo = useTodoStore((s) => s.moveTodo)
@@ -43,6 +50,8 @@ export function StickyNoteCanvas() {
 
   const expandedStackId = useUiStore((s) => s.expandedStackId)
   const setExpandedStack = useUiStore((s) => s.setExpandedStack)
+  const headerHeight = useUiStore((s) => s.headerHeight)
+  const inputBarHeight = useUiStore((s) => s.inputBarHeight)
 
   // Load data from IndexedDB on first mount
   const initializeTodos = useTodoStore((s) => s.initialize)
@@ -98,7 +107,10 @@ export function StickyNoteCanvas() {
   }
 
   // ── Context input (right-click to create) ─────────────────────────────────
-  const [contextInputPos, setContextInputPos] = useState<{ x: number; y: number } | null>(null)
+  const [contextInputPos, setContextInputPos] = useState<{
+    x: number
+    y: number
+  } | null>(null)
 
   const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
     // Only trigger on the canvas itself, not on sticky notes
@@ -165,7 +177,7 @@ export function StickyNoteCanvas() {
       <div
         className="absolute font-mono text-[8px] tracking-[0.22em] uppercase pointer-events-none select-none"
         style={{
-          bottom: 96,
+          bottom: inputBarHeight + BOTTOM_HINT_OFFSET_ABOVE_BAR,
           left: '50%',
           transform: 'translateX(-50%)',
           color: 'var(--rf-text-dim, rgba(0,245,255,0.3))',
@@ -173,12 +185,12 @@ export function StickyNoteCanvas() {
           whiteSpace: 'nowrap',
         }}
       >
-        ↓  archive · hold to delete
+        ↓ archive · hold to delete
       </div>
       <div
         className="absolute font-mono text-[8px] tracking-[0.22em] uppercase pointer-events-none select-none"
         style={{
-          top: 62,
+          top: headerHeight + TOP_HINT_OFFSET_BELOW_HEADER,
           left: '50%',
           transform: 'translateX(-50%)',
           color: 'var(--rf-text-dim, rgba(0,245,255,0.3))',
@@ -186,7 +198,7 @@ export function StickyNoteCanvas() {
           whiteSpace: 'nowrap',
         }}
       >
-        ↑  export
+        ↑ export
       </div>
 
       {/* Empty state */}
