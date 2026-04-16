@@ -22,7 +22,7 @@ const checklistMd: ExportTemplate = {
       lines.push(todo.description)
       lines.push('')
     }
-    if (todo.subtasks?.length) {
+    if (todo.subtasks.length) {
       lines.push('## Tasks')
       lines.push('')
       for (const st of todo.subtasks) {

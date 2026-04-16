@@ -232,7 +232,7 @@ export function ExportModal({ open, todo, onClose }: ExportModalProps) {
         >
           {format === 'html' ? (
             <iframe
-              key={selectedId + (todo.updatedAt ?? 0)}
+              key={selectedId + todo.updatedAt}
               title="export preview"
               srcDoc={rendered}
               sandbox=""

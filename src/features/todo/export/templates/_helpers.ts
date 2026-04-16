@@ -24,7 +24,7 @@ export function renderSubtasksHtml(
   bullet: string,
   doneBullet: string,
 ): string {
-  if (!todo.subtasks?.length) return ''
+  if (!todo.subtasks.length) return ''
   return todo.subtasks
     .map(
       (st) =>

@@ -14,7 +14,7 @@ const plainMd: ExportTemplate = {
       lines.push(todo.description)
       lines.push('')
     }
-    if (todo.subtasks?.length) {
+    if (todo.subtasks.length) {
       for (const st of todo.subtasks) {
         lines.push(`- ${st.completed ? '~~' : ''}${st.title}${st.completed ? '~~' : ''}`)
       }
