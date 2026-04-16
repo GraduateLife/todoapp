@@ -3,15 +3,20 @@ import ThemeToggle from './ThemeToggle'
 
 export default function Header() {
   return (
-    <header className="relative" style={{ zIndex: 50 }}>
+    // pointer-events surgery: the <header> + <nav> would otherwise intercept
+    // pointer events across the entire top strip of the viewport (they sit in
+    // a stacking context above the sticky-note canvas). Make the empty area
+    // transparent to events, and re-enable events only on the actual
+    // interactive islands (the link group and the theme toggle).
+    <header className="relative" style={{ zIndex: 50, pointerEvents: 'none' }}>
       <nav
         className="w-[95%] mx-auto flex items-stretch gap-6 py-3 bg-transparent"
-        style={{ minHeight: 52 }}
+        style={{ minHeight: 52, pointerEvents: 'none' }}
       >
         {/* Logo */}
 
         {/* Nav links */}
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-5" style={{ pointerEvents: 'auto' }}>
           <Link
             to="/"
             className="nav-link"
@@ -36,7 +41,7 @@ export default function Header() {
         </div>
 
         {/* Right side */}
-        <div className="ml-auto flex items-center">
+        <div className="ml-auto flex items-center" style={{ pointerEvents: 'auto' }}>
           <ThemeToggle />
         </div>
       </nav>
