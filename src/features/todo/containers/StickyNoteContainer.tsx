@@ -34,6 +34,7 @@ interface StickyNoteContainerProps {
   onToggleSubTask: (id: string, subtaskId: string) => void
   onDeleteSubTask: (id: string, subtaskId: string) => void
   onUpdateSubTask: (id: string, subtaskId: string, title: string) => void
+  onRequestExport: (id: string) => void
   zIndexOverride?: number
   otherNotes: Array<{ id: string; position: { x: number; y: number } }>
   isStackTarget: boolean
@@ -57,6 +58,7 @@ export function StickyNoteContainer({
   onToggleSubTask,
   onDeleteSubTask,
   onUpdateSubTask,
+  onRequestExport,
   zIndexOverride,
   otherNotes,
   isStackTarget,
@@ -108,6 +110,7 @@ export function StickyNoteContainer({
     handleDrag,
     handleDragEnd,
     isInBottomZone,
+    isInTopZone,
     glitchIntensity,
     isInStackZone,
   } = useDragZones({
@@ -119,6 +122,7 @@ export function StickyNoteContainer({
     onMove,
     onDelete,
     onArchive,
+    onRequestExport,
     onBringToFront,
     onDropOnNote,
     onStackTargetChange,
@@ -204,14 +208,17 @@ export function StickyNoteContainer({
   // Derive archive vs delete from bottom zone + glitch
   const isInDeleteZone = isInBottomZone && glitchIntensity > 0
   const isInArchiveZone = isInBottomZone && glitchIntensity === 0
-  const isInZone = isInBottomZone || isInStackZone
+  const isInExportZone = isInTopZone
+  const isInZone = isInBottomZone || isInTopZone || isInStackZone
 
   // Resolve which zone we're in (if any).
   const activeZone = isInDeleteZone
     ? ZONE_VISUALS.delete
     : isInArchiveZone
       ? ZONE_VISUALS.archive
-      : ZONE_VISUALS.stack
+      : isInExportZone
+        ? ZONE_VISUALS.export
+        : ZONE_VISUALS.stack
   const zoneColor = activeZone.color
   const zoneGlow = activeZone.glow
 
@@ -234,7 +241,9 @@ export function StickyNoteContainer({
     ? 'rgba(255,30,30,0.12)'
     : isInArchiveZone
       ? 'rgba(255,30,30,0.12)'
-      : ns.bg
+      : isInExportZone
+        ? 'rgba(255,184,0,0.10)'
+        : ns.bg
   const glowColor = isInZone
     ? zoneGlow
     : isStackTarget
@@ -271,6 +280,7 @@ export function StickyNoteContainer({
       isInZone={isInZone}
       isInDeleteZone={isInDeleteZone}
       isInArchiveZone={isInArchiveZone}
+      isInExportZone={isInExportZone}
       glitchIntensity={glitchIntensity}
       isInStackZone={isInStackZone}
       zoneColor={zoneColor}

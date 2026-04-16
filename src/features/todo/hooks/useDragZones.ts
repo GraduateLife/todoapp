@@ -5,6 +5,7 @@ import { DELETE_GLITCH_DELAY, DELETE_GLITCH_DURATION } from '@/lib/limits'
 
 // ─── Zone thresholds ─────────────────────────────────────────────────────────
 const BOTTOM_ZONE_OFFSET = 160 // px from bottom of viewport
+const TOP_ZONE_OFFSET = 80 // px from top of viewport — must clear the header
 
 // ─── Stack hit area ──────────────────────────────────────────────────────────
 const STACK_HIT_W = 200
@@ -19,6 +20,7 @@ interface UseDragZonesOptions {
   onMove: (id: string, x: number, y: number) => void
   onDelete: (id: string) => void
   onArchive: (id: string) => void
+  onRequestExport: (id: string) => void
   onBringToFront: (id: string) => void
   onDropOnNote: (targetId: string) => void
   onStackTargetChange: (targetId: string | null) => void
@@ -34,6 +36,7 @@ export function useDragZones({
   onMove,
   onDelete,
   onArchive,
+  onRequestExport,
   onBringToFront,
   onDropOnNote,
   onStackTargetChange,
@@ -42,6 +45,7 @@ export function useDragZones({
   const setDragging = useUiStore((s) => s.setDragging)
 
   const [isInBottomZone, setIsInBottomZone] = useState(false)
+  const [isInTopZone, setIsInTopZone] = useState(false)
   const [glitchIntensity, setGlitchIntensity] = useState(0)
   const [isInStackZone, setIsInStackZone] = useState(false)
 
@@ -58,6 +62,15 @@ export function useDragZones({
   const bottomEnteredAtRef = useRef<number>(0)
   const glitchTickRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const autoDeletedRef = useRef(false)
+
+  // ── "Started inside zone" suppression ──────────────────────────────────────
+  // If a drag begins with the card already inside an edge zone, that zone is
+  // suppressed for the duration of the drag — until the card leaves the zone
+  // at least once. This prevents the case where a user cancels an export
+  // modal and then can't drag the (still up-top) card back down without
+  // re-triggering export. Same idea applies to the bottom zone.
+  const startInBottomZoneRef = useRef(false)
+  const startInTopZoneRef = useRef(false)
 
   const stopGlitchTimer = useCallback(() => {
     if (glitchTickRef.current) {
@@ -100,25 +113,54 @@ export function useDragZones({
     setDragging(true)
     onBringToFront(todoId)
     if (isExpanded) onToggleExpand()
-  }, [todoId, onBringToFront, setDragging, isExpanded, onToggleExpand])
+    // Capture which zones the card is already inside — these get suppressed
+    // until the card leaves them.
+    if (typeof window !== 'undefined') {
+      const startInBottom =
+        y.get() > window.innerHeight - BOTTOM_ZONE_OFFSET
+      startInBottomZoneRef.current = startInBottom
+      startInTopZoneRef.current = !startInBottom && y.get() < TOP_ZONE_OFFSET
+    } else {
+      startInBottomZoneRef.current = false
+      startInTopZoneRef.current = false
+    }
+  }, [todoId, onBringToFront, setDragging, isExpanded, onToggleExpand, y])
 
   const handleDrag = useCallback(() => {
     if (typeof window === 'undefined') return
     const cx = x.get() + 128 // center of 256px card
     const cy = y.get() + 90 // approximate center Y
     const inBottom = y.get() > window.innerHeight - BOTTOM_ZONE_OFFSET
+    const inTop = !inBottom && y.get() < TOP_ZONE_OFFSET
+
+    // Once the card leaves a zone it started inside, lift the suppression so
+    // a fresh re-entry can trigger normally.
+    if (!inBottom && startInBottomZoneRef.current) {
+      startInBottomZoneRef.current = false
+    }
+    if (!inTop && startInTopZoneRef.current) {
+      startInTopZoneRef.current = false
+    }
+
+    // Effective zone state — what the rest of the system sees. Suppressed
+    // while we're still sitting inside a zone the drag started in.
+    const effectiveInBottom = inBottom && !startInBottomZoneRef.current
+    const effectiveInTop = inTop && !startInTopZoneRef.current
 
     // Bottom zone enter/leave
-    if (inBottom && !isInBottomZone) {
+    if (effectiveInBottom && !isInBottomZone) {
       setIsInBottomZone(true)
       startGlitchTimer()
-    } else if (!inBottom && isInBottomZone) {
+    } else if (!effectiveInBottom && isInBottomZone) {
       setIsInBottomZone(false)
       stopGlitchTimer()
     }
 
-    // Stack detection — only when not in bottom zone
-    if (!inBottom) {
+    // Top zone enter/leave
+    if (effectiveInTop !== isInTopZone) setIsInTopZone(effectiveInTop)
+
+    // Stack detection — only when not in any (effective) edge zone
+    if (!effectiveInBottom && !effectiveInTop) {
       const target = otherNotes.find(
         (n) =>
           cx > n.position.x + 28 &&
@@ -139,23 +181,35 @@ export function useDragZones({
         setIsInStackZone(false)
       }
     }
-  }, [x, y, otherNotes, onStackTargetChange, isInBottomZone, startGlitchTimer, stopGlitchTimer])
+  }, [x, y, otherNotes, onStackTargetChange, isInBottomZone, isInTopZone, startGlitchTimer, stopGlitchTimer])
 
   const handleDragEnd = useCallback(() => {
     setDragging(false)
     if (typeof window === 'undefined') return
     const inBottom = y.get() > window.innerHeight - BOTTOM_ZONE_OFFSET
+    const inTop = !inBottom && y.get() < TOP_ZONE_OFFSET
 
-    // Stack drop (bottom zone takes precedence)
-    if (!inBottom && stackTargetRef.current) {
+    // Apply the same suppression: a zone the drag started in is inert until
+    // the card leaves it. If it never left, treat it as "not in zone".
+    const effectiveInBottom = inBottom && !startInBottomZoneRef.current
+    const effectiveInTop = inTop && !startInTopZoneRef.current
+
+    // Stack drop (edge zones take precedence)
+    if (!effectiveInBottom && !effectiveInTop && stackTargetRef.current) {
       onDropOnNote(stackTargetRef.current)
       stackTargetRef.current = null
       onStackTargetChange(null)
       setIsInStackZone(false)
+      startInBottomZoneRef.current = false
+      startInTopZoneRef.current = false
       return
     }
 
-    if (inBottom && !autoDeletedRef.current) {
+    if (effectiveInTop) {
+      // Drag into top → open export modal
+      onMove(todoId, x.get(), y.get())
+      onRequestExport(todoId)
+    } else if (effectiveInBottom && !autoDeletedRef.current) {
       const elapsed = Date.now() - bottomEnteredAtRef.current
       if (elapsed < DELETE_GLITCH_DELAY) {
         // Quick release → archive
@@ -164,13 +218,17 @@ export function useDragZones({
         // In glitch phase → delete immediately
         onDelete(todoId)
       }
-    } else if (!inBottom) {
+    } else {
+      // Either outside any zone, or inside a suppressed zone — just save.
       onMove(todoId, x.get(), y.get())
     }
 
     // Always clean up
     stopGlitchTimer()
     setIsInBottomZone(false)
+    setIsInTopZone(false)
+    startInBottomZoneRef.current = false
+    startInTopZoneRef.current = false
   }, [
     todoId,
     x,
@@ -178,6 +236,7 @@ export function useDragZones({
     onMove,
     onDelete,
     onArchive,
+    onRequestExport,
     onDropOnNote,
     onStackTargetChange,
     setDragging,
@@ -189,6 +248,7 @@ export function useDragZones({
     handleDrag,
     handleDragEnd,
     isInBottomZone,
+    isInTopZone,
     glitchIntensity,
     isInStackZone,
   }

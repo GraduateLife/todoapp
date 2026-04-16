@@ -47,6 +47,7 @@ export interface StickyNoteProps {
   isInZone: boolean
   isInDeleteZone: boolean
   isInArchiveZone: boolean
+  isInExportZone: boolean
   glitchIntensity: number
   isInStackZone: boolean
   zoneColor: string
@@ -296,6 +297,7 @@ export function StickyNote({
   isInZone,
   isInDeleteZone,
   isInArchiveZone,
+  isInExportZone,
   glitchIntensity,
   isInStackZone,
   zoneColor,
@@ -623,9 +625,11 @@ export function StickyNote({
                   ? 'rgba(255,30,30,0.08)'
                   : isInArchiveZone
                     ? 'rgba(255,30,30,0.08)'
-                    : isInStackZone
-                      ? 'rgba(0,245,255,0.06)'
-                      : 'transparent',
+                    : isInExportZone
+                      ? 'rgba(255,184,0,0.08)'
+                      : isInStackZone
+                        ? 'rgba(0,245,255,0.06)'
+                        : 'transparent',
               }}
             >
               <span

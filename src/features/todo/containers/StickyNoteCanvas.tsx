@@ -9,6 +9,7 @@ import { StickyNoteContainer as StickyNote } from './StickyNoteContainer'
 import { ReminderModal } from '../components/reminder/ReminderModal'
 import { ReminderToast } from '../components/reminder/ReminderToast'
 import { FolderPickerModal } from '../components/folder/FolderPickerModal'
+import { ExportModal } from '../components/export/ExportModal'
 import { FolderMarkers } from '../components/folder/FolderMarkers'
 import { FolderDrawer } from '../components/folder/FolderDrawer'
 import { useReminderScheduler } from '../hooks/useReminderScheduler'
@@ -73,6 +74,12 @@ export function StickyNoteCanvas() {
 
   // Folder picker modal state
   const [folderTarget, setFolderTarget] = useState<string | null>(null)
+
+  // Export modal state
+  const [exportTarget, setExportTarget] = useState<string | null>(null)
+  const exportTodo = exportTarget
+    ? (todos.find((t) => t.id === exportTarget) ?? null)
+    : null
 
   const handleFolderConfirm = (folderId: string) => {
     if (!folderTarget) return
@@ -154,7 +161,7 @@ export function StickyNoteCanvas() {
       aria-label="Sticky notes canvas"
       onContextMenu={handleCanvasContextMenu}
     >
-      {/* Drag-zone edge hint */}
+      {/* Drag-zone edge hints */}
       <div
         className="absolute font-mono text-[8px] tracking-[0.22em] uppercase pointer-events-none select-none"
         style={{
@@ -167,6 +174,19 @@ export function StickyNoteCanvas() {
         }}
       >
         ↓  archive · hold to delete
+      </div>
+      <div
+        className="absolute font-mono text-[8px] tracking-[0.22em] uppercase pointer-events-none select-none"
+        style={{
+          top: 62,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          color: 'var(--rf-text-dim, rgba(0,245,255,0.3))',
+          opacity: 0.4,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        ↑  export
       </div>
 
       {/* Empty state */}
@@ -226,6 +246,7 @@ export function StickyNoteCanvas() {
               onToggleSubTask={toggleSubTask}
               onDeleteSubTask={deleteSubTask}
               onUpdateSubTask={updateSubTask}
+              onRequestExport={setExportTarget}
               // Stack props
               otherNotes={otherNotes}
               isStackTarget={stackTargetId === todo.id}
@@ -299,6 +320,13 @@ export function StickyNoteCanvas() {
         open={!!folderTarget}
         onConfirm={handleFolderConfirm}
         onCancel={() => setFolderTarget(null)}
+      />
+
+      {/* Export modal (drag-to-top trigger) */}
+      <ExportModal
+        open={!!exportTarget}
+        todo={exportTodo}
+        onClose={() => setExportTarget(null)}
       />
 
       {/* In-app reminder toast (fallback when browser notifications are denied) */}

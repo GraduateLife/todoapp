@@ -57,6 +57,7 @@ export const ZONE_VISUALS = {
   delete:   { color: '#ff3030', glow: 'rgba(255,48,48,0.5)',    label: '[ delete ]' },
   archive:  { color: '#ff3030', glow: 'rgba(255,48,48,0.5)',    label: '[ archive ]' },
   stack:    { color: '#00f5ff', glow: 'rgba(0,245,255,0.5)',    label: '[ stack ]' },
+  export:   { color: '#ffb800', glow: 'rgba(255,184,0,0.5)',    label: '[ export ]' },
 } as const
 
 // ─── Box-shadow builder ─────────────────────────────────────────────────────

@@ -32,7 +32,6 @@ export const REMINDER_SHAKE_DISTANCE = 60
 
 // ── Delete zone ────────────────────────────────────────────────────────────
 /** Time (ms) in bottom zone before glitch/delete phase begins */
-export const DELETE_GLITCH_DELAY = 1500
+export const DELETE_GLITCH_DELAY = 1000
 /** Duration (ms) of glitch phase before auto-delete fires */
-export const DELETE_GLITCH_DURATION = 5000
-
+export const DELETE_GLITCH_DURATION = 3000
