@@ -4,8 +4,8 @@ import {
   createShare,
   getShare,
   deleteShare,
-  type CreateShareInput,
 } from '../../application/shares.js'
+import type { CreateShareInput } from '../../application/shares.js'
 
 type ShareRoutesDeps = {
   db: AppDb
@@ -39,7 +39,8 @@ function wrapMarkdown(title: string, md: string): string {
 export function registerShareRoutes(app: Hono, deps: ShareRoutesDeps) {
   // Create a share
   app.post('/share', async (c) => {
-    const body = await c.req.json<CreateShareInput>()
+    // Parse as unknown first so validation checks are not tautological
+    const body: Record<string, unknown> = await c.req.json()
 
     if (!body.content || !body.format || !body.title) {
       return c.json({ error: 'missing required fields' }, 400)
@@ -48,7 +49,7 @@ export function registerShareRoutes(app: Hono, deps: ShareRoutesDeps) {
       return c.json({ error: 'format must be "html" or "md"' }, 400)
     }
 
-    const share = await createShare(deps.db, body)
+    const share = await createShare(deps.db, body as unknown as CreateShareInput)
 
     // Build the public URL from the request origin
     const origin = new URL(c.req.url).origin
