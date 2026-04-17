@@ -71,7 +71,20 @@
       "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx|json\\)$\")",
       "Bash(npx vite:*)",
       "Bash(ls -la /Users/zhangyuntao/Desktop/code/todoapp/backend/*.toml)",
-      "Bash(grep -r \"upload\\\\|file\\\\|storage\\\\|r2\\\\|blob\" /Users/zhangyuntao/Desktop/code/todoapp/backend --include=\"*.ts\" --include=\"*.js\" ! -path \"*/node_modules/*\")"
+      "Bash(grep -r \"upload\\\\|file\\\\|storage\\\\|r2\\\\|blob\" /Users/zhangyuntao/Desktop/code/todoapp/backend --include=\"*.ts\" --include=\"*.js\" ! -path \"*/node_modules/*\")",
+      "Bash(pnpm dev:*)",
+      "Read(//tmp/**)",
+      "Bash(pnpm start:*)",
+      "Bash(curl -s -X POST http://localhost:8000/share -H 'Content-Type: application/json' -d '{\"title\":\"Test Todo\",\"format\":\"html\",\"content\":\"<h1>Hello</h1><p>This is a test share</p>\",\"ttlMs\":86400000}')",
+      "Bash(curl -s http://localhost:8000/s/oB62p6vE)",
+      "Bash(curl -s -X POST http://localhost:8000/share -H 'Content-Type: application/json' -d '{\"title\":\"MD Test\",\"format\":\"md\",\"content\":\"# Hello\\\\n\\\\n- item 1\\\\n- item 2\"}')",
+      "Bash(curl -s http://localhost:8000/s/HKhET1qu)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/s/nonexist)",
+      "Bash(npx vinxi:*)",
+      "Bash(grep STORAGE_STRATEGY /Users/zhangyuntao/Desktop/code/todoapp/.env*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X HEAD http://localhost:8000/todos)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(curl -s http://localhost:8000/s/2xI4DQx_)"
     ]
   }
 }

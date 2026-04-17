@@ -1,47 +1,35 @@
 import { createPortal } from 'react-dom'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import type { CSSProperties } from 'react'
 import type { Todo } from '../../types'
 import { EXPORT_TEMPLATES, getTemplate } from '../../export/templates'
 import { slugify } from '../../export/templates/_helpers'
+import { getShareStrategy } from '../../../../lib/share'
 
 // ─── Markdown preview with lightweight syntax highlighting ──────────────────
-// This is a per-line highlighter — not a full markdown renderer. Headings,
-// list items, task boxes, emphasis, fences and frontmatter dividers are
-// colored so the raw source stays readable on a dark background.
 
 function lineStyle(line: string): CSSProperties {
-  // YAML frontmatter / horizontal rule
   if (/^---\s*$/.test(line)) return { color: '#ffb800', opacity: 0.55 }
-  // Headings
   if (/^###### /.test(line)) return { color: '#ffd580' }
   if (/^##### /.test(line)) return { color: '#ffd580' }
   if (/^#### /.test(line)) return { color: '#ffd580' }
   if (/^### /.test(line)) return { color: '#ffcc66', fontWeight: 500 }
   if (/^## /.test(line)) return { color: '#ffb840', fontWeight: 600 }
   if (/^# /.test(line)) return { color: '#ffb800', fontWeight: 700 }
-  // Task list (checked)
   if (/^\s*- \[x\] /i.test(line))
     return {
       color: 'rgba(200,220,235,0.5)',
       textDecoration: 'line-through',
     }
-  // Task list (unchecked)
   if (/^\s*- \[ \] /.test(line))
     return { color: '#e6faff' }
-  // Regular list items
   if (/^\s*[-*+] /.test(line)) return { color: '#a8cce0' }
-  // Blockquote
   if (/^\s*> /.test(line)) return { color: '#7fa8c0', fontStyle: 'italic' }
-  // Code fence
   if (/^```/.test(line)) return { color: '#80d4e8', opacity: 0.7 }
-  // Line that is pure italic / caption (e.g. "*Apr 16 · normal*")
   if (/^\*[^*]+\*\s*$/.test(line))
     return { color: '#80d4e8', fontStyle: 'italic' }
-  // YAML frontmatter entry "key: value"
   if (/^\w[\w-]*:\s/.test(line))
     return { color: '#b8d4e8' }
-  // Default body text
   return { color: '#d8ecf5' }
 }
 
@@ -77,6 +65,72 @@ function MarkdownPreview({ content }: { content: string }) {
   )
 }
 
+// ─── Share result panel ─────────────────────────────────────────────────────
+
+function ShareResultPanel({
+  url,
+  onCopyUrl,
+  urlCopied,
+}: {
+  url: string
+  onCopyUrl: () => void
+  urlCopied: boolean
+}) {
+  return (
+    <div
+      className="mx-6 mb-3 rounded-[2px] flex items-center gap-3"
+      style={{
+        padding: '10px 14px',
+        background: 'rgba(0,245,255,0.04)',
+        border: '1px solid rgba(0,245,255,0.2)',
+      }}
+    >
+      <span
+        className="font-mono text-[9px] tracking-[0.15em] uppercase shrink-0"
+        style={{ color: '#00f5ff', opacity: 0.6 }}
+      >
+        shared
+      </span>
+      <input
+        type="text"
+        readOnly
+        value={url}
+        className="font-mono text-[11px] flex-1 min-w-0 bg-transparent outline-none"
+        style={{ color: '#d8ecf5', border: 'none' }}
+        onFocus={(e) => e.target.select()}
+      />
+      <button
+        type="button"
+        className="rf-btn shrink-0"
+        onClick={onCopyUrl}
+        style={{
+          borderColor: '#00f5ff',
+          color: '#00f5ff',
+          background: 'rgba(0,245,255,0.06)',
+        }}
+      >
+        {urlCopied ? '[ copied ]' : '[ copy url ]'}
+      </button>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="rf-btn shrink-0"
+        style={{
+          borderColor: '#00f5ff',
+          color: '#00f5ff',
+          background: 'rgba(0,245,255,0.06)',
+          textDecoration: 'none',
+        }}
+      >
+        [ open ]
+      </a>
+    </div>
+  )
+}
+
+// ─── Export Modal ────────────────────────────────────────────────────────────
+
 interface ExportModalProps {
   open: boolean
   todo: Todo | null
@@ -87,10 +141,35 @@ export function ExportModal({ open, todo, onClose }: ExportModalProps) {
   const [selectedId, setSelectedId] = useState<string>(EXPORT_TEMPLATES[0].id)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle')
 
+  // Share state
+  const [shareStatus, setShareStatus] = useState<
+    'idle' | 'sharing' | 'shared' | 'error'
+  >('idle')
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [urlCopied, setUrlCopied] = useState(false)
+  const [shareError, setShareError] = useState<string | null>(null)
+
+  // Check if sharing is available — re-evaluate each time the modal opens
+  // because initShareStrategy() is async and may not have completed on first
+  // render.
+  const [shareAvailable, setShareAvailable] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    try {
+      setShareAvailable(getShareStrategy().isAvailable())
+    } catch {
+      setShareAvailable(false)
+    }
+  }, [open])
+
   useEffect(() => {
     if (open) {
       setSelectedId(EXPORT_TEMPLATES[0].id)
       setCopyStatus('idle')
+      setShareStatus('idle')
+      setShareUrl(null)
+      setUrlCopied(false)
+      setShareError(null)
     }
   }, [open])
 
@@ -99,6 +178,44 @@ export function ExportModal({ open, todo, onClose }: ExportModalProps) {
     if (!todo || !template) return ''
     return template.render(todo)
   }, [todo, template])
+
+  const handleShare = useCallback(async () => {
+    if (!todo || !template) return
+    setShareStatus('sharing')
+    setShareError(null)
+    try {
+      const result = await getShareStrategy().publish({
+        title: todo.title || 'Untitled',
+        format: template.format,
+        content: rendered,
+      })
+      setShareUrl(result.url)
+      setShareStatus('shared')
+      // Auto-copy to clipboard
+      try {
+        await navigator.clipboard.writeText(result.url)
+        setUrlCopied(true)
+        setTimeout(() => setUrlCopied(false), 2000)
+      } catch {
+        // Clipboard might fail on some browsers, that's ok
+      }
+    } catch (err) {
+      console.error('[share] failed', err)
+      setShareError(err instanceof Error ? err.message : 'Share failed')
+      setShareStatus('error')
+    }
+  }, [todo, template, rendered])
+
+  const handleCopyUrl = useCallback(async () => {
+    if (!shareUrl) return
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setUrlCopied(true)
+      setTimeout(() => setUrlCopied(false), 2000)
+    } catch (err) {
+      console.error('Copy URL failed', err)
+    }
+  }, [shareUrl])
 
   if (!open || !todo || !template || typeof document === 'undefined') return null
 
@@ -248,6 +365,34 @@ export function ExportModal({ open, todo, onClose }: ExportModalProps) {
           )}
         </div>
 
+        {/* Share result panel — shown after successful share */}
+        {shareStatus === 'shared' && shareUrl && (
+          <ShareResultPanel
+            url={shareUrl}
+            onCopyUrl={handleCopyUrl}
+            urlCopied={urlCopied}
+          />
+        )}
+
+        {/* Share error */}
+        {shareStatus === 'error' && shareError && (
+          <div
+            className="mx-6 mb-3 rounded-[2px]"
+            style={{
+              padding: '8px 14px',
+              background: 'rgba(255,48,48,0.06)',
+              border: '1px solid rgba(255,48,48,0.25)',
+            }}
+          >
+            <p
+              className="font-mono text-[10px]"
+              style={{ color: '#ff6060' }}
+            >
+              share failed: {shareError}
+            </p>
+          </div>
+        )}
+
         {/* Footer / actions */}
         <div
           className="px-6 py-3 flex items-center justify-between gap-2"
@@ -257,7 +402,9 @@ export function ExportModal({ open, todo, onClose }: ExportModalProps) {
             className="font-mono text-[9px] tracking-[0.12em] opacity-40"
             style={{ color: 'var(--rf-text-dim)' }}
           >
-            phase 1 · local only · backend link coming soon
+            {shareAvailable
+              ? 'export · download · share'
+              : 'export · download · share requires backend'}
           </p>
           <div className="flex gap-2">
             <button type="button" className="rf-btn" onClick={onClose}>
@@ -279,6 +426,29 @@ export function ExportModal({ open, todo, onClose }: ExportModalProps) {
               }}
             >
               [ download ]
+            </button>
+            <button
+              type="button"
+              className="rf-btn"
+              onClick={handleShare}
+              disabled={!shareAvailable || shareStatus === 'sharing'}
+              style={
+                shareAvailable
+                  ? {
+                      borderColor: '#00f5ff',
+                      color: '#00f5ff',
+                      background: 'rgba(0,245,255,0.06)',
+                      opacity: shareStatus === 'sharing' ? 0.5 : 1,
+                    }
+                  : { opacity: 0.25, cursor: 'not-allowed' }
+              }
+              title={shareAvailable ? undefined : 'Requires backend connection'}
+            >
+              {shareStatus === 'sharing'
+                ? '[ sharing... ]'
+                : shareStatus === 'shared'
+                  ? '[ re-share ]'
+                  : '[ share ]'}
             </button>
           </div>
         </div>

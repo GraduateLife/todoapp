@@ -23,6 +23,14 @@ export function createNodeDb() {
       id TEXT PRIMARY KEY,
       data TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS shares (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      format TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      expires_at INTEGER
+    );
   `)
 
   return drizzle(sqlite, { schema })

@@ -4,6 +4,7 @@ import { useTodoStore, useFolderStore } from '../store'
 import type { Reminder } from '../types'
 import { initStrategy as initAdapter } from '../../../lib/strategies'
 import { initAIProvider } from '../../../lib/ai'
+import { initShareStrategy } from '../../../lib/share'
 import { useUiStore } from '../store/uiStore'
 import { StickyNoteContainer as StickyNote } from './StickyNoteContainer'
 import { ReminderModal } from '../components/reminder/ReminderModal'
@@ -64,6 +65,7 @@ export function StickyNoteCanvas() {
       })
       .catch(console.error)
     initAIProvider().catch(console.error)
+    initShareStrategy().catch(console.error)
   }, [initializeFolders, initializeTodos])
 
   // Boot reminder scheduler (idempotent)
