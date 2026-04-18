@@ -1,16 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useTodoStore, useFolderStore } from '../store'
 import type { Reminder } from '../types'
-import { initStrategy as initAdapter } from '../../../lib/strategies'
-import { initAIProvider } from '../../../lib/ai'
-import { initShareStrategy } from '../../../lib/share'
 import { useUiStore } from '../store/uiStore'
 import { StickyNoteContainer as StickyNote } from './StickyNoteContainer'
 import { ReminderModal } from '../components/reminder/ReminderModal'
 import { ReminderToast } from '../components/reminder/ReminderToast'
 import { FolderPickerModal } from '../components/folder/FolderPickerModal'
-import { ExportModal } from '../components/export/ExportModal'
 import { FolderMarkers } from '../components/folder/FolderMarkers'
 import { FolderDrawer } from '../components/folder/FolderDrawer'
 import { useReminderScheduler } from '../hooks/useReminderScheduler'
@@ -54,19 +51,7 @@ export function StickyNoteCanvas() {
   const headerHeight = useUiStore((s) => s.headerHeight)
   const inputBarHeight = useUiStore((s) => s.inputBarHeight)
 
-  // Load data from IndexedDB on first mount
-  const initializeTodos = useTodoStore((s) => s.initialize)
-  const initializeFolders = useFolderStore((s) => s.initialize)
-  useEffect(() => {
-    initAdapter()
-      .then(({ todos: loadedTodos, folders }) => {
-        initializeTodos(loadedTodos)
-        initializeFolders(folders)
-      })
-      .catch(console.error)
-    initAIProvider().catch(console.error)
-    initShareStrategy().catch(console.error)
-  }, [initializeFolders, initializeTodos])
+  const navigate = useNavigate()
 
   // Boot reminder scheduler (idempotent)
   const { activeToast, clearToast } = useReminderScheduler()
@@ -86,11 +71,13 @@ export function StickyNoteCanvas() {
   // Folder picker modal state
   const [folderTarget, setFolderTarget] = useState<string | null>(null)
 
-  // Export modal state
-  const [exportTarget, setExportTarget] = useState<string | null>(null)
-  const exportTodo = exportTarget
-    ? (todos.find((t) => t.id === exportTarget) ?? null)
-    : null
+  // Export request → navigate to the share page
+  const handleRequestExport = useCallback(
+    (todoId: string) => {
+      navigate({ to: '/share', search: { id: todoId } })
+    },
+    [navigate],
+  )
 
   const handleFolderConfirm = (folderId: string) => {
     if (!folderTarget) return
@@ -260,7 +247,7 @@ export function StickyNoteCanvas() {
               onToggleSubTask={toggleSubTask}
               onDeleteSubTask={deleteSubTask}
               onUpdateSubTask={updateSubTask}
-              onRequestExport={setExportTarget}
+              onRequestExport={handleRequestExport}
               // Stack props
               otherNotes={otherNotes}
               isStackTarget={stackTargetId === todo.id}
@@ -334,13 +321,6 @@ export function StickyNoteCanvas() {
         open={!!folderTarget}
         onConfirm={handleFolderConfirm}
         onCancel={() => setFolderTarget(null)}
-      />
-
-      {/* Export modal (drag-to-top trigger) */}
-      <ExportModal
-        open={!!exportTarget}
-        todo={exportTodo}
-        onClose={() => setExportTarget(null)}
       />
 
       {/* In-app reminder toast (fallback when browser notifications are denied) */}

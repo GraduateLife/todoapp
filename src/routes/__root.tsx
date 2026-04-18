@@ -10,12 +10,16 @@ import Footer from '../components/Footer'
 import Header from '../components/Header'
 import { STORAGE_STRATEGY, AI_PROVIDER, AI_MODEL } from '../lib/env'
 
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import TanStackQueryProvider from '../integrations/tanstack-query/root-provider'
 
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 
 import { getLocale } from '#/paraglide/runtime'
+import { useTodoStore, useFolderStore } from '../features/todo/store'
+import { initStrategy as initAdapter } from '../lib/strategies'
+import { initAIProvider } from '../lib/ai'
+import { initShareStrategy } from '../lib/share'
 
 import appCss from '../styles/globals.css?url'
 
@@ -61,7 +65,23 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   shellComponent: RootDocument,
 })
 
+function useAppBootstrap() {
+  const initializeTodos = useTodoStore((s) => s.initialize)
+  const initializeFolders = useFolderStore((s) => s.initialize)
+  useEffect(() => {
+    initAdapter()
+      .then(({ todos: loadedTodos, folders }) => {
+        initializeTodos(loadedTodos)
+        initializeFolders(folders)
+      })
+      .catch(console.error)
+    initAIProvider().catch(console.error)
+    initShareStrategy().catch(console.error)
+  }, [initializeTodos, initializeFolders])
+}
+
 function RootDocument({ children }: { children: React.ReactNode }) {
+  useAppBootstrap()
   return (
     <html lang={getLocale()} suppressHydrationWarning>
       <head>
