@@ -64,6 +64,13 @@ export default function Header() {
           >
             archive
           </Link>
+          <Link
+            to="/share"
+            className="nav-link"
+            activeProps={{ className: 'nav-link is-active' }}
+          >
+            share
+          </Link>
         </div>
 
         {/* Right side */}
