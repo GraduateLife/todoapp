@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { ExportFormat } from '#/features/todo/export/templates'
 import { MarkdownPreview } from './MarkdownPreview'
 
@@ -7,6 +8,12 @@ interface PreviewFrameProps {
   format: ExportFormat
   rendered: string
   templateLabel?: string
+  /** Rendered between the chrome bar and the preview body — e.g. the content editor */
+  editorSlot?: ReactNode
+  /** Rendered on the right side of the chrome bar, before the char count */
+  toolbarSlot?: ReactNode
+  /** Small badge shown next to "preview" when source has been edited */
+  modified?: boolean
 }
 
 export function PreviewFrame({
@@ -14,6 +21,9 @@ export function PreviewFrame({
   format,
   rendered,
   templateLabel,
+  editorSlot,
+  toolbarSlot,
+  modified,
 }: PreviewFrameProps) {
   return (
     <section
@@ -41,11 +51,29 @@ export function PreviewFrame({
           {templateLabel && (
             <span style={{ opacity: 0.5 }}>· {templateLabel}</span>
           )}
+          {modified && (
+            <span
+              className="px-1.5 py-0.5 rounded-[2px]"
+              style={{
+                color: '#00f5ff',
+                border: '1px solid rgba(0,245,255,0.35)',
+                background: 'rgba(0,245,255,0.06)',
+                fontSize: '8px',
+              }}
+            >
+              · modified
+            </span>
+          )}
         </div>
-        <span style={{ opacity: 0.5 }}>
-          {rendered.length.toLocaleString()} chars
-        </span>
+        <div className="flex items-center gap-3">
+          {toolbarSlot}
+          <span style={{ opacity: 0.5 }}>
+            {rendered.length.toLocaleString()} chars
+          </span>
+        </div>
       </div>
+
+      {editorSlot}
 
       <div
         className="flex-1 min-h-0 relative"

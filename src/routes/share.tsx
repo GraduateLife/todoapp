@@ -7,11 +7,13 @@ import {
 } from '#/features/todo/export/templates'
 import { slugify } from '#/features/todo/export/templates/_helpers'
 import {
+  ContentEditor,
   PreviewFrame,
   ShareActions,
   ShareHeader,
   ShareResult,
   TemplateList,
+  useContentOverride,
   useShareState,
 } from '#/features/share'
 
@@ -36,13 +38,27 @@ function RouteComponent() {
 
   const [selectedId, setSelectedId] = useState<string>(EXPORT_TEMPLATES[0].id)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle')
+  const [editorOpen, setEditorOpen] = useState(false)
   const share = useShareState()
+  const override = useContentOverride(todo)
 
   const template = useMemo(() => getTemplate(selectedId), [selectedId])
+  const renderTarget = override.overriddenTodo ?? todo
   const rendered = useMemo(() => {
-    if (!todo || !template) return ''
-    return template.render(todo)
-  }, [todo, template])
+    if (!renderTarget || !template) return ''
+    return template.render(renderTarget)
+  }, [renderTarget, template])
+
+  // Cheap stable hash of the rendered output — lets us bust the iframe cache
+  // whenever the user edits, since some browsers don't re-parse a sandboxed
+  // iframe when srcDoc changes in place.
+  const renderedHash = useMemo(() => {
+    let h = 0
+    for (let i = 0; i < rendered.length; i++) {
+      h = (h * 31 + rendered.charCodeAt(i)) | 0
+    }
+    return h.toString(36)
+  }, [rendered])
 
   // Reset panel state when switching template
   useEffect(() => {
@@ -74,8 +90,8 @@ function RouteComponent() {
   }, [rendered])
 
   const handleDownload = useCallback(() => {
-    if (!todo || !template) return
-    const name = slugify(todo.title || 'untitled')
+    if (!renderTarget || !template) return
+    const name = slugify(renderTarget.title || 'untitled')
     const ext = template.format === 'md' ? 'md' : 'html'
     const mime = template.format === 'md' ? 'text/markdown' : 'text/html'
     const blob = new Blob([rendered], { type: mime })
@@ -87,16 +103,16 @@ function RouteComponent() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }, [todo, template, rendered])
+  }, [renderTarget, template, rendered])
 
   const handleShare = useCallback(() => {
-    if (!todo || !template) return
+    if (!renderTarget || !template) return
     void share.publish({
-      title: todo.title || 'Untitled',
+      title: renderTarget.title || 'Untitled',
       format: template.format,
       content: rendered,
     })
-  }, [todo, template, rendered, share])
+  }, [renderTarget, template, rendered, share])
 
   // ── Missing-todo state ─────────────────────────────────────────────────────
   if (!id || !todo) {
@@ -129,7 +145,7 @@ function RouteComponent() {
       style={{ minHeight: 'calc(100vh - 120px)' }}
     >
       <ShareHeader
-        title={todo.title}
+        title={renderTarget?.title ?? todo.title}
         format={format}
         onBack={handleBack}
       />
@@ -143,7 +159,7 @@ function RouteComponent() {
             templates={EXPORT_TEMPLATES}
             selectedId={selectedId}
             onSelect={setSelectedId}
-            fileBaseTitle={todo.title || 'untitled'}
+            fileBaseTitle={renderTarget?.title || 'untitled'}
           />
 
           <ShareActions
@@ -175,13 +191,45 @@ function RouteComponent() {
         </aside>
 
         <PreviewFrame
-          contentKey={selectedId + todo.updatedAt}
+          contentKey={`${selectedId}:${renderedHash}`}
           format={format}
           rendered={rendered}
           templateLabel={
             template
               ? `${template.name.toLowerCase()}.${template.format}`
               : undefined
+          }
+          modified={override.isModified}
+          toolbarSlot={
+            <button
+              type="button"
+              onClick={() => setEditorOpen((v) => !v)}
+              className="font-mono text-[9px] tracking-[0.15em] uppercase px-2 py-0.5 rounded-[2px]"
+              style={{
+                color: editorOpen ? '#ffb800' : 'var(--rf-text-dim)',
+                border: `1px solid ${
+                  editorOpen ? 'rgba(255,184,0,0.5)' : 'rgba(200,220,235,0.18)'
+                }`,
+                background: editorOpen
+                  ? 'rgba(255,184,0,0.08)'
+                  : 'transparent',
+              }}
+            >
+              {editorOpen ? '[ editing ]' : '[ edit ]'}
+            </button>
+          }
+          editorSlot={
+            editorOpen ? (
+              <ContentEditor
+                title={override.title}
+                description={override.description}
+                isModified={override.isModified}
+                onTitleChange={override.setTitle}
+                onDescriptionChange={override.setDescription}
+                onReset={override.resetToOriginal}
+                onClose={() => setEditorOpen(false)}
+              />
+            ) : null
           }
         />
       </div>
