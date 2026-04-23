@@ -29,6 +29,8 @@ export function PreviewFrame({
     <section
       className="flex-1 min-w-0 rounded-[2px] overflow-hidden flex flex-col"
       style={{
+        position: 'relative',
+        zIndex: 1,
         border: '1px solid rgba(255,184,0,0.35)',
         background: '#0a0f1c',
         boxShadow: '0 0 24px rgba(255,184,0,0.04)',
@@ -41,61 +43,38 @@ export function PreviewFrame({
           borderBottom: '1px solid rgba(255,184,0,0.2)',
           background: 'rgba(255,184,0,0.05)',
         }}
-      >
-        <div className="flex items-center gap-2">
-          <span
-            className="inline-block w-[6px] h-[6px] rounded-full"
-            style={{ background: '#ffb800', boxShadow: '0 0 6px #ffb800' }}
-          />
-          <span>preview</span>
-          {templateLabel && (
-            <span style={{ opacity: 0.5 }}>· {templateLabel}</span>
-          )}
-          {modified && (
-            <span
-              className="px-1.5 py-0.5 rounded-[2px]"
-              style={{
-                color: '#00f5ff',
-                border: '1px solid rgba(0,245,255,0.35)',
-                background: 'rgba(0,245,255,0.06)',
-                fontSize: '8px',
-              }}
-            >
-              · modified
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          {toolbarSlot}
-          <span style={{ opacity: 0.5 }}>
-            {rendered.length.toLocaleString()} chars
-          </span>
-        </div>
-      </div>
+      ></div>
 
       {editorSlot}
 
       <div
-        className="flex-1 min-h-0 relative"
-        style={{ background: '#05070d' }}
+        className="flex-1 min-h-0 preview-frame-body rf-scrollbar"
+        style={{
+          background: '#05070d',
+          overflowY: 'auto',
+          display: 'flex',
+          justifyContent: 'center',
+        }}
       >
-        {format === 'html' ? (
-          <iframe
-            key={contentKey}
-            title="export preview"
-            srcDoc={rendered}
-            sandbox=""
-            style={{
-              width: '100%',
-              height: '100%',
-              minHeight: 520,
-              border: 'none',
-              display: 'block',
-            }}
-          />
-        ) : (
-          <MarkdownPreview content={rendered} />
-        )}
+        <div className="preview-frame-content" style={{ width: '100%', height: '100%' }}>
+          {format === 'html' ? (
+            <iframe
+              key={contentKey}
+              title="export preview"
+              srcDoc={rendered}
+              sandbox=""
+              scrolling="no"
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                display: 'block',
+              }}
+            />
+          ) : (
+            <MarkdownPreview content={rendered} />
+          )}
+        </div>
       </div>
     </section>
   )

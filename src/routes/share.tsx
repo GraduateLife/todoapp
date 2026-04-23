@@ -138,7 +138,7 @@ function RouteComponent() {
   return (
     <main
       className="page-wrap px-4 py-6 flex flex-col gap-4"
-      style={{ minHeight: 'calc(100vh - 120px)' }}
+      style={{ height: 'calc(100dvh - 74px)', overflow: 'hidden' }}
     >
       <ShareHeader
         title={renderTarget?.title ?? todo.title}
@@ -146,8 +146,8 @@ function RouteComponent() {
         onBack={handleBack}
       />
 
-      <div className="flex gap-4 flex-1 min-h-0" style={{ minHeight: 560 }}>
-        <aside className="flex flex-col gap-4 shrink-0" style={{ width: 260 }}>
+      <div id="share-layout" className="flex gap-4 flex-1 min-h-0">
+        <aside id="share-sidebar" className="flex flex-col gap-4 shrink-0" style={{ width: 260 }}>
           <TemplateList
             templates={EXPORT_TEMPLATES}
             selectedId={selectedId}
@@ -177,7 +177,7 @@ function RouteComponent() {
           </p>
         </aside>
 
-        <div className="flex flex-col gap-3 flex-1 min-w-0">
+        <div id="share-preview-panel" className="flex flex-col gap-3 flex-1 min-w-0">
           <ContentEditor
             title={override.title}
             description={override.description}
