@@ -5,7 +5,6 @@ interface ContentEditorProps {
   onTitleChange: (v: string) => void
   onDescriptionChange: (v: string) => void
   onReset: () => void
-  onClose: () => void
 }
 
 export function ContentEditor({
@@ -15,15 +14,14 @@ export function ContentEditor({
   onTitleChange,
   onDescriptionChange,
   onReset,
-  onClose,
 }: ContentEditorProps) {
   return (
     <div
       className="flex flex-col gap-2 px-4 py-3 shrink-0"
       style={{
-        background: 'rgba(0,245,255,0.04)',
-        borderTop: '1px solid rgba(0,245,255,0.2)',
-        borderBottom: '1px solid rgba(0,245,255,0.25)',
+        background: 'rgba(0,245,255,0.08)',
+        borderTop: '1px solid rgba(0,245,255,0.4)',
+        borderBottom: '1px solid rgba(0,245,255,0.4)',
       }}
     >
       <div className="flex items-center justify-between">
@@ -62,14 +60,6 @@ export function ContentEditor({
           >
             [ reset ]
           </button>
-          <button
-            type="button"
-            className="rf-btn"
-            onClick={onClose}
-            style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-          >
-            [ close ]
-          </button>
         </div>
       </div>
 
@@ -85,13 +75,8 @@ export function ContentEditor({
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder="untitled"
-          className="font-mono outline-none rounded-[2px] px-2 py-1.5"
-          style={{
-            color: '#e6faff',
-            fontSize: '0.82rem',
-            border: '1px solid rgba(0,245,255,0.35)',
-            background: 'rgba(255,255,255,0.04)',
-          }}
+          className="rf-edit-field"
+          style={{ fontSize: '0.82rem' }}
         />
       </label>
 
@@ -107,13 +92,10 @@ export function ContentEditor({
           onChange={(e) => onDescriptionChange(e.target.value)}
           placeholder="(empty)"
           rows={3}
-          className="font-mono outline-none rounded-[2px] px-2 py-1.5 resize-y"
+          className="rf-edit-field resize-y"
           style={{
-            color: '#e6faff',
             fontSize: '0.78rem',
             lineHeight: 1.5,
-            border: '1px solid rgba(0,245,255,0.35)',
-            background: 'rgba(255,255,255,0.04)',
             minHeight: 60,
             maxHeight: 200,
           }}

@@ -495,6 +495,28 @@ pre code {
   color: var(--rf-text-dim);
 }
 
+/* ─── Share content editor inputs ──────────────── */
+.rf-edit-field {
+  position: relative;
+  z-index: 1;
+  background: #0a1a24 !important;
+  border: 1px solid #00f5ff !important;
+  color: #e6faff !important;
+  width: 100% !important;
+  border-radius: 2px;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.rf-edit-field:focus {
+  box-shadow: 0 0 0 2px rgba(0, 245, 255, 0.35);
+}
+.rf-edit-field::placeholder {
+  color: rgba(230, 250, 255, 0.35);
+}
+
 /* ─── Buffer-mode overlay: wavy underline rows ── */
 /* SVG wavy path drawn at bottom of each line row  */
 .rf-row-wavy-danger {

@@ -1,10 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTodoStore } from '#/features/todo/store'
-import {
-  EXPORT_TEMPLATES,
-  getTemplate,
-} from '#/features/todo/export/templates'
+import { EXPORT_TEMPLATES, getTemplate } from '#/features/todo/export/templates'
 import { slugify } from '#/features/todo/export/templates/_helpers'
 import {
   ContentEditor,
@@ -38,7 +35,6 @@ function RouteComponent() {
 
   const [selectedId, setSelectedId] = useState<string>(EXPORT_TEMPLATES[0].id)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle')
-  const [editorOpen, setEditorOpen] = useState(false)
   const share = useShareState()
   const override = useContentOverride(todo)
 
@@ -151,10 +147,7 @@ function RouteComponent() {
       />
 
       <div className="flex gap-4 flex-1 min-h-0" style={{ minHeight: 560 }}>
-        <aside
-          className="flex flex-col gap-4 shrink-0"
-          style={{ width: 260 }}
-        >
+        <aside className="flex flex-col gap-4 shrink-0" style={{ width: 260 }}>
           <TemplateList
             templates={EXPORT_TEMPLATES}
             selectedId={selectedId}
@@ -190,48 +183,27 @@ function RouteComponent() {
           </p>
         </aside>
 
-        <PreviewFrame
-          contentKey={`${selectedId}:${renderedHash}`}
-          format={format}
-          rendered={rendered}
-          templateLabel={
-            template
-              ? `${template.name.toLowerCase()}.${template.format}`
-              : undefined
-          }
-          modified={override.isModified}
-          toolbarSlot={
-            <button
-              type="button"
-              onClick={() => setEditorOpen((v) => !v)}
-              className="font-mono text-[9px] tracking-[0.15em] uppercase px-2 py-0.5 rounded-[2px]"
-              style={{
-                color: editorOpen ? '#ffb800' : 'var(--rf-text-dim)',
-                border: `1px solid ${
-                  editorOpen ? 'rgba(255,184,0,0.5)' : 'rgba(200,220,235,0.18)'
-                }`,
-                background: editorOpen
-                  ? 'rgba(255,184,0,0.08)'
-                  : 'transparent',
-              }}
-            >
-              {editorOpen ? '[ editing ]' : '[ edit ]'}
-            </button>
-          }
-          editorSlot={
-            editorOpen ? (
-              <ContentEditor
-                title={override.title}
-                description={override.description}
-                isModified={override.isModified}
-                onTitleChange={override.setTitle}
-                onDescriptionChange={override.setDescription}
-                onReset={override.resetToOriginal}
-                onClose={() => setEditorOpen(false)}
-              />
-            ) : null
-          }
-        />
+        <div className="flex flex-col gap-3 flex-1 min-w-0">
+          <ContentEditor
+            title={override.title}
+            description={override.description}
+            isModified={override.isModified}
+            onTitleChange={override.setTitle}
+            onDescriptionChange={override.setDescription}
+            onReset={override.resetToOriginal}
+          />
+          <PreviewFrame
+            contentKey={`${selectedId}:${renderedHash}`}
+            format={format}
+            rendered={rendered}
+            templateLabel={
+              template
+                ? `${template.name.toLowerCase()}.${template.format}`
+                : undefined
+            }
+            modified={override.isModified}
+          />
+        </div>
       </div>
     </main>
   )
