@@ -13,3 +13,5 @@ __unconfig*
 todos.json
 backend/db.sqlite
 
+.vercel
+backend/wrangler.toml

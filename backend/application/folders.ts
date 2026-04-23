@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { foldersTable } from '../adapters/node/db/schema.js'
+import { foldersTable } from '../adapters/db/schema.js'
 import type { AppDb } from './db.js'
 import type { FolderRecord } from './types.js'
 

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "tsx watch adapters/node/server.ts",
     "start": "tsx adapters/node/server.ts",
+    "cf:dev": "wrangler dev adapters/cloudflare/worker.ts",
+    "cf:deploy": "wrangler deploy adapters/cloudflare/worker.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push"
   },
@@ -21,11 +23,13 @@
     "@types/better-sqlite3": "^7.6.12",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "wrangler": "^4.13.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "better-sqlite3"
+      "better-sqlite3",
+      "workerd"
     ]
   }
 }

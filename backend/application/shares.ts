@@ -1,6 +1,6 @@
 import { eq, lt, and, isNotNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
-import { sharesTable } from '../adapters/node/db/schema.js'
+import { sharesTable } from '../adapters/db/schema.js'
 import type { AppDb } from './db.js'
 
 export interface CreateShareInput {
@@ -84,9 +84,11 @@ export async function deleteShare(db: AppDb, id: string): Promise<void> {
 
 /** Remove all expired shares. Call on startup or periodically. */
 export async function purgeExpired(db: AppDb): Promise<number> {
-  const result = await db
+  const result = (await db
     .delete(sharesTable)
-    .where(and(isNotNull(sharesTable.expiresAt), lt(sharesTable.expiresAt, Date.now())))
+    .where(
+      and(isNotNull(sharesTable.expiresAt), lt(sharesTable.expiresAt, Date.now())),
+    )) as { changes?: number } | undefined
 
-  return result.changes
+  return result?.changes ?? 0
 }

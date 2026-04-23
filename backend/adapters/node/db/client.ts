@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import * as schema from './schema.js'
+import * as schema from '../../db/schema.js'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 

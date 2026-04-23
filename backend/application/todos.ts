@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { todosTable } from '../adapters/node/db/schema.js'
+import { todosTable } from '../adapters/db/schema.js'
 import type { AppDb } from './db.js'
 import type { TodoRecord } from './types.js'
 

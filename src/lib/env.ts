@@ -6,15 +6,16 @@
 export type StorageStrategyName = 'offline' | 'online' | 'dual' | 'auto'
 
 export const STORAGE_STRATEGY: StorageStrategyName =
-  (import.meta.env.VITE_STORAGE_STRATEGY as StorageStrategyName) ?? 'offline'
+  (import.meta.env.VITE_STORAGE_STRATEGY as StorageStrategyName | undefined) ??
+  'offline'
 
 export const API_BASE_URL: string =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+  import.meta.env.VITE_API_BASE_URL ?? ''
 
 export type AIProviderName = 'openai' | 'anthropic' | 'ollama'
 
 export const AI_PROVIDER: AIProviderName =
-  (import.meta.env.VITE_AI_PROVIDER as AIProviderName) ?? 'ollama'
+  (import.meta.env.VITE_AI_PROVIDER as AIProviderName | undefined) ?? 'ollama'
 
 export const AI_API_KEY: string = import.meta.env.VITE_AI_API_KEY ?? ''
 

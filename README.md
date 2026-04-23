@@ -48,6 +48,69 @@ pnpm format
 pnpm check
 ```
 
+## Deployment
+
+This repo now supports a split deployment:
+
+- Frontend on Vercel
+- Backend API on Cloudflare Workers + D1
+
+### Frontend on Vercel
+
+The frontend uses TanStack Start with the Nitro Vite plugin so Vercel can build and run it as an SSR app.
+
+In the Vercel project:
+
+```bash
+Build Command: pnpm build
+Install Command: pnpm install
+```
+
+Set this environment variable in Vercel:
+
+```bash
+VITE_API_BASE_URL=https://<your-worker-subdomain>.workers.dev
+```
+
+That value is used by the browser and SSR runtime when the frontend calls `/todos`, `/share`, and `/s/:id` on the Cloudflare backend.
+
+### Backend on Cloudflare Workers
+
+The Worker entry lives at [`backend/adapters/cloudflare/worker.ts`](./backend/adapters/cloudflare/worker.ts) and is configured by [`backend/wrangler.toml`](./backend/wrangler.toml).
+
+Before deploying the Worker:
+
+1. Create a D1 database.
+2. Replace `database_id` in `backend/wrangler.toml`.
+3. Set `CORS_ORIGIN` so the Worker accepts your Vercel frontend origin.
+
+Recommended `CORS_ORIGIN` value:
+
+```bash
+https://your-production-domain.com,https://*.vercel.app,http://localhost:3000
+```
+
+This allows:
+
+- your production Vercel/custom domain
+- Vercel preview deployments
+- local frontend development
+
+To run the Worker locally:
+
+```bash
+cd backend
+pnpm install
+pnpm cf:dev
+```
+
+To deploy the Worker:
+
+```bash
+cd backend
+pnpm cf:deploy
+```
+
 # Paraglide i18n
 
 This add-on wires up ParaglideJS for localized routing and message formatting.
