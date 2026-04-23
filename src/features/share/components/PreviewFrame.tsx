@@ -25,6 +25,15 @@ export function PreviewFrame({
   toolbarSlot,
   modified,
 }: PreviewFrameProps) {
+  const handleMaximize = () => {
+    if (!rendered) return
+    const mime = format === 'html' ? 'text/html' : 'text/plain;charset=utf-8'
+    const blob = new Blob([rendered], { type: mime })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
+
   return (
     <section
       className="flex-1 min-w-0 rounded-[2px] overflow-hidden flex flex-col"
@@ -43,7 +52,26 @@ export function PreviewFrame({
           borderBottom: '1px solid rgba(255,184,0,0.2)',
           background: 'rgba(255,184,0,0.05)',
         }}
-      ></div>
+      >
+        <button
+          type="button"
+          onClick={handleMaximize}
+          title="open in new tab"
+          aria-label="maximize preview"
+          style={{
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            background: '#1a6b2a',
+            border: '1px solid rgba(40,180,64,0.3)',
+            padding: 0,
+            cursor: 'pointer',
+            position: 'relative',
+            zIndex: 1,
+            boxShadow: '0 0 4px rgba(40,180,64,0.2)',
+          }}
+        />
+      </div>
 
       {editorSlot}
 
