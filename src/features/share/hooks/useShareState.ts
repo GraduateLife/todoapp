@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { getShareStrategy } from '#/lib/share'
 import type { ExportFormat } from '#/features/todo/export/templates'
 
@@ -15,16 +15,6 @@ export function useShareState() {
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [urlCopied, setUrlCopied] = useState(false)
-
-  // initShareStrategy() is async; re-check after mount
-  const [available, setAvailable] = useState(false)
-  useEffect(() => {
-    try {
-      setAvailable(getShareStrategy().isAvailable())
-    } catch {
-      setAvailable(false)
-    }
-  }, [])
 
   const reset = useCallback(() => {
     setStatus('idle')
@@ -70,7 +60,6 @@ export function useShareState() {
     url,
     error,
     urlCopied,
-    available,
     publish,
     copyUrl,
     reset,

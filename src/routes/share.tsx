@@ -154,17 +154,14 @@ function RouteComponent() {
             onSelect={setSelectedId}
             fileBaseTitle={renderTarget?.title || 'untitled'}
           />
-
           <ShareActions
             format={format}
             copyStatus={copyStatus}
             shareStatus={share.status}
-            shareAvailable={share.available}
             onCopy={handleCopy}
             onDownload={handleDownload}
             onShare={handleShare}
           />
-
           <ShareResult
             status={share.status}
             url={share.url}
@@ -172,14 +169,11 @@ function RouteComponent() {
             urlCopied={share.urlCopied}
             onCopyUrl={share.copyUrl}
           />
-
           <p
             className="font-mono text-[9px] tracking-[0.12em] opacity-40 mt-auto"
             style={{ color: 'var(--rf-text-dim)' }}
           >
-            {share.available
-              ? 'esc · back to canvas'
-              : 'share requires backend'}
+            esc · back to canvas
           </p>
         </aside>
 
