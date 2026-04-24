@@ -170,12 +170,17 @@ function RouteComponent() {
           <ShareResult
             status={share.status}
             url={share.url}
+            recentUrl={share.recentShare?.url ?? null}
+            recentSharedAt={share.recentShare?.sharedAt ?? null}
             error={share.error}
             urlCopied={share.urlCopied}
             onCopyUrl={share.copyUrl}
           />
           {import.meta.env.DEV && (
-            <ShareDiagnostics lastAttempt={share.lastAttempt} />
+            <ShareDiagnostics
+              lastAttempt={share.lastAttempt}
+              health={share.health}
+            />
           )}
           <p
             className="font-mono text-[9px] tracking-[0.12em] opacity-40 mt-auto"

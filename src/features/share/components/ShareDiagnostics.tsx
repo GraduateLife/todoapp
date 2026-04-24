@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
-import { SHARE_PROXY_BASE_URL, probeShareHealth } from '#/lib/share'
+import type { UseQueryResult } from '@tanstack/react-query'
+import { SHARE_PROXY_BASE_URL } from '#/lib/share'
 import type { ShareAttempt } from '../hooks/useShareState'
 import type { ShareHealthStatus } from '#/lib/share'
 
 interface ShareDiagnosticsProps {
   lastAttempt: ShareAttempt | null
+  health: UseQueryResult<ShareHealthStatus, Error>
 }
 
 function formatClock(timestamp: number | null): string {
@@ -12,31 +13,12 @@ function formatClock(timestamp: number | null): string {
   return new Date(timestamp).toLocaleTimeString()
 }
 
-export function ShareDiagnostics({ lastAttempt }: ShareDiagnosticsProps) {
-  const [health, setHealth] = useState<ShareHealthStatus | null>(null)
-  const [probing, setProbing] = useState(false)
-
-  useEffect(() => {
-    let alive = true
-
-    const runProbe = async () => {
-      setProbing(true)
-      const next = await probeShareHealth()
-      if (!alive) return
-      setHealth(next)
-      setProbing(false)
-    }
-
-    void runProbe()
-    const timer = setInterval(() => {
-      void runProbe()
-    }, 15000)
-
-    return () => {
-      alive = false
-      clearInterval(timer)
-    }
-  }, [])
+export function ShareDiagnostics({
+  lastAttempt,
+  health,
+}: ShareDiagnosticsProps) {
+  const healthData = health.data ?? null
+  const probing = health.isFetching
 
   return (
     <div
@@ -66,25 +48,25 @@ export function ShareDiagnostics({ lastAttempt }: ShareDiagnosticsProps) {
         health:{' '}
         {probing
           ? 'probing...'
-          : health?.ok
-            ? `ok (${health.status ?? 'n/a'})`
-            : `down${health?.status ? ` (${health.status})` : ''}`}
+          : healthData?.ok
+            ? `ok (${healthData.status ?? 'n/a'})`
+            : `down${healthData?.status ? ` (${healthData.status})` : ''}`}
       </p>
       <p
         className="font-mono text-[10px]"
         style={{ color: 'var(--rf-text-dim)' }}
       >
-        checked: {formatClock(health?.checkedAt ?? null)}
+        checked: {formatClock(healthData?.checkedAt ?? null)}
       </p>
       <p
         className="font-mono text-[10px]"
         style={{ color: 'var(--rf-text-dim)' }}
       >
-        upstream: {health?.target ?? '(unknown)'}
+        upstream: {healthData?.target ?? '(unknown)'}
       </p>
-      {health?.error && (
+      {(healthData?.error ?? health.error?.message) && (
         <p className="font-mono text-[10px]" style={{ color: '#ff9090' }}>
-          health error: {health.error}
+          health error: {healthData?.error ?? health.error?.message}
         </p>
       )}
       {lastAttempt && (

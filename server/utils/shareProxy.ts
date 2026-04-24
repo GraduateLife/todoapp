@@ -26,14 +26,11 @@ function trimTrailingSlash(value: string): string {
 }
 
 export function getShareProxyConfig(): ShareProxyConfig {
-  const raw =
-    readEnv('VITE_SHARE_TARGET_URL') ??
-    readEnv('SHARE_TARGET_URL') ??
-    readEnv('VITE_API_BASE_URL')
+  const raw = readEnv('SHARE_TARGET_URL')
 
   if (!raw) {
     throw new Error(
-      '[share:bff] Missing upstream target. Set VITE_SHARE_TARGET_URL, SHARE_TARGET_URL, or VITE_API_BASE_URL.',
+      '[share:bff] Missing upstream target. Set SHARE_TARGET_URL for the share BFF.',
     )
   }
 
