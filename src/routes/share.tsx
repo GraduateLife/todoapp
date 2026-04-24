@@ -60,7 +60,7 @@ function RouteComponent() {
   useEffect(() => {
     share.reset()
     setCopyStatus('idle')
-  }, [selectedId, share])
+  }, [selectedId, share.reset])
 
   const handleBack = useCallback(() => {
     navigate({ to: '/' })
