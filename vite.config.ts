@@ -10,6 +10,15 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 const config = defineConfig({
+  nitro: {
+    serverDir: './server',
+    devServer: {
+      // Nitro's default node-worker env runner boots an internal helper server
+      // on 127.0.0.1. In this app's dev setup that can fail, leaving `/api`
+      // routes unreachable while Vite still serves the client shell.
+      runner: 'self',
+    },
+  },
   plugins: [
     devtools(),
     paraglideVitePlugin({

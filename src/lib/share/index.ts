@@ -1,7 +1,12 @@
-import { API_BASE_URL } from '../env'
 import type { ShareStrategy } from './types'
 
 export type { ShareStrategy, ShareInput, ShareResult } from './types'
+export type { ShareHealthStatus } from './api'
+export {
+  SHARE_PROXY_BASE_URL,
+  ShareRequestError,
+  probeShareHealth,
+} from './api'
 
 let _share: ShareStrategy | null = null
 
@@ -19,5 +24,5 @@ export async function initShareStrategy(): Promise<void> {
   // is the source of truth, which avoids permanently disabling share after a
   // transient Worker/CORS/cold-start failure.
   const { ApiShareStrategy } = await import('./api')
-  _share = new ApiShareStrategy(API_BASE_URL)
+  _share = new ApiShareStrategy()
 }

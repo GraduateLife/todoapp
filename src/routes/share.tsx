@@ -7,6 +7,7 @@ import {
   ContentEditor,
   PreviewFrame,
   ShareActions,
+  ShareDiagnostics,
   ShareHeader,
   ShareResult,
   TemplateList,
@@ -147,7 +148,11 @@ function RouteComponent() {
       />
 
       <div id="share-layout" className="flex gap-4 flex-1 min-h-0">
-        <aside id="share-sidebar" className="flex flex-col gap-4 shrink-0" style={{ width: 260 }}>
+        <aside
+          id="share-sidebar"
+          className="flex flex-col gap-4 shrink-0"
+          style={{ width: 260 }}
+        >
           <TemplateList
             templates={EXPORT_TEMPLATES}
             selectedId={selectedId}
@@ -169,6 +174,9 @@ function RouteComponent() {
             urlCopied={share.urlCopied}
             onCopyUrl={share.copyUrl}
           />
+          {import.meta.env.DEV && (
+            <ShareDiagnostics lastAttempt={share.lastAttempt} />
+          )}
           <p
             className="font-mono text-[9px] tracking-[0.12em] opacity-40 mt-auto"
             style={{ color: 'var(--rf-text-dim)' }}
@@ -177,7 +185,10 @@ function RouteComponent() {
           </p>
         </aside>
 
-        <div id="share-preview-panel" className="flex flex-col gap-3 flex-1 min-w-0">
+        <div
+          id="share-preview-panel"
+          className="flex flex-col gap-3 flex-1 min-w-0"
+        >
           <ContentEditor
             title={override.title}
             description={override.description}

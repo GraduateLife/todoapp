@@ -49,9 +49,7 @@ export function TemplateList({
               onClick={() => onSelect(tpl.id)}
               className="relative text-left px-2.5 py-2 font-mono rounded-[2px] transition-colors flex items-center justify-between gap-2"
               style={{
-                background: active
-                  ? 'rgba(255,184,0,0.08)'
-                  : 'transparent',
+                background: active ? 'rgba(255,184,0,0.08)' : 'transparent',
                 color: active ? '#ffe8a8' : 'var(--rf-text)',
                 border: active
                   ? '1px solid rgba(255,184,0,0.35)'
@@ -63,7 +61,7 @@ export function TemplateList({
                 <span
                   aria-hidden
                   style={{
-                    position: 'absolute',
+                    // position: 'absolute',
                     left: 0,
                     top: 6,
                     bottom: 6,

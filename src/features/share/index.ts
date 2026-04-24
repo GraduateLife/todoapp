@@ -1,4 +1,5 @@
 export { ContentEditor } from './components/ContentEditor'
+export { ShareDiagnostics } from './components/ShareDiagnostics'
 export { MarkdownPreview } from './components/MarkdownPreview'
 export { PreviewFrame } from './components/PreviewFrame'
 export { ShareActions } from './components/ShareActions'

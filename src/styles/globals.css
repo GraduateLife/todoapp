@@ -162,6 +162,7 @@ html,
 body,
 #app {
   min-height: 100%;
+  position: relative;
 }
 
 body {
@@ -576,20 +577,48 @@ pre code {
 
 /* ─── Neon flicker — CRT / bad-contact style ─── */
 @keyframes rf-neon-flicker {
-  0%   { opacity: 1; }
-  4%   { opacity: 0.72; }
-  6%   { opacity: 1; }
-  12%  { opacity: 0.88; }
-  14%  { opacity: 1; }
-  38%  { opacity: 1; }
-  40%  { opacity: 0.65; }
-  42%  { opacity: 0.9; }
-  43%  { opacity: 0.68; }
-  45%  { opacity: 1; }
-  74%  { opacity: 1; }
-  76%  { opacity: 0.82; }
-  77%  { opacity: 1; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  4% {
+    opacity: 0.72;
+  }
+  6% {
+    opacity: 1;
+  }
+  12% {
+    opacity: 0.88;
+  }
+  14% {
+    opacity: 1;
+  }
+  38% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.65;
+  }
+  42% {
+    opacity: 0.9;
+  }
+  43% {
+    opacity: 0.68;
+  }
+  45% {
+    opacity: 1;
+  }
+  74% {
+    opacity: 1;
+  }
+  76% {
+    opacity: 0.82;
+  }
+  77% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* Active reminder: subtle neon flicker on the whole card */
@@ -599,16 +628,36 @@ pre code {
 
 /* Stale reminder: slow, faint flicker — neon tube almost dead */
 @keyframes rf-neon-flicker-stale {
-  0%   { opacity: 0.55; }
-  20%  { opacity: 0.55; }
-  22%  { opacity: 0.4; }
-  24%  { opacity: 0.55; }
-  70%  { opacity: 0.55; }
-  72%  { opacity: 0.42; }
-  74%  { opacity: 0.5; }
-  75%  { opacity: 0.38; }
-  77%  { opacity: 0.55; }
-  100% { opacity: 0.55; }
+  0% {
+    opacity: 0.55;
+  }
+  20% {
+    opacity: 0.55;
+  }
+  22% {
+    opacity: 0.4;
+  }
+  24% {
+    opacity: 0.55;
+  }
+  70% {
+    opacity: 0.55;
+  }
+  72% {
+    opacity: 0.42;
+  }
+  74% {
+    opacity: 0.5;
+  }
+  75% {
+    opacity: 0.38;
+  }
+  77% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0.55;
+  }
 }
 
 .rf-reminder-flicker-stale {
