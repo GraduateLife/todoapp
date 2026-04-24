@@ -181,9 +181,18 @@ function RouteComponent() {
           <ContentEditor
             title={override.title}
             description={override.description}
+            priority={override.priority}
+            subtasks={override.subtasks}
+            attachments={override.attachments}
             isModified={override.isModified}
             onTitleChange={override.setTitle}
             onDescriptionChange={override.setDescription}
+            onPriorityChange={override.setPriority}
+            onSubtaskAdd={override.addSubtask}
+            onSubtaskUpdate={override.updateSubtask}
+            onSubtaskRemove={override.removeSubtask}
+            onAttachmentsAdd={override.addAttachments}
+            onAttachmentRemove={override.removeAttachment}
             onReset={override.resetToOriginal}
           />
           <PreviewFrame
