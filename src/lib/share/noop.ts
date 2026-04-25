@@ -10,6 +10,10 @@ export class NoopShareStrategy implements ShareStrategy {
     throw new Error('[share] Not available in offline mode')
   }
 
+  async getByTodoId(): Promise<null> {
+    return null
+  }
+
   async revoke(): Promise<void> {
     // Nothing to do
   }

@@ -12,6 +12,7 @@ export const foldersTable = sqliteTable('folders', {
 
 export const sharesTable = sqliteTable('shares', {
   id: text('id').primaryKey(),
+  todoId: text('todo_id').notNull().unique(),
   title: text('title').notNull(),
   format: text('format').notNull(),
   content: text('content').notNull(),

@@ -4,18 +4,24 @@ interface ShareActionsProps {
   format: ExportFormat
   copyStatus: 'idle' | 'copied'
   shareStatus: 'idle' | 'sharing' | 'shared' | 'error'
+  hasActiveShare: boolean
+  isRevoking: boolean
   onCopy: () => void
   onDownload: () => void
   onShare: () => void
+  onUnshare: () => void
 }
 
 export function ShareActions({
   format,
   copyStatus,
   shareStatus,
+  hasActiveShare,
+  isRevoking,
   onCopy,
   onDownload,
   onShare,
+  onUnshare,
 }: ShareActionsProps) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -46,26 +52,36 @@ export function ShareActions({
       <button
         type="button"
         className="rf-btn"
-        onClick={onShare}
-        disabled={shareStatus === 'sharing'}
+        onClick={hasActiveShare ? onUnshare : onShare}
+        disabled={shareStatus === 'sharing' || isRevoking}
         style={{
-          borderColor: '#00f5ff',
-          color: '#00f5ff',
+          borderColor: hasActiveShare ? '#ff2d78' : '#00f5ff',
+          color: hasActiveShare ? '#ff2d78' : '#00f5ff',
           background:
-            shareStatus === 'sharing'
-              ? 'rgba(0,245,255,0.04)'
-              : 'rgba(0,245,255,0.12)',
-          opacity: shareStatus === 'sharing' ? 0.5 : 1,
+            shareStatus === 'sharing' || isRevoking
+              ? hasActiveShare
+                ? 'rgba(255,45,120,0.05)'
+                : 'rgba(0,245,255,0.04)'
+              : hasActiveShare
+                ? 'rgba(255,45,120,0.12)'
+                : 'rgba(0,245,255,0.12)',
+          opacity: shareStatus === 'sharing' || isRevoking ? 0.5 : 1,
           boxShadow:
-            shareStatus === 'sharing'
+            shareStatus === 'sharing' || isRevoking
               ? 'none'
-              : '0 0 18px rgba(0,245,255,0.14)',
+              : hasActiveShare
+                ? '0 0 18px rgba(255,45,120,0.16)'
+                : '0 0 18px rgba(0,245,255,0.14)',
         }}
       >
-        {shareStatus === 'sharing'
+        {isRevoking
+          ? '[ unsharing... ]'
+          : shareStatus === 'sharing'
           ? '[ publishing... ]'
-          : shareStatus === 'shared'
-            ? '[ publish again ]'
+          : hasActiveShare
+            ? '[ unshare ]'
+            : shareStatus === 'shared'
+              ? '[ publish again ]'
             : '[ publish share ]'}
       </button>
     </div>

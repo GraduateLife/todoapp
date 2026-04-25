@@ -11,6 +11,7 @@ import type { ExportFormat } from '#/features/todo/export/templates'
 export type ShareStatus = 'idle' | 'sharing' | 'shared' | 'error'
 
 interface PublishArgs {
+  todoId: string
   title: string
   format: ExportFormat
   content: string
@@ -38,7 +39,7 @@ interface RecentShareRecord {
 const SHARE_HEALTH_QUERY_KEY = ['share', 'health'] as const
 const RECENT_SHARE_QUERY_KEY = ['share', 'recent-success'] as const
 
-export function useShareState() {
+export function useShareState(todoId: string | null) {
   const [urlCopied, setUrlCopied] = useState(false)
   const [lastAttempt, setLastAttempt] = useState<ShareAttempt | null>(null)
   const queryClient = useQueryClient()
@@ -58,6 +59,16 @@ export function useShareState() {
           null,
       ),
     staleTime: Number.POSITIVE_INFINITY,
+  })
+
+  const activeShare = useQuery({
+    queryKey: ['share', 'active', todoId],
+    queryFn: async () => {
+      if (!todoId) return null
+      return getShareStrategy().getByTodoId(todoId)
+    },
+    enabled: Boolean(todoId),
+    staleTime: 5_000,
   })
 
   const publishMutation = useMutation({
@@ -106,6 +117,7 @@ export function useShareState() {
         format: context.format,
         sharedAt: finishedAt,
       })
+      queryClient.setQueryData(['share', 'active', args.todoId], result)
 
       try {
         void navigator.clipboard.writeText(result.url).then(() => {
@@ -136,6 +148,23 @@ export function useShareState() {
     },
   })
 
+  const revokeMutation = useMutation({
+    mutationFn: async (shareId: string) => {
+      await getShareStrategy().revoke(shareId)
+      return shareId
+    },
+    onSuccess: (_, shareId) => {
+      if (todoId) {
+        queryClient.setQueryData(['share', 'active', todoId], null)
+        void queryClient.invalidateQueries({ queryKey: ['share', 'active', todoId] })
+      }
+
+      if (publishMutation.data?.id === shareId) {
+        publishMutation.reset()
+      }
+    },
+  })
+
   const resetMutationRef = useRef(publishMutation.reset)
   resetMutationRef.current = publishMutation.reset
 
@@ -154,8 +183,18 @@ export function useShareState() {
     [],
   )
 
+  const unshare = useCallback(async () => {
+    const shareId = activeShare.data?.id ?? publishMutation.data?.id ?? null
+    if (!shareId) return
+    await revokeMutation.mutateAsync(shareId)
+  }, [activeShare.data?.id, publishMutation.data?.id, revokeMutation])
+
   const copyUrl = useCallback(async () => {
-    const url = publishMutation.data?.url ?? recentShare.data?.url ?? null
+    const url =
+      activeShare.data?.url ??
+      publishMutation.data?.url ??
+      recentShare.data?.url ??
+      null
     if (!url) return
     try {
       await navigator.clipboard.writeText(url)
@@ -164,15 +203,16 @@ export function useShareState() {
     } catch (err) {
       console.error('Copy URL failed', err)
     }
-  }, [publishMutation.data?.url, recentShare.data?.url])
+  }, [activeShare.data?.url, publishMutation.data?.url, recentShare.data?.url])
 
   let status: ShareStatus = 'idle'
   if (publishMutation.isPending) status = 'sharing'
+  else if (revokeMutation.isPending) status = 'sharing'
   else if (publishMutation.isError) status = 'error'
-  else if (publishMutation.isSuccess) status = 'shared'
+  else if (publishMutation.isSuccess || Boolean(activeShare.data)) status = 'shared'
 
   const currentShare = publishMutation.data ?? null
-  const error = publishMutation.error?.message ?? null
+  const error = publishMutation.error?.message ?? revokeMutation.error?.message ?? null
 
   return {
     status,
@@ -181,9 +221,13 @@ export function useShareState() {
     urlCopied,
     lastAttempt,
     currentShare,
+    activeShare,
     recentShare: recentShare.data ?? null,
     health,
+    isLocked: Boolean(activeShare.data),
+    isRevoking: revokeMutation.isPending,
     publish,
+    unshare,
     copyUrl,
     reset,
   }

@@ -14,7 +14,9 @@ export interface CloudflareD1Database {
 const BOOTSTRAP_QUERIES = [
   'CREATE TABLE IF NOT EXISTS todos (id TEXT PRIMARY KEY, data TEXT NOT NULL);',
   'CREATE TABLE IF NOT EXISTS folders (id TEXT PRIMARY KEY, data TEXT NOT NULL);',
-  'CREATE TABLE IF NOT EXISTS shares (id TEXT PRIMARY KEY, title TEXT NOT NULL, format TEXT NOT NULL, content TEXT NOT NULL, created_at INTEGER NOT NULL, expires_at INTEGER);',
+  'CREATE TABLE IF NOT EXISTS shares (id TEXT PRIMARY KEY, todo_id TEXT NOT NULL UNIQUE, title TEXT NOT NULL, format TEXT NOT NULL, content TEXT NOT NULL, created_at INTEGER NOT NULL, expires_at INTEGER);',
+  'ALTER TABLE shares ADD COLUMN todo_id TEXT;',
+  'CREATE UNIQUE INDEX IF NOT EXISTS shares_todo_id_unique ON shares(todo_id);',
 ]
 
 const bootstrapped = new WeakMap<object, Promise<void>>()
@@ -29,7 +31,18 @@ export function initCloudflareDb(d1: CloudflareD1Database): Promise<void> {
 
   const pending = (async () => {
     for (const query of BOOTSTRAP_QUERIES) {
-      await d1.prepare(query).run()
+      try {
+        await d1.prepare(query).run()
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (
+          query.startsWith('ALTER TABLE shares ADD COLUMN todo_id') &&
+          /duplicate column name|already exists/i.test(message)
+        ) {
+          continue
+        }
+        throw error
+      }
     }
   })()
   bootstrapped.set(d1 as object, pending)

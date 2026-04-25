@@ -25,12 +25,27 @@ export function createNodeDb() {
     );
     CREATE TABLE IF NOT EXISTS shares (
       id TEXT PRIMARY KEY,
+      todo_id TEXT NOT NULL UNIQUE,
       title TEXT NOT NULL,
       format TEXT NOT NULL,
       content TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       expires_at INTEGER
     );
+  `)
+
+  try {
+    sqlite.exec('ALTER TABLE shares ADD COLUMN todo_id TEXT;')
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (!/duplicate column name|already exists/i.test(message)) {
+      throw error
+    }
+  }
+
+  sqlite.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS shares_todo_id_unique
+    ON shares(todo_id);
   `)
 
   return drizzle(sqlite, { schema })

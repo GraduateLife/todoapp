@@ -8,7 +8,7 @@ export class ShareRequestError extends Error {
     message: string,
     readonly status: number,
     readonly url: string,
-    readonly method: 'POST' | 'DELETE',
+    readonly method: 'GET' | 'POST' | 'DELETE',
   ) {
     super(message)
     this.name = 'ShareRequestError'
@@ -45,9 +45,25 @@ export class ApiShareStrategy implements ShareStrategy {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
     })
+
+    const data = (await readJsonSafely(res)) as SharePublishResponse | null
+
+    if (res.status === 409 && data?.code === 'SHARE_ALREADY_EXISTS' && data.share) {
+      console.info('[share:publish:existing]', {
+        target: this.apiBaseUrl,
+        status: res.status,
+        durationMs: Date.now() - startedAt,
+        shareId: data.share.id,
+        shareUrl: data.share.url,
+      })
+      return data.share
+    }
+
     if (!res.ok) {
       const error = new ShareRequestError(
-        `[share] POST /share → ${res.status}`,
+        data?.message
+          ? `[share] POST /share → ${res.status} (${data.message})`
+          : `[share] POST /share → ${res.status}`,
         res.status,
         url,
         'POST',
@@ -59,7 +75,7 @@ export class ApiShareStrategy implements ShareStrategy {
       })
       throw error
     }
-    const result = (await res.json()) as ShareResult
+    const result = data as ShareResult
     console.info('[share:publish:success]', {
       target: this.apiBaseUrl,
       status: res.status,
@@ -68,6 +84,28 @@ export class ApiShareStrategy implements ShareStrategy {
       shareUrl: result.url,
     })
     return result
+  }
+
+  async getByTodoId(todoId: string): Promise<ShareResult | null> {
+    const url = `${this.apiBaseUrl}/share/todo/${todoId}`
+    const res = await fetch(url, {
+      method: 'GET',
+    })
+
+    if (res.status === 404) {
+      return null
+    }
+
+    if (!res.ok) {
+      throw new ShareRequestError(
+        `[share] GET /share/todo/${todoId} → ${res.status}`,
+        res.status,
+        url,
+        'GET',
+      )
+    }
+
+    return (await res.json()) as ShareResult
   }
 
   async revoke(id: string): Promise<void> {
@@ -83,6 +121,25 @@ export class ApiShareStrategy implements ShareStrategy {
         'DELETE',
       )
     }
+  }
+}
+
+interface ShareConflictPayload {
+  code?: string
+  message?: string
+  share?: ShareResult
+}
+
+type SharePublishResponse = ShareResult | ShareConflictPayload
+
+async function readJsonSafely(res: Response): Promise<unknown> {
+  const text = await res.text()
+  if (!text) return null
+
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return null
   }
 }
 

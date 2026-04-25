@@ -36,7 +36,7 @@ function RouteComponent() {
 
   const [selectedId, setSelectedId] = useState<string>(EXPORT_TEMPLATES[0].id)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle')
-  const share = useShareState()
+  const share = useShareState(todo?.id ?? null)
   const override = useContentOverride(todo)
 
   const template = useMemo(() => getTemplate(selectedId), [selectedId])
@@ -105,6 +105,7 @@ function RouteComponent() {
   const handleShare = useCallback(() => {
     if (!renderTarget || !template) return
     void share.publish({
+      todoId: renderTarget.id,
       title: renderTarget.title || 'Untitled',
       format: template.format,
       content: rendered,
@@ -157,19 +158,23 @@ function RouteComponent() {
             templates={EXPORT_TEMPLATES}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            disabled={share.isLocked}
             fileBaseTitle={renderTarget?.title || 'untitled'}
           />
           <ShareActions
             format={format}
             copyStatus={copyStatus}
             shareStatus={share.status}
+            hasActiveShare={share.isLocked}
+            isRevoking={share.isRevoking}
             onCopy={handleCopy}
             onDownload={handleDownload}
             onShare={handleShare}
+            onUnshare={() => void share.unshare()}
           />
           <ShareResult
             status={share.status}
-            url={share.url}
+            url={share.activeShare.data?.url ?? share.url}
             recentUrl={share.recentShare?.url ?? null}
             recentSharedAt={share.recentShare?.sharedAt ?? null}
             error={share.error}
@@ -201,6 +206,7 @@ function RouteComponent() {
             subtasks={override.subtasks}
             attachments={override.attachments}
             isModified={override.isModified}
+            disabled={share.isLocked}
             onTitleChange={override.setTitle}
             onDescriptionChange={override.setDescription}
             onPriorityChange={override.setPriority}

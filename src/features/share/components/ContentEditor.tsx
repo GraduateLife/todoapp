@@ -21,6 +21,7 @@ interface ContentEditorProps {
   subtasks: SubTask[]
   attachments: Attachment[]
   isModified: boolean
+  disabled?: boolean
   onTitleChange: (v: string) => void
   onDescriptionChange: (v: string) => void
   onPriorityChange: (p: Priority) => void
@@ -196,6 +197,7 @@ export function ContentEditor({
   subtasks,
   attachments,
   isModified,
+  disabled = false,
   onTitleChange,
   onDescriptionChange,
   onPriorityChange,
@@ -220,6 +222,7 @@ export function ContentEditor({
         background: 'rgba(0,245,255,0.08)',
         borderTop: `1px solid ${CYAN}66`,
         borderBottom: `1px solid ${CYAN}66`,
+        opacity: disabled ? 0.55 : 1,
       }}
     >
       {/* ── Header ───────────────────────────────────────── */}
@@ -283,6 +286,7 @@ export function ContentEditor({
               value={title}
               onChange={(e) => onTitleChange(e.target.value)}
               placeholder="untitled"
+              disabled={disabled}
               className="rf-edit-field"
               style={{ fontSize: '0.82rem' }}
             />
@@ -301,6 +305,7 @@ export function ContentEditor({
               onChange={(e) => onDescriptionChange(e.target.value)}
               placeholder="(empty)"
               rows={2}
+              disabled={disabled}
               className="rf-edit-field resize-y"
               style={{
                 fontSize: '0.78rem',
@@ -327,6 +332,7 @@ export function ContentEditor({
                   <button
                     key={p}
                     type="button"
+                    disabled={disabled}
                     onClick={() => onPriorityChange(p)}
                     className="flex items-center gap-1.5"
                     style={{
@@ -410,6 +416,7 @@ export function ContentEditor({
                         <input
                           type="checkbox"
                           checked={st.completed}
+                          disabled={disabled}
                           onChange={(e) =>
                             onSubtaskUpdate(st.id, { completed: e.target.checked })
                           }
@@ -418,6 +425,7 @@ export function ContentEditor({
                         <input
                           type="text"
                           value={st.title}
+                          disabled={disabled}
                           onChange={(e) =>
                             onSubtaskUpdate(st.id, { title: e.target.value })
                           }
@@ -431,8 +439,9 @@ export function ContentEditor({
                         />
                         <IconBtn
                           danger
-                          onClick={() => onSubtaskRemove(st.id)}
+                          onClick={disabled ? undefined : () => onSubtaskRemove(st.id)}
                           title="Remove"
+                          disabled={disabled}
                         >
                           ×
                         </IconBtn>
@@ -459,16 +468,18 @@ export function ContentEditor({
                     multiple
                     style={{ display: 'none' }}
                     onChange={(e) => {
+                      if (disabled) return
                       if (e.target.files) onAttachmentsAdd(e.target.files)
                       e.target.value = ''
                     }}
                   />
                   <IconBtn
-                    onClick={() => {
+                    onClick={disabled ? undefined : () => {
                       setAttachmentsOpen(true)
                       fileInputRef.current?.click()
                     }}
                     title="Upload files"
+                    disabled={disabled}
                   >
                     ↑
                   </IconBtn>
@@ -557,8 +568,9 @@ export function ContentEditor({
                         </span>
                         <IconBtn
                           danger
-                          onClick={() => onAttachmentRemove(att.id)}
+                          onClick={disabled ? undefined : () => onAttachmentRemove(att.id)}
                           title="Remove"
+                          disabled={disabled}
                         >
                           ×
                         </IconBtn>

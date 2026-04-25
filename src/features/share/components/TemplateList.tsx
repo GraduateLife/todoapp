@@ -5,6 +5,7 @@ interface TemplateListProps {
   templates: ExportTemplate[]
   selectedId: string
   onSelect: (id: string) => void
+  disabled?: boolean
   /** The title used to generate the per-template filename (e.g. "abc" → "abc.html") */
   fileBaseTitle: string
 }
@@ -13,6 +14,7 @@ export function TemplateList({
   templates,
   selectedId,
   onSelect,
+  disabled = false,
   fileBaseTitle,
 }: TemplateListProps) {
   const base = slugify(fileBaseTitle || 'untitled')
@@ -47,6 +49,7 @@ export function TemplateList({
               key={tpl.id}
               type="button"
               onClick={() => onSelect(tpl.id)}
+              disabled={disabled}
               className="relative text-left px-2.5 py-2 font-mono rounded-[2px] transition-colors flex items-center justify-between gap-2"
               style={{
                 background: active ? 'rgba(255,184,0,0.08)' : 'transparent',
@@ -54,6 +57,8 @@ export function TemplateList({
                 border: active
                   ? '1px solid rgba(255,184,0,0.35)'
                   : '1px solid transparent',
+                opacity: disabled ? 0.45 : 1,
+                cursor: disabled ? 'not-allowed' : 'pointer',
               }}
               title={tpl.description}
             >

@@ -17,6 +17,8 @@ export function ShareResult({
   urlCopied,
   onCopyUrl,
 }: ShareResultProps) {
+  const showRecentUrl = Boolean(recentUrl && recentUrl !== url)
+
   if (status === 'shared' && url) {
     return (
       <div
@@ -49,7 +51,13 @@ export function ShareResult({
             onFocus={(e) => e.target.select()}
           />
         </div>
-        {recentUrl && (
+        <p
+          className="font-mono text-[9px] tracking-[0.12em] uppercase"
+          style={{ color: 'var(--rf-text-dim)' }}
+        >
+          share is live. unshare before editing or changing template.
+        </p>
+        {showRecentUrl && (
           <div className="flex flex-col gap-1">
             <span
               className="font-mono text-[9px] tracking-[0.12em] uppercase"
@@ -63,7 +71,7 @@ export function ShareResult({
             <input
               type="text"
               readOnly
-              value={recentUrl}
+              value={recentUrl ?? ''}
               className="font-mono text-[10px] bg-transparent outline-none"
               style={{ color: '#9be7f4', border: 'none', opacity: 0.9 }}
               onFocus={(e) => e.target.select()}

@@ -4,6 +4,8 @@ import {
   createShare,
   getShare,
   deleteShare,
+  getShareByTodoId,
+  ShareAlreadyExistsError,
 } from '../../application/shares.js'
 import type { CreateShareInput } from '../../application/shares.js'
 
@@ -42,23 +44,68 @@ export function registerShareRoutes(app: Hono, deps: ShareRoutesDeps) {
     // Parse as unknown first so validation checks are not tautological
     const body: Record<string, unknown> = await c.req.json()
 
-    if (!body.content || !body.format || !body.title) {
+    if (!body.content || !body.format || !body.title || !body.todoId) {
       return c.json({ error: 'missing required fields' }, 400)
     }
     if (body.format !== 'html' && body.format !== 'md') {
       return c.json({ error: 'format must be "html" or "md"' }, 400)
     }
 
-    const share = await createShare(deps.db, body as unknown as CreateShareInput)
+    try {
+      const share = await createShare(
+        deps.db,
+        body as unknown as CreateShareInput,
+      )
 
-    // Build the public URL from the request origin
+      // Build the public URL from the request origin
+      const origin = new URL(c.req.url).origin
+      const url = `${origin}/s/${share.id}`
+
+      return c.json({
+        id: share.id,
+        todoId: share.todoId,
+        url,
+        expiresAt: share.expiresAt,
+        createdAt: share.createdAt,
+      })
+    } catch (error) {
+      if (error instanceof ShareAlreadyExistsError) {
+        const origin = new URL(c.req.url).origin
+        return c.json(
+          {
+            error: 'share already exists for todo',
+            code: 'SHARE_ALREADY_EXISTS',
+            share: {
+              id: error.existing.id,
+              todoId: error.existing.todoId,
+              url: `${origin}/s/${error.existing.id}`,
+              expiresAt: error.existing.expiresAt,
+              createdAt: error.existing.createdAt,
+            },
+          },
+          409,
+        )
+      }
+
+      throw error
+    }
+  })
+
+  app.get('/share/todo/:todoId', async (c) => {
+    const todoId = c.req.param('todoId')
+    const share = await getShareByTodoId(deps.db, todoId)
+
+    if (!share) {
+      return c.json({ error: 'share not found' }, 404)
+    }
+
     const origin = new URL(c.req.url).origin
-    const url = `${origin}/s/${share.id}`
-
     return c.json({
       id: share.id,
-      url,
+      todoId: share.todoId,
+      url: `${origin}/s/${share.id}`,
       expiresAt: share.expiresAt,
+      createdAt: share.createdAt,
     })
   })
 
