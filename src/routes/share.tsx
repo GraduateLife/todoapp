@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTodoStore } from '#/features/todo/store'
 import { EXPORT_TEMPLATES, getTemplate } from '#/features/todo/export/templates'
 import { slugify } from '#/features/todo/export/templates/_helpers'
+import { getShareStrategy } from '#/lib/share'
 import {
   ContentEditor,
   PreviewFrame,
@@ -29,6 +31,7 @@ export const Route = createFileRoute('/share')({
 function RouteComponent() {
   const { id } = Route.useSearch()
   const navigate = useNavigate()
+  const todos = useTodoStore((s) => s.todos)
 
   const todo = useTodoStore((s) =>
     id ? (s.todos.find((t) => t.id === id) ?? null) : null,
@@ -38,6 +41,29 @@ function RouteComponent() {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle')
   const share = useShareState(todo?.id ?? null)
   const override = useContentOverride(todo)
+  const sharedTodos = useQuery({
+    queryKey: ['share', 'active-list', todos.map((t) => t.id)],
+    queryFn: async () => {
+      const strategy = getShareStrategy()
+      const results = await Promise.all(
+        todos.map(async (item) => ({
+          todo: item,
+          share: await strategy.getByTodoId(item.id),
+        })),
+      )
+
+      return results.filter(
+        (
+          entry,
+        ): entry is {
+          todo: (typeof todos)[number]
+          share: NonNullable<typeof entry.share>
+        } => Boolean(entry.share),
+      )
+    },
+    enabled: !id && todos.length > 0,
+    staleTime: 10_000,
+  })
 
   const template = useMemo(() => getTemplate(selectedId), [selectedId])
   const renderTarget = override.overriddenTodo ?? todo
@@ -115,22 +141,88 @@ function RouteComponent() {
   // ── Missing-todo state ─────────────────────────────────────────────────────
   if (!id || !todo) {
     return (
-      <main className="page-wrap px-4 py-16 flex flex-col items-center justify-center">
+      <main className="relative page-wrap px-4 py-16 flex flex-col items-center justify-center">
         <p
           className="font-mono text-[9px] tracking-[0.22em] uppercase mb-2"
           style={{ color: '#ffb800', opacity: 0.6 }}
         >
-          export
+          exported
         </p>
+        {!id && (
+          <div
+            className="w-full max-w-[560px] rounded-[2px] flex flex-col gap-2 mb-6"
+            style={{
+              padding: '12px',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(200,224,244,0.12)',
+            }}
+          >
+            {/* <p
+              className="font-mono text-[9px] tracking-[0.15em] uppercase"
+              style={{ color: '#80d4e8', opacity: 0.75 }}
+            >
+              active shares
+            </p> */}
+
+            {sharedTodos.isLoading ? (
+              <p
+                className="font-mono text-[10px]"
+                style={{ color: 'var(--rf-text-dim)' }}
+              >
+                loading shared todos...
+              </p>
+            ) : sharedTodos.data?.length ? (
+              <div className="flex flex-col gap-2">
+                {sharedTodos.data.map(
+                  ({ todo: sharedTodo, share: activeShare }) => (
+                    <button
+                      key={sharedTodo.id}
+                      type="button"
+                      className="text-left rounded-[2px]"
+                      onClick={() =>
+                        navigate({
+                          to: '/share',
+                          search: { id: sharedTodo.id },
+                        })
+                      }
+                      style={{
+                        padding: '10px 12px',
+                        border: '1px solid rgba(0,245,255,0.18)',
+                        background: 'rgba(0,245,255,0.04)',
+                      }}
+                    >
+                      <p
+                        className="font-mono text-[10px] uppercase tracking-[0.12em]"
+                        style={{ color: '#00f5ff' }}
+                      >
+                        {sharedTodo.title || 'untitled'}
+                      </p>
+                      <p
+                        className="font-mono text-[9px] mt-1"
+                        style={{ color: 'var(--rf-text-dim)' }}
+                      >
+                        {activeShare.url}
+                      </p>
+                    </button>
+                  ),
+                )}
+              </div>
+            ) : (
+              <p
+                className="font-mono text-[10px]"
+                style={{ color: 'var(--rf-text-dim)' }}
+              >
+                no active shares yet
+              </p>
+            )}
+          </div>
+        )}
         <p
-          className="font-mono text-[0.85rem] mb-6"
+          className="font-mono text-[9px]"
           style={{ color: 'var(--rf-text-dim)' }}
         >
-          {id ? 'todo not found' : 'no todo selected'}
+          click to inspect any shared todo.
         </p>
-        <button type="button" className="rf-btn" onClick={handleBack}>
-          [ back to canvas ]
-        </button>
       </main>
     )
   }
@@ -139,7 +231,7 @@ function RouteComponent() {
 
   return (
     <main
-      className="page-wrap px-4 py-6 flex flex-col gap-4"
+      className="relative page-wrap px-4 py-6 flex flex-col gap-4"
       style={{ height: 'calc(100dvh - 74px)', overflow: 'hidden' }}
     >
       <ShareHeader
@@ -187,12 +279,6 @@ function RouteComponent() {
               health={share.health}
             />
           )}
-          <p
-            className="font-mono text-[9px] tracking-[0.12em] opacity-40 mt-auto"
-            style={{ color: 'var(--rf-text-dim)' }}
-          >
-            esc · back to canvas
-          </p>
         </aside>
 
         <div

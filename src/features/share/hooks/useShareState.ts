@@ -6,6 +6,8 @@ import {
   getShareStrategy,
   probeShareHealth,
 } from '#/lib/share'
+import { readRecentShare, writeRecentShare } from '#/lib/share/recent'
+import type { RecentShareRecord } from '#/lib/share/recent'
 import type { ExportFormat } from '#/features/todo/export/templates'
 
 export type ShareStatus = 'idle' | 'sharing' | 'shared' | 'error'
@@ -29,13 +31,6 @@ export interface ShareAttempt {
   error: string | null
 }
 
-interface RecentShareRecord {
-  url: string
-  title: string
-  format: ExportFormat
-  sharedAt: number
-}
-
 const SHARE_HEALTH_QUERY_KEY = ['share', 'health'] as const
 const RECENT_SHARE_QUERY_KEY = ['share', 'recent-success'] as const
 
@@ -53,13 +48,17 @@ export function useShareState(todoId: string | null) {
 
   const recentShare = useQuery<RecentShareRecord | null>({
     queryKey: RECENT_SHARE_QUERY_KEY,
-    queryFn: () =>
-      Promise.resolve(
+    queryFn: () => {
+      const cached =
         queryClient.getQueryData<RecentShareRecord | null>(RECENT_SHARE_QUERY_KEY) ??
-          null,
-      ),
+        null
+
+      return Promise.resolve(cached ?? readRecentShare())
+    },
     staleTime: Number.POSITIVE_INFINITY,
   })
+  const scopedRecentShare =
+    recentShare.data && recentShare.data.todoId === todoId ? recentShare.data : null
 
   const activeShare = useQuery({
     queryKey: ['share', 'active', todoId],
@@ -111,13 +110,18 @@ export function useShareState(todoId: string | null) {
         error: null,
       })
 
-      queryClient.setQueryData<RecentShareRecord>(RECENT_SHARE_QUERY_KEY, {
+      const recent: RecentShareRecord = {
+        todoId: args.todoId,
         url: result.url,
         title: context.title,
         format: context.format,
         sharedAt: finishedAt,
-      })
+      }
+
+      queryClient.setQueryData<RecentShareRecord>(RECENT_SHARE_QUERY_KEY, recent)
+      writeRecentShare(recent)
       queryClient.setQueryData(['share', 'active', args.todoId], result)
+      void queryClient.invalidateQueries({ queryKey: ['share', 'active-list'] })
 
       try {
         void navigator.clipboard.writeText(result.url).then(() => {
@@ -158,6 +162,7 @@ export function useShareState(todoId: string | null) {
         queryClient.setQueryData(['share', 'active', todoId], null)
         void queryClient.invalidateQueries({ queryKey: ['share', 'active', todoId] })
       }
+      void queryClient.invalidateQueries({ queryKey: ['share', 'active-list'] })
 
       if (publishMutation.data?.id === shareId) {
         publishMutation.reset()
@@ -193,7 +198,7 @@ export function useShareState(todoId: string | null) {
     const url =
       activeShare.data?.url ??
       publishMutation.data?.url ??
-      recentShare.data?.url ??
+      scopedRecentShare?.url ??
       null
     if (!url) return
     try {
@@ -203,7 +208,7 @@ export function useShareState(todoId: string | null) {
     } catch (err) {
       console.error('Copy URL failed', err)
     }
-  }, [activeShare.data?.url, publishMutation.data?.url, recentShare.data?.url])
+  }, [activeShare.data?.url, publishMutation.data?.url, scopedRecentShare?.url])
 
   let status: ShareStatus = 'idle'
   if (publishMutation.isPending) status = 'sharing'
@@ -222,7 +227,7 @@ export function useShareState(todoId: string | null) {
     lastAttempt,
     currentShare,
     activeShare,
-    recentShare: recentShare.data ?? null,
+    recentShare: scopedRecentShare,
     health,
     isLocked: Boolean(activeShare.data),
     isRevoking: revokeMutation.isPending,
