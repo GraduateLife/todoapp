@@ -248,6 +248,7 @@ export function StickyNoteCanvas() {
               onDeleteSubTask={deleteSubTask}
               onUpdateSubTask={updateSubTask}
               onRequestExport={handleRequestExport}
+              onManageShare={handleRequestExport}
               // Stack props
               otherNotes={otherNotes}
               isStackTarget={stackTargetId === todo.id}

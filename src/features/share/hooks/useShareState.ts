@@ -6,9 +6,30 @@ import {
   getShareStrategy,
   probeShareHealth,
 } from '#/lib/share'
-import { readRecentShare, writeRecentShare } from '#/lib/share/recent'
+import {
+  addSharedId,
+  readRecentShare,
+  removeSharedId,
+  writeJustShared,
+  writeRecentShare,
+} from '#/lib/share/recent'
 import type { RecentShareRecord } from '#/lib/share/recent'
 import type { ExportFormat } from '#/features/todo/export/templates'
+import { useTodoStore } from '#/features/todo/store/todoStore'
+
+const CARD_WIDTH = 256
+const CARD_HEIGHT = 160
+const SHARE_LANDING_SPREAD = 80
+
+function shareLandingPosition(): { x: number; y: number } {
+  if (typeof window === 'undefined') return { x: 10, y: 10 }
+  const cx = window.innerWidth / 2 - CARD_WIDTH / 2
+  const cy = window.innerHeight / 2 - CARD_HEIGHT / 2
+  return {
+    x: Math.floor(cx + (Math.random() - 0.5) * SHARE_LANDING_SPREAD * 2),
+    y: Math.floor(cy + (Math.random() - 0.5) * SHARE_LANDING_SPREAD * 2),
+  }
+}
 
 export type ShareStatus = 'idle' | 'sharing' | 'shared' | 'error'
 
@@ -123,6 +144,11 @@ export function useShareState(todoId: string | null) {
       queryClient.setQueryData(['share', 'active', args.todoId], result)
       void queryClient.invalidateQueries({ queryKey: ['share', 'active-list'] })
 
+      addSharedId(args.todoId)
+      writeJustShared({ todoId: args.todoId, sharedAt: finishedAt })
+      const landing = shareLandingPosition()
+      useTodoStore.getState().moveTodo(args.todoId, landing.x, landing.y)
+
       try {
         void navigator.clipboard.writeText(result.url).then(() => {
           setUrlCopied(true)
@@ -161,6 +187,7 @@ export function useShareState(todoId: string | null) {
       if (todoId) {
         queryClient.setQueryData(['share', 'active', todoId], null)
         void queryClient.invalidateQueries({ queryKey: ['share', 'active', todoId] })
+        removeSharedId(todoId)
       }
       void queryClient.invalidateQueries({ queryKey: ['share', 'active-list'] })
 

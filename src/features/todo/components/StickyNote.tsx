@@ -8,11 +8,13 @@ import { useTheme } from '../hooks/useTheme'
 import {
   isFreshTodo,
   getThrowYOffset,
+  getReturnFromTopOffset,
   NOTE_THROW_TRANSITION,
   NOTE_DEFAULT_INITIAL,
   NOTE_DEFAULT_TRANSITION,
   NOTE_EXIT,
 } from '../animations/noteEntrance'
+import { consumeJustShared } from '#/lib/share/recent'
 import { GLOW } from '../constants/glow'
 import type { Todo, NoteColor } from '../types'
 
@@ -61,6 +63,9 @@ export interface StickyNoteProps {
   isEditing: boolean
   editValue: string
   isAddingSubTask: boolean
+  // ── Share state ──────────────────────────────────────────────────────────────
+  isShared: boolean
+  onShareCornerClick: () => void
   // ── Drag handlers ────────────────────────────────────────────────────────────
   onDragStart: () => void
   onDrag: () => void
@@ -280,6 +285,80 @@ function GlitchOverlay({
   )
 }
 
+// ─── Folded-corner affordance for shared cards ───────────────────────────────
+
+function ShareDogEar({
+  borderColor,
+  foldFill,
+  shadowGlow,
+  onClick,
+}: {
+  borderColor: string
+  foldFill: string
+  shadowGlow: string
+  onClick: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  const size = hovered ? 22 : 16
+  return (
+    <button
+      type="button"
+      aria-label="Manage share"
+      title="manage share"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: size,
+        height: size,
+        padding: 0,
+        margin: 0,
+        background: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        zIndex: 13,
+        transition: 'width 140ms ease, height 140ms ease',
+      }}
+    >
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 22 22"
+        style={{ display: 'block' }}
+      >
+        {/* Triangular fold — top-right corner peeled back */}
+        <polygon
+          points="22,0 22,22 0,0"
+          fill={foldFill}
+          stroke={borderColor}
+          strokeWidth={1}
+          style={{
+            filter: hovered ? `drop-shadow(0 0 4px ${shadowGlow})` : 'none',
+            transition: 'filter 140ms ease',
+          }}
+        />
+        {/* Diagonal crease line */}
+        <line
+          x1="0"
+          y1="0"
+          x2="22"
+          y2="22"
+          stroke={borderColor}
+          strokeWidth={0.6}
+          opacity={0.5}
+        />
+      </svg>
+    </button>
+  )
+}
+
 export function StickyNote({
   todo,
   x,
@@ -309,6 +388,8 @@ export function StickyNote({
   isEditing,
   editValue,
   isAddingSubTask,
+  isShared,
+  onShareCornerClick,
   onDragStart,
   onDrag,
   onDragEnd,
@@ -331,15 +412,32 @@ export function StickyNote({
   const palette = theme === 'light' ? LIGHT_NOTE_STYLES : NOTE_STYLES
   const cardRef = useRef<HTMLDivElement>(null)
 
-  // Decide entrance style once on mount: fresh → throw, existing → scale-in
-  const isFresh = useMemo(() => isFreshTodo(todo.createdAt), [todo.id])
+  // Decide entrance style once on mount.
+  //   - 'justShared' → drop from above (returning from /share)
+  //   - 'fresh'      → throw from below (just created)
+  //   - 'default'    → scale-in (existing card)
+  // 'justShared' is a one-shot: consumeJustShared() clears it from sessionStorage.
+  const entranceMode = useMemo<'justShared' | 'fresh' | 'default'>(() => {
+    if (consumeJustShared(todo.id)) return 'justShared'
+    if (isFreshTodo(todo.createdAt)) return 'fresh'
+    return 'default'
+  }, [todo.id])
+  const isFresh = entranceMode === 'fresh'
+  const isJustShared = entranceMode === 'justShared'
 
-  // For fresh cards: offset the y MotionValue, then spring it back
+  // For fresh / just-shared cards: offset the y MotionValue, then spring it back
   useEffect(() => {
-    if (!isFresh) return
-    const offset = getThrowYOffset(todo.position.y)
-    y.set(todo.position.y + offset)
-    animate(y, todo.position.y, NOTE_THROW_TRANSITION)
+    if (isFresh) {
+      const offset = getThrowYOffset(todo.position.y)
+      y.set(todo.position.y + offset)
+      animate(y, todo.position.y, NOTE_THROW_TRANSITION)
+      return
+    }
+    if (isJustShared) {
+      const offset = getReturnFromTopOffset(todo.position.y)
+      y.set(todo.position.y + offset)
+      animate(y, todo.position.y, NOTE_THROW_TRANSITION)
+    }
   }, [todo.id])
 
   return (
@@ -358,13 +456,19 @@ export function StickyNote({
           width: 256,
           touchAction: 'none',
         }}
-        initial={isFresh ? { scale: 0.75, opacity: 0 } : NOTE_DEFAULT_INITIAL}
+        initial={
+          isFresh || isJustShared
+            ? { scale: 0.75, opacity: 0 }
+            : NOTE_DEFAULT_INITIAL
+        }
         animate={{
           scale: 1,
           opacity: GLOW[reminderState].opacity,
         }}
         exit={NOTE_EXIT}
-        transition={isFresh ? NOTE_THROW_TRANSITION : NOTE_DEFAULT_TRANSITION}
+        transition={
+          isFresh || isJustShared ? NOTE_THROW_TRANSITION : NOTE_DEFAULT_TRANSITION
+        }
         onDragStart={onDragStart}
         onDrag={onDrag}
         onDragEnd={onDragEnd}
@@ -606,6 +710,16 @@ export function StickyNote({
 
           {/* Glitch overlay — horizontal corruption bars (delete zone) */}
           <GlitchOverlay intensity={glitchIntensity} color={zoneColor} />
+
+          {/* Folded corner — appears on shared cards. Click to manage share. */}
+          {isShared && (
+            <ShareDogEar
+              borderColor={ns.border}
+              foldFill={bgColor}
+              shadowGlow={ns.glow}
+              onClick={onShareCornerClick}
+            />
+          )}
 
           {/* Scanline overlay */}
           <div

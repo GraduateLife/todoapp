@@ -2,6 +2,7 @@ import { useMotionValue } from 'framer-motion'
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { imeGuard } from '@/lib/utils'
 import { REMINDER_SHAKE_DISTANCE } from '@/lib/limits'
+import { useIsShared } from '#/features/share/hooks/useSharedIds'
 import { useDragZones } from '../hooks/useDragZones'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
 import { priorityToColor } from '../constants/priority'
@@ -35,6 +36,7 @@ interface StickyNoteContainerProps {
   onDeleteSubTask: (id: string, subtaskId: string) => void
   onUpdateSubTask: (id: string, subtaskId: string, title: string) => void
   onRequestExport: (id: string) => void
+  onManageShare: (id: string) => void
   zIndexOverride?: number
   otherNotes: Array<{ id: string; position: { x: number; y: number } }>
   isStackTarget: boolean
@@ -59,6 +61,7 @@ export function StickyNoteContainer({
   onDeleteSubTask,
   onUpdateSubTask,
   onRequestExport,
+  onManageShare,
   zIndexOverride,
   otherNotes,
   isStackTarget,
@@ -69,6 +72,7 @@ export function StickyNoteContainer({
   onToggleExpand,
   onDisbandStack,
 }: StickyNoteContainerProps) {
+  const isShared = useIsShared(todo.id)
   const priority: Priority = todo.priority
   // Color is always derived from priority. We tolerate a stale `todo.color`
   // in memory (e.g. legacy data from before the refactor) by preferring the
@@ -292,6 +296,8 @@ export function StickyNoteContainer({
       isEditing={isEditing}
       editValue={editValue}
       isAddingSubTask={isAddingSubTask}
+      isShared={isShared}
+      onShareCornerClick={() => onManageShare(todo.id)}
       onDragStart={wrappedDragStart}
       onDrag={handleDrag}
       onDragEnd={wrappedDragEnd}

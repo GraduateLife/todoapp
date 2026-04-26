@@ -26,6 +26,18 @@ export const NOTE_THROW_TRANSITION: Transition = {
   mass: 0.6,
 }
 
+// ── "Return from top" entrance (returning from share page) ──────────────────
+
+/**
+ * Compute the y offset for the return-from-top animation.
+ * Returns a negative value (distance from top of viewport above the card).
+ */
+export function getReturnFromTopOffset(cardY: number): number {
+  // Push the card off-screen above the viewport, with a margin so it
+  // visibly enters from outside the screen.
+  return -(cardY + 240)
+}
+
 // ── Default entrance (page load / existing cards) ───────────────────────────
 
 export const NOTE_DEFAULT_INITIAL = {
