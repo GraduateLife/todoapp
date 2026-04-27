@@ -3,6 +3,7 @@ import { useMemo, useEffect, useRef, useState } from 'react'
 import type { MotionValue } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { SubTaskList } from './note/SubTaskList'
+import { ShareDogEar } from './ShareDogEar'
 import { NOTE_STYLES, LIGHT_NOTE_STYLES } from '../constants/noteColors'
 import { useTheme } from '../hooks/useTheme'
 import {
@@ -282,96 +283,6 @@ function GlitchOverlay({
         />
       ))}
     </div>
-  )
-}
-
-// ─── Folded-corner affordance for shared cards ───────────────────────────────
-
-function ShareDogEar({
-  borderColor,
-  foldFill,
-  onClick,
-}: {
-  borderColor: string
-  foldFill: string
-  onClick: () => void
-}) {
-  const SIZE = 20
-  const gradId = useMemo(
-    () => `dogear-grad-${Math.random().toString(36).slice(2, 8)}`,
-    [],
-  )
-  const FLAP_BORDER = 1
-  const FLAP_RADIUS = 3
-  return (
-    <button
-      type="button"
-      aria-label="Manage share"
-      title="manage share"
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => {
-        e.stopPropagation()
-        onClick()
-      }}
-      style={{
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        width: SIZE,
-        height: SIZE,
-        padding: 0,
-        margin: 0,
-        background: 'transparent',
-        border: 'none',
-        cursor: 'pointer',
-        zIndex: 13,
-      }}
-    >
-      <svg
-        width={SIZE}
-        height={SIZE}
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
-        style={{ display: 'block', overflow: 'visible' }}
-      >
-        <defs>
-          {/* Subtle shading on the flap so the diagonal reads as a fold
-              crease (slightly darker near the crease, lighter at the outer
-              corner). */}
-          <linearGradient id={gradId} x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={foldFill} stopOpacity={1} />
-            <stop offset="100%" stopColor={foldFill} stopOpacity={0.7} />
-          </linearGradient>
-        </defs>
-        {/* Cut-out: corner is "missing" — fill with page bg. Extends 1px
-            beyond the visible square (negative origin) so the card's top &
-            right borders inside this corner are fully painted over. */}
-        <polygon
-          points={`-1,-1 ${SIZE + 1},-1 ${SIZE + 1},${SIZE}`}
-          fill="var(--rf-bg)"
-        />
-        {/* Fold flap: the underside of the peeled corner. The bottom-left
-            tip is rounded to match the card's 3px corner radius (which the
-            flap's two outer edges originally were part of). */}
-        <path
-          d={`M 0,0 L ${SIZE},${SIZE} L ${FLAP_RADIUS},${SIZE} Q 0,${SIZE} 0,${SIZE - FLAP_RADIUS} Z`}
-          fill={`url(#${gradId})`}
-          stroke={borderColor}
-          strokeWidth={FLAP_BORDER}
-          strokeLinejoin="round"
-        />
-        {/* Diagonal crease — softer than the borders; this is the fold line,
-            not an edge of paper. */}
-        <line
-          x1="0"
-          y1="0"
-          x2={SIZE}
-          y2={SIZE}
-          stroke={borderColor}
-          strokeWidth={FLAP_BORDER}
-          opacity={0.55}
-        />
-      </svg>
-    </button>
   )
 }
 
@@ -726,15 +637,6 @@ export function StickyNote({
           {/* Glitch overlay — horizontal corruption bars (delete zone) */}
           <GlitchOverlay intensity={glitchIntensity} color={zoneColor} />
 
-          {/* Scanline overlay */}
-          <div
-            className="pointer-events-none absolute inset-0 rounded-[3px]"
-            style={{
-              backgroundImage:
-                'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px)',
-            }}
-          />
-
           {/* Drag zone overlay */}
           {isInZone && (
             <div
@@ -785,6 +687,17 @@ export function StickyNote({
           <ShareDogEar
             borderColor={ns.border}
             foldFill={ns.bgOpaque}
+            overlayTint={
+              isInZone
+                ? isInDeleteZone || isInArchiveZone
+                  ? 'rgba(255,30,30,0.08)'
+                  : isInExportZone
+                    ? 'rgba(255,184,0,0.08)'
+                    : isInStackZone
+                      ? 'rgba(0,245,255,0.06)'
+                      : null
+                : null
+            }
             onClick={onShareCornerClick}
           />
         )}

@@ -20,5 +20,11 @@ function RouteComponent() {
     id ? (s.todos.find((t) => t.id === id) ?? null) : null,
   )
 
-  return <SharePage requestedId={id} todo={todo} todos={todos} />
+  return (
+    <>
+      {/* Global CRT scanline overlay */}
+      <div className="rf-scanlines" aria-hidden="true" />
+      <SharePage requestedId={id} todo={todo} todos={todos} />
+    </>
+  )
 }
