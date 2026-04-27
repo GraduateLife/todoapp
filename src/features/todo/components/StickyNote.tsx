@@ -290,16 +290,19 @@ function GlitchOverlay({
 function ShareDogEar({
   borderColor,
   foldFill,
-  shadowGlow,
   onClick,
 }: {
   borderColor: string
   foldFill: string
-  shadowGlow: string
   onClick: () => void
 }) {
-  const [hovered, setHovered] = useState(false)
-  const size = hovered ? 22 : 16
+  const SIZE = 20
+  const gradId = useMemo(
+    () => `dogear-grad-${Math.random().toString(36).slice(2, 8)}`,
+    [],
+  )
+  const FLAP_BORDER = 1
+  const FLAP_RADIUS = 3
   return (
     <button
       type="button"
@@ -310,49 +313,62 @@ function ShareDogEar({
         e.stopPropagation()
         onClick()
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
         position: 'absolute',
         top: 0,
         right: 0,
-        width: size,
-        height: size,
+        width: SIZE,
+        height: SIZE,
         padding: 0,
         margin: 0,
         background: 'transparent',
         border: 'none',
         cursor: 'pointer',
         zIndex: 13,
-        transition: 'width 140ms ease, height 140ms ease',
       }}
     >
       <svg
-        width={size}
-        height={size}
-        viewBox="0 0 22 22"
-        style={{ display: 'block' }}
+        width={SIZE}
+        height={SIZE}
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        style={{ display: 'block', overflow: 'visible' }}
       >
-        {/* Triangular fold — top-right corner peeled back */}
+        <defs>
+          {/* Subtle shading on the flap so the diagonal reads as a fold
+              crease (slightly darker near the crease, lighter at the outer
+              corner). */}
+          <linearGradient id={gradId} x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={foldFill} stopOpacity={1} />
+            <stop offset="100%" stopColor={foldFill} stopOpacity={0.7} />
+          </linearGradient>
+        </defs>
+        {/* Cut-out: corner is "missing" — fill with page bg. Extends 1px
+            beyond the visible square (negative origin) so the card's top &
+            right borders inside this corner are fully painted over. */}
         <polygon
-          points="22,0 22,22 0,0"
-          fill={foldFill}
-          stroke={borderColor}
-          strokeWidth={1}
-          style={{
-            filter: hovered ? `drop-shadow(0 0 4px ${shadowGlow})` : 'none',
-            transition: 'filter 140ms ease',
-          }}
+          points={`-1,-1 ${SIZE + 1},-1 ${SIZE + 1},${SIZE}`}
+          fill="var(--rf-bg)"
         />
-        {/* Diagonal crease line */}
+        {/* Fold flap: the underside of the peeled corner. The bottom-left
+            tip is rounded to match the card's 3px corner radius (which the
+            flap's two outer edges originally were part of). */}
+        <path
+          d={`M 0,0 L ${SIZE},${SIZE} L ${FLAP_RADIUS},${SIZE} Q 0,${SIZE} 0,${SIZE - FLAP_RADIUS} Z`}
+          fill={`url(#${gradId})`}
+          stroke={borderColor}
+          strokeWidth={FLAP_BORDER}
+          strokeLinejoin="round"
+        />
+        {/* Diagonal crease — softer than the borders; this is the fold line,
+            not an edge of paper. */}
         <line
           x1="0"
           y1="0"
-          x2="22"
-          y2="22"
+          x2={SIZE}
+          y2={SIZE}
           stroke={borderColor}
-          strokeWidth={0.6}
-          opacity={0.5}
+          strokeWidth={FLAP_BORDER}
+          opacity={0.55}
         />
       </svg>
     </button>
@@ -510,7 +526,6 @@ export function StickyNote({
           style={{
             background: bgColor,
             border: `1px solid ${borderColor}`,
-            boxShadow,
             position: 'relative',
             zIndex: 1,
           }}
@@ -711,16 +726,6 @@ export function StickyNote({
           {/* Glitch overlay — horizontal corruption bars (delete zone) */}
           <GlitchOverlay intensity={glitchIntensity} color={zoneColor} />
 
-          {/* Folded corner — appears on shared cards. Click to manage share. */}
-          {isShared && (
-            <ShareDogEar
-              borderColor={ns.border}
-              foldFill={bgColor}
-              shadowGlow={ns.glow}
-              onClick={onShareCornerClick}
-            />
-          )}
-
           {/* Scanline overlay */}
           <div
             className="pointer-events-none absolute inset-0 rounded-[3px]"
@@ -774,6 +779,15 @@ export function StickyNote({
               />
             )
           })()}
+
+        {/* ── Folded corner (outside card so it overlaps the card border) ─── */}
+        {isShared && (
+          <ShareDogEar
+            borderColor={ns.border}
+            foldFill={ns.bgOpaque}
+            onClick={onShareCornerClick}
+          />
+        )}
 
         {/* ── Flip button (outside card, bottom-right) ─────────────────────── */}
         <button
