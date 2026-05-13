@@ -1,19 +1,19 @@
-import { openDB, type IDBPDatabase } from 'idb'
-import type { StorageDriver } from './types'
-import type { Todo, Folder } from '../../features/todo/types'
-import { NOTE_COLORS } from '../../features/todo/types'
+import type { IDBPDatabase } from 'idb'
+import { openDB } from 'idb'
+import type { Store } from '../types'
+import type { Todo, Folder } from '../../../../features/todo/types'
+import { NOTE_COLORS } from '../../../../features/todo/types'
 
 const DB_NAME = 'todoapp-idb'
 const DB_VERSION = 1
 const TODO_LS_KEY = 'todoai-storage'
 const FOLDER_LS_KEY = 'todoai-folders'
 
-// ── localStorage migration (handles all Zustand persist versions) ─────────────
-
 function migrateLSTodos(raw: unknown): Todo[] {
-  const parsed = raw as Record<string, unknown>
-  const version = (parsed?.version as number) ?? 0
-  let todos: unknown[] = ((parsed?.state as Record<string, unknown>)?.todos as unknown[]) ?? []
+  const parsed = asRecord(raw)
+  const version = typeof parsed.version === 'number' ? parsed.version : 0
+  const state = asRecord(parsed.state)
+  let todos: unknown[] = Array.isArray(state.todos) ? state.todos : []
 
   if (version < 2) {
     todos = todos.map((t: unknown) => {
@@ -54,10 +54,10 @@ function migrateLSTodos(raw: unknown): Todo[] {
 }
 
 function migrateLSFolders(raw: unknown): Folder[] {
-  const parsed = raw as Record<string, unknown>
-  const version = (parsed?.version as number) ?? 0
-  let folders: unknown[] =
-    ((parsed?.state as Record<string, unknown>)?.folders as unknown[]) ?? []
+  const parsed = asRecord(raw)
+  const version = typeof parsed.version === 'number' ? parsed.version : 0
+  const state = asRecord(parsed.state)
+  let folders: unknown[] = Array.isArray(state.folders) ? state.folders : []
 
   if (version < 2) {
     folders = folders.map((f: unknown) => {
@@ -65,14 +65,15 @@ function migrateLSFolders(raw: unknown): Folder[] {
       return { ...folder, orderedTodoIds: folder.orderedTodoIds ?? [] }
     })
   }
-  // Reset transient UI state
   folders = folders.map((f: unknown) => ({ ...(f as object), isOpen: false }))
   return folders as Folder[]
 }
 
-// ── Driver ────────────────────────────────────────────────────────────────────
+function asRecord(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : {}
+}
 
-export class IDBDriver implements StorageDriver {
+export class IdbStore implements Store {
   private db: IDBPDatabase | null = null
 
   private async open(): Promise<IDBPDatabase> {
@@ -99,7 +100,6 @@ export class IDBDriver implements StorageDriver {
     let todos = (await db.getAll('todos')) as Todo[]
     let folders = (await db.getAll('folders')) as Folder[]
 
-    // Migrate from localStorage on first run (IDB empty)
     if (todos.length === 0 && folders.length === 0) {
       try {
         const rawTodos = localStorage.getItem(TODO_LS_KEY)
@@ -121,7 +121,6 @@ export class IDBDriver implements StorageDriver {
         console.warn('[idb] localStorage migration failed:', e)
       }
     } else {
-      // Reset transient isOpen on every load
       folders = folders.map((f) => ({ ...f, isOpen: false }))
     }
 

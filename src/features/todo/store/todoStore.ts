@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Todo, Attachment, Priority, Reminder } from '../types'
 import { priorityToColor } from '../constants/priority'
-import { getStrategy as getAdapter } from '../../../lib/strategies'
+import { getStrategy as getAdapter } from '../../../lib/storage'
 
 import { TITLE_MAX_LEN, MAX_STACK_SIZE } from '../../../lib/limits'
 

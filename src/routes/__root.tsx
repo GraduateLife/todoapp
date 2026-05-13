@@ -17,7 +17,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 
 import { getLocale } from '#/paraglide/runtime'
 import { useTodoStore, useFolderStore } from '../features/todo/store'
-import { initStrategy as initAdapter } from '../lib/strategies'
+import { initStrategy as initAdapter } from '../lib/storage'
 import { initAIProvider } from '../lib/ai'
 import { initShareStrategy } from '../lib/share'
 

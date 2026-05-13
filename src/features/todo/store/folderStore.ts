@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Folder, NoteColor } from '../types'
 import { NOTE_COLORS } from '../types'
-import { getStrategy as getAdapter } from '../../../lib/strategies'
+import { getStrategy as getAdapter } from '../../../lib/storage'
 
 // ── Debounce for high-frequency saves (marker drag) ──────────────────────────
 
