@@ -171,9 +171,13 @@ function SectionHeader({
 function Collapsible({
   open,
   children,
+  innerScroll,
 }: {
   open: boolean
   children: React.ReactNode
+  /** When true, cap height at 50vh and scroll internally — keeps the preview
+   *  panel below visible on short viewports. */
+  innerScroll?: boolean
 }) {
   return (
     <AnimatePresence initial={false}>
@@ -186,7 +190,16 @@ function Collapsible({
           transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
           style={{ overflow: 'hidden' }}
         >
-          {children}
+          {innerScroll ? (
+            <div
+              className="rf-scrollbar"
+              style={{ maxHeight: '50vh', overflowY: 'auto' }}
+            >
+              {children}
+            </div>
+          ) : (
+            children
+          )}
         </motion.div>
       )}
     </AnimatePresence>
@@ -281,7 +294,7 @@ export function ContentEditor({
       </div>
 
       {/* ── Body ─────────────────────────────────────────── */}
-      <Collapsible open={panelOpen}>
+      <Collapsible open={panelOpen} innerScroll>
         <div className="flex flex-col gap-2 px-4 pt-1 pb-3">
           {/* Title */}
           <label className="flex flex-col gap-1">

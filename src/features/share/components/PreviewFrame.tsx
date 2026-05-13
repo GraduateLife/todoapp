@@ -100,7 +100,7 @@ export function PreviewFrame({
 
   return (
     <section
-      className="min-w-0 rounded-[2px] overflow-hidden flex flex-col"
+      className="min-w-0 shrink-0 rounded-[2px] overflow-hidden flex flex-col"
       style={{
         position: 'relative',
         zIndex: 1,
