@@ -65,3 +65,26 @@ export async function probeShareUpstream() {
     }
   }
 }
+
+export async function probeShareStatus(id: string) {
+  const { upstreamBaseUrl } = getShareProxyConfig()
+  const checkedAt = Date.now()
+  const target = `${upstreamBaseUrl}/s/${id}`
+
+  try {
+    const res = await fetch(target, { method: 'HEAD' })
+    return {
+      id,
+      status: res.status,
+      checkedAt,
+      error: null as string | null,
+    }
+  } catch (error) {
+    return {
+      id,
+      status: null as number | null,
+      checkedAt,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}

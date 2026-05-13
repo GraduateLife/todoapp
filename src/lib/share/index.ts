@@ -1,11 +1,12 @@
 import type { ShareStrategy } from './types'
 
 export type { ShareStrategy, ShareInput, ShareResult } from './types'
-export type { ShareHealthStatus } from './api'
+export type { ShareHealthStatus, ShareStatusProbe } from './api'
 export {
   SHARE_PROXY_BASE_URL,
   ShareRequestError,
   probeShareHealth,
+  fetchShareStatus,
 } from './api'
 
 let _share: ShareStrategy | null = null

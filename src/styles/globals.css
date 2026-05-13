@@ -170,9 +170,13 @@ body {
   font-family: var(--font-sans);
   background-color: var(--rf-bg);
   overflow-x: hidden;
-  overflow-y: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Routes that own a fixed canvas (home) opt out of body scroll. */
+body.rf-no-scroll {
+  overflow-y: hidden;
 }
 
 /* Deep space background with grid */

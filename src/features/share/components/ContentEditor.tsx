@@ -34,6 +34,9 @@ interface ContentEditorProps {
   onAttachmentsAdd: (files: FileList | File[]) => void
   onAttachmentRemove: (id: string) => void
   onReset: () => void
+  /** Controlled: when provided, the parent owns the expand/collapse state. */
+  panelOpen?: boolean
+  onPanelOpenChange?: (open: boolean) => void
 }
 
 const LABEL_STYLE = {
@@ -207,9 +210,16 @@ export function ContentEditor({
   onAttachmentsAdd,
   onAttachmentRemove,
   onReset,
+  panelOpen: controlledPanelOpen,
+  onPanelOpenChange,
 }: ContentEditorProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const [panelOpen, setPanelOpen] = useState(true)
+  const [uncontrolledPanelOpen, setUncontrolledPanelOpen] = useState(true)
+  const panelOpen = controlledPanelOpen ?? uncontrolledPanelOpen
+  const setPanelOpen = (next: boolean) => {
+    if (onPanelOpenChange) onPanelOpenChange(next)
+    else setUncontrolledPanelOpen(next)
+  }
   const [subtasksOpen, setSubtasksOpen] = useState(true)
   const [attachmentsOpen, setAttachmentsOpen] = useState(false)
 
@@ -232,7 +242,7 @@ export function ContentEditor({
       >
         <button
           type="button"
-          onClick={() => setPanelOpen((v) => !v)}
+          onClick={() => setPanelOpen(!panelOpen)}
           className="flex items-center gap-2"
           style={{
             background: 'transparent',

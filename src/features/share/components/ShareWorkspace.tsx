@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  EXPORT_TEMPLATES,
-  getTemplate,
-} from '#/features/todo/export/templates'
+import { EXPORT_TEMPLATES, getTemplate } from '#/features/todo/export/templates'
 import { slugify } from '#/features/todo/export/templates/_helpers'
 import type { Todo } from '#/features/todo/types'
 import { useContentOverride } from '../hooks/useContentOverride'
@@ -23,6 +20,7 @@ interface ShareWorkspaceProps {
 export function ShareWorkspace({ todo, onBack }: ShareWorkspaceProps) {
   const [selectedId, setSelectedId] = useState<string>(EXPORT_TEMPLATES[0].id)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle')
+  const [editorOpen, setEditorOpen] = useState(true)
   const share = useShareState(todo.id)
   const override = useContentOverride(todo)
 
@@ -96,8 +94,8 @@ export function ShareWorkspace({ todo, onBack }: ShareWorkspaceProps) {
 
   return (
     <main
-      className="relative page-wrap px-4 py-6 flex flex-col gap-4"
-      style={{ height: 'calc(100dvh - 74px)', overflow: 'hidden' }}
+      className="relative page-wrap rf-scrollbar px-4 py-6 flex flex-col gap-4"
+      style={{ height: 'calc(100dvh - 74px)', overflow: 'auto' }}
     >
       <ShareHeader
         title={renderTarget.title || todo.title}
@@ -167,6 +165,8 @@ export function ShareWorkspace({ todo, onBack }: ShareWorkspaceProps) {
             onAttachmentsAdd={override.addAttachments}
             onAttachmentRemove={override.removeAttachment}
             onReset={override.resetToOriginal}
+            panelOpen={editorOpen}
+            onPanelOpenChange={setEditorOpen}
           />
           <PreviewFrame
             contentKey={`${selectedId}:${renderedHash}`}
@@ -178,6 +178,8 @@ export function ShareWorkspace({ todo, onBack }: ShareWorkspaceProps) {
                 : undefined
             }
             modified={override.isModified}
+            editorCollapsed={!editorOpen}
+            onToggleEditor={() => setEditorOpen((v) => !v)}
           />
         </div>
       </div>

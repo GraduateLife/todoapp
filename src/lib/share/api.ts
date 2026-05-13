@@ -143,6 +143,38 @@ async function readJsonSafely(res: Response): Promise<unknown> {
   }
 }
 
+export interface ShareStatusProbe {
+  id: string
+  status: number | null
+  checkedAt: number
+  error: string | null
+}
+
+export async function fetchShareStatus(
+  id: string,
+  apiBaseUrl: string = SHARE_PROXY_BASE_URL,
+): Promise<ShareStatusProbe> {
+  try {
+    const res = await fetch(`${apiBaseUrl}/share/status/${id}`, {
+      method: 'GET',
+    })
+    const data = (await res.json()) as Partial<ShareStatusProbe>
+    return {
+      id,
+      status: data.status ?? null,
+      checkedAt: data.checkedAt ?? Date.now(),
+      error: data.error ?? null,
+    }
+  } catch (error) {
+    return {
+      id,
+      status: null,
+      checkedAt: Date.now(),
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
 export async function probeShareHealth(
   apiBaseUrl: string = SHARE_PROXY_BASE_URL,
 ): Promise<ShareHealthStatus> {

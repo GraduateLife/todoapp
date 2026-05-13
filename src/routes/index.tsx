@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { StickyNoteCanvas } from '../features/todo/containers/StickyNoteCanvas'
 import { TodoInputContainer } from '../features/todo/containers/TodoInputContainer'
@@ -7,6 +8,11 @@ export const Route = createFileRoute('/')({
 })
 
 function HomePage() {
+  useEffect(() => {
+    document.body.classList.add('rf-no-scroll')
+    return () => document.body.classList.remove('rf-no-scroll')
+  }, [])
+
   return (
     <>
       {/* Global CRT scanline overlay */}
